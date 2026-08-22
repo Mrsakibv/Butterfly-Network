@@ -1,0 +1,6 @@
+{
+  "name": "Butterfly Network",
+  "description": "Premium Minecraft Server Network website featuring Skyblock, BedWars, SkyWars, Survival, Lifesteal, HeadSteal, live server status, and leaderboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
