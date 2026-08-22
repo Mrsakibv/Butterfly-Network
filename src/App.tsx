@@ -22,6 +22,9 @@ import { FaqPage } from './pages/FaqPage';
 import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { LoginPage } from './pages/LoginPage';
+import { ProfilePage } from './pages/ProfilePage';
+
 import { motion, AnimatePresence } from 'motion/react';
 
 function AppContent() {
@@ -36,27 +39,60 @@ function AppContent() {
     if (path === '/' || path === '') {
       return <HomePage onOpenPlayModal={handleOpenPlayModal} />;
     }
+
     if (path === '/games') {
       return <GamesPage onOpenPlayModal={handleOpenPlayModal} />;
     }
+
     if (path.startsWith('/games/') && gameSlug) {
-      return <GameDetailPage slug={gameSlug} onOpenPlayModal={handleOpenPlayModal} />;
+      return (
+        <GameDetailPage
+          slug={gameSlug}
+          onOpenPlayModal={handleOpenPlayModal}
+        />
+      );
     }
+
+    if (path === '/login') {
+      return <LoginPage />;
+    }
+
+    if (path === '/profile') {
+      return <ProfilePage />;
+    }
+
     if (path === '/leaderboard') {
-      return <LeaderboardPage onOpenPlayModal={handleOpenPlayModal} />;
+      return (
+        <LeaderboardPage
+          onOpenPlayModal={handleOpenPlayModal}
+        />
+      );
     }
+
     if (path === '/how-to-play') {
-      return <HowToPlayPage onOpenPlayModal={handleOpenPlayModal} />;
+      return (
+        <HowToPlayPage
+          onOpenPlayModal={handleOpenPlayModal}
+        />
+      );
     }
+
     if (path === '/faq') {
-      return <FaqPage onOpenPlayModal={handleOpenPlayModal} />;
+      return (
+        <FaqPage
+          onOpenPlayModal={handleOpenPlayModal}
+        />
+      );
     }
+
     if (path === '/rules') {
       return <RulesPage />;
     }
+
     if (path === '/terms') {
       return <TermsPage />;
     }
+
     if (path === '/privacy') {
       return <PrivacyPage />;
     }
@@ -64,11 +100,19 @@ function AppContent() {
     // 404 Fallback
     return (
       <div className="pt-36 pb-24 text-center max-w-xl mx-auto px-4 space-y-6">
-        <h1 className="text-6xl font-extrabold text-purple-400 font-heading">404</h1>
-        <h2 className="text-2xl font-bold text-white">Page Not Found</h2>
+        <h1 className="text-6xl font-extrabold text-purple-400 font-heading">
+          404
+        </h1>
+
+        <h2 className="text-2xl font-bold text-white">
+          Page Not Found
+        </h2>
+
         <p className="text-sm text-slate-400">
-          The quadrant of the server network you requested does not exist or has been warped.
+          The quadrant of the server network you requested does not exist
+          or has been warped.
         </p>
+
         <button
           onClick={() => navigate('/')}
           className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold text-sm text-white"
@@ -81,6 +125,7 @@ function AppContent() {
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#050505] text-[#e5e7eb] selection:bg-purple-600/30 selection:text-purple-100">
+
       {/* Dynamic Floating Particles */}
       <ParticleBackground />
 
@@ -106,7 +151,10 @@ function AppContent() {
       <Footer />
 
       {/* Play Now Modal */}
-      <JoinModal isOpen={playModalOpen} onClose={handleClosePlayModal} />
+      <JoinModal
+        isOpen={playModalOpen}
+        onClose={handleClosePlayModal}
+      />
 
       {/* Global Toast Notification System */}
       <ToastContainer />

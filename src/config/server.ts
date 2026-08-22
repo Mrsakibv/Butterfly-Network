@@ -23,8 +23,8 @@ export interface ServerConfig {
 export const SERVER_CONFIG: ServerConfig = {
   serverName: "Butterfly Network",
   tagline: "Your next Minecraft adventure starts here.",
-  javaIp: "play.firemc.fun",
-  bedrockIp: "play.firemc.fun",
+  javaIp: "play.hypixel.net",
+  bedrockIp: "play.hypixel.net",
   port: 25565,
   bedrockPort: 19132,
   version: "1.8.x - 1.21.x",
@@ -35,6 +35,6 @@ export const SERVER_CONFIG: ServerConfig = {
   storeUrl: "#",
   voteUrl: "#",
   // Leave empty or set to custom endpoint. If empty, will use public mcstatus.io API with demo fallback
-  serverStatusApi: "https://api.mcstatus.io/v2/status/java/play.firemc.fun",
+  serverStatusApi: "https://api.mcstatus.io/v2/status/java/play.hypixel.net",
   copyrightYear: 2026,
 };
