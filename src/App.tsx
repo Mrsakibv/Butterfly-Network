@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RouterProvider, useRouter } from './hooks/useRouter';
 import { ToastProvider } from './hooks/useToast';
 import { ToastContainer } from './components/ToastContainer';
@@ -11,6 +11,7 @@ import { ParticleBackground } from './components/ParticleBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
+import { supabase } from './lib/supabase';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -24,12 +25,26 @@ import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 
 import { motion, AnimatePresence } from 'motion/react';
 
 function AppContent() {
   const { path, gameSlug, navigate } = useRouter();
   const [playModalOpen, setPlayModalOpen] = useState(false);
+
+  // পাসওয়ার্ড রিকভারি ইভেন্ট ট্র্যাক করার জন্য
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/update-password');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const handleOpenPlayModal = () => setPlayModalOpen(true);
   const handleClosePlayModal = () => setPlayModalOpen(false);
@@ -55,6 +70,10 @@ function AppContent() {
 
     if (path === '/login') {
       return <LoginPage />;
+    }
+
+    if (path === '/update-password') {
+      return <UpdatePasswordPage />;
     }
 
     if (path === '/profile') {
