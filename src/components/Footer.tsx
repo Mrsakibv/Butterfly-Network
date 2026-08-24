@@ -182,7 +182,7 @@ export const Footer: React.FC = () => {
 
           <div className="flex items-center gap-2 text-center text-slate-500 max-w-md text-[11px] leading-tight">
             <ShieldAlert className="w-4 h-4 shrink-0 text-slate-600" />
-            <span>Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</span>
+            <span>This is a test Minecraft server Website and this server created By Sakib.</span>
           </div>
         </div>
       </div>
