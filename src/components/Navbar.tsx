@@ -234,12 +234,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             className="focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl"
             aria-label="Butterfly Network Home"
           >
-            <Logo size="md" />
+            {/* Updated Logo */}
+            <Logo size="md" showText={false} />
           </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] border border-white/[0.07] backdrop-blur-md px-3">
-
             {navLinks.map((link) => {
               const active = isActive(link.href);
 
@@ -394,7 +394,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-1.5">
-
               {navLinks.map((link) => {
                 const active = isActive(link.href);
 
