@@ -22,7 +22,7 @@ export interface ServerConfig {
 
 export const SERVER_CONFIG: ServerConfig = {
   serverName: "Butterfly Network",
-  tagline: "Your next Minecraft adventure starts here.",
+  tagline: "Your next Minecraft adventure starts here :)",
   javaIp: "play.hypixel.net",
   bedrockIp: "play.hypixel.net",
   port: 25565,
