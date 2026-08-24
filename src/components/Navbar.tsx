@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Logo } from './Logo';
 import { SERVER_CONFIG } from '../config/server';
 import { useRouter } from '../hooks/useRouter';
@@ -26,8 +26,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
+  const [minecraftUsername, setMinecraftUsername] = useState('');
 
   const { path, navigate } = useRouter();
+
+  // =========================
+  // Load Profile
+  // =========================
+
+  const loadProfile = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      setIsLoggedIn(false);
+      setUsername('');
+      setMinecraftUsername('');
+      return;
+    }
+
+    setIsLoggedIn(true);
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, minecraft_username')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!error && data) {
+      setUsername(data.username ?? '');
+      setMinecraftUsername(data.minecraft_username ?? '');
+    } else {
+      setUsername('');
+      setMinecraftUsername('');
+    }
+  }, []);
 
   // =========================
   // Scroll
@@ -53,28 +87,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     let mounted = true;
 
     const loadAuthState = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      await loadProfile();
 
       if (!mounted) return;
-
-      if (session?.user) {
-        setIsLoggedIn(true);
-
-        const profileResult = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', session.user.id)
-          .single();
-
-        if (mounted) {
-          setUsername(profileResult.data?.username ?? '');
-        }
-      } else {
-        setIsLoggedIn(false);
-        setUsername('');
-      }
     };
 
     loadAuthState();
@@ -85,20 +100,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       if (!mounted) return;
 
       if (session?.user) {
-        setIsLoggedIn(true);
-
-        const profileResult = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', session.user.id)
-          .single();
-
-        if (mounted) {
-          setUsername(profileResult.data?.username ?? '');
-        }
+        await loadProfile();
       } else {
         setIsLoggedIn(false);
         setUsername('');
+        setMinecraftUsername('');
       }
     });
 
@@ -106,7 +112,39 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadProfile]);
+
+  // =========================
+  // Refresh profile when route changes
+  // =========================
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadProfile();
+    }
+  }, [path, isLoggedIn, loadProfile]);
+
+  // =========================
+  // Listen for profile updates
+  // =========================
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      loadProfile();
+    };
+
+    window.addEventListener(
+      'butterfly-profile-updated',
+      handleProfileUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        'butterfly-profile-updated',
+        handleProfileUpdate
+      );
+    };
+  }, [loadProfile]);
 
   // =========================
   // Close mobile menu
@@ -115,6 +153,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [path]);
+
+  // =========================
+  // Minecraft Head URL
+  // =========================
+
+  const getMinecraftHead = (name: string) => {
+    if (!name) return '';
+
+    return `https://mc-heads.net/avatar/${encodeURIComponent(
+      name
+    )}/64`;
+  };
+
+  const minecraftHeadUrl = getMinecraftHead(minecraftUsername);
 
   // =========================
   // Navigation
@@ -207,8 +259,46 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
     setIsLoggedIn(false);
     setUsername('');
+    setMinecraftUsername('');
 
     navigate('/');
+  };
+
+  // =========================
+  // Minecraft Head Component
+  // =========================
+
+  const MinecraftHead = ({
+    size = 'sm',
+  }: {
+    size?: 'sm' | 'md';
+  }) => {
+    if (!minecraftUsername) {
+      return (
+        <User
+          className={
+            size === 'md'
+              ? 'w-5 h-5 text-purple-400'
+              : 'w-4 h-4 text-purple-400'
+          }
+        />
+      );
+    }
+
+    return (
+      <img
+        src={minecraftHeadUrl}
+        alt={`${minecraftUsername} Minecraft head`}
+        className={
+          size === 'md'
+            ? 'w-8 h-8 rounded-md object-cover pixelated border border-purple-400/30 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+            : 'w-5 h-5 rounded-[4px] object-cover pixelated border border-purple-400/30'
+        }
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
   };
 
   // =========================
@@ -234,7 +324,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             className="focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl"
             aria-label="Butterfly Network Home"
           >
-            {/* Updated Logo */}
             <Logo size="md" showText={false} />
           </a>
 
@@ -294,9 +383,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 {/* Profile */}
                 <button
                   onClick={handleProfile}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all active:scale-95 cursor-pointer"
                 >
-                  <User className="w-4 h-4 text-purple-400" />
+
+                  {/* Minecraft Head */}
+                  <MinecraftHead size="sm" />
 
                   <span>
                     {username
@@ -340,6 +431,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
           {/* Mobile Menu */}
           <div className="flex items-center gap-2 md:hidden">
+
+            {/* Mobile Minecraft Head */}
+            {isLoggedIn && minecraftUsername && (
+              <button
+                onClick={handleProfile}
+                className="flex items-center justify-center"
+                title={`Minecraft: ${minecraftUsername}`}
+              >
+                <MinecraftHead size="md" />
+              </button>
+            )}
 
             <button
               onClick={onOpenPlayModal}
@@ -437,7 +539,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                     onClick={handleProfile}
                     className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 transition-all"
                   >
-                    <User className="w-4 h-4 text-purple-400" />
+                    <MinecraftHead size="sm" />
 
                     <span>
                       {username
