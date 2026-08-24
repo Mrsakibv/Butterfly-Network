@@ -46,7 +46,7 @@ export const FAQ_DATA: FaqItem[] = [
   {
     id: 'Buy-Rank',
     category: 'Support',
-    question: 'How can I buy ranks and golds?',
+    question: 'How can I buy ranks and golds or coins?',
     answer: 'Yes you can buy Ranks and golds in our discord server because our online store status is developing so if you interest to buy rank you must check our discord server.'
   },
   {
