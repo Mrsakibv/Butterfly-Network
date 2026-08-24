@@ -177,6 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     { label: 'Games', href: '/games' },
     { label: 'Features', href: '/#features' },
     { label: 'Leaderboard', href: '/leaderboard' },
+    { label: 'Pricing', href: '/pricing' },
     { label: 'FAQ', href: '/faq' },
   ];
 

@@ -19,6 +19,7 @@ import { GamesPage } from './pages/GamesPage';
 import { GameDetailPage } from './pages/GameDetailPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { HowToPlayPage } from './pages/HowToPlayPage';
+import { PricingPage } from './pages/PricingPage';
 import { FaqPage } from './pages/FaqPage';
 import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
@@ -481,6 +482,14 @@ function AppContent() {
     if (path === '/how-to-play') {
       return (
         <HowToPlayPage
+          onOpenPlayModal={handleOpenPlayModal}
+        />
+      );
+    }
+
+    if (path === '/pricing') {
+      return (
+        <PricingPage
           onOpenPlayModal={handleOpenPlayModal}
         />
       );
