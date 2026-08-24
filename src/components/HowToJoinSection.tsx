@@ -108,7 +108,7 @@ export const HowToJoinSection: React.FC = () => {
             <div className="pt-6 border-t border-white/[0.06] space-y-2">
               <div className="p-2.5 rounded-lg bg-black/40 border border-white/5 font-mono text-xs text-purple-200 flex justify-between items-center">
                 <span>{platform === 'java' ? SERVER_CONFIG.javaIp : SERVER_CONFIG.bedrockIp}</span>
-                <span className="text-[11px] text-slate-500">Port: {SERVER_CONFIG.port}</span>
+                <span className="text-[11px] text-slate-500">Port: {SERVER_CONFIG.bedrockPort}</span>
               </div>
             </div>
           </motion.div>

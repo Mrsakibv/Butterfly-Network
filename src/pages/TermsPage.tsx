@@ -41,15 +41,7 @@ export const TermsPage: React.FC = () => {
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold text-white font-heading">4. Mojang Disclaimer</h2>
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex items-start gap-3 text-xs text-slate-400">
-              <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-              <span>
-                {SERVER_CONFIG.serverName} is not an official Minecraft product, nor is it approved by or affiliated with Mojang AB or Microsoft Corporation.
-              </span>
-            </div>
-          </section>
+          
         </div>
       </div>
     </div>

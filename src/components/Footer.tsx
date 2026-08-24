@@ -3,7 +3,7 @@ import { Logo } from './Logo';
 import { SERVER_CONFIG } from '../config/server';
 import { useRouter } from '../hooks/useRouter';
 import { CopyIpButton } from './CopyIpButton';
-import { Disc as DiscordIcon, Youtube, Twitter, Video, ShieldAlert, Heart } from 'lucide-react';
+import { Disc as DiscordIcon, Youtube, Twitter, Video, ShieldAlert, Heart, Facebook } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const { navigate } = useRouter();
@@ -49,16 +49,20 @@ export const Footer: React.FC = () => {
                 aria-label="Join our Discord Server"
                 className="w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-purple-600/30 border border-white/10 hover:border-purple-500/50 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
               >
-                <DiscordIcon className="w-5 h-5" />
+                <img
+  src="/discord.svg"
+  alt="Discord"
+  className="w-5 h-5"
+/>
               </a>
               <a
-                href={SERVER_CONFIG.youtubeUrl}
+                href={SERVER_CONFIG.facebookUrl}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Watch on YouTube"
-                className="w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-red-600/30 border border-white/10 hover:border-red-500/50 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
+                aria-label="Follow on Facebook"
+                className="w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-blue-600/30 border border-white/10 hover:border-blue-500/50 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
               >
-                <Youtube className="w-5 h-5" />
+                <Facebook className="w-5 h-5" />
               </a>
               <a
                 href={SERVER_CONFIG.tiktokUrl}
@@ -67,7 +71,11 @@ export const Footer: React.FC = () => {
                 aria-label="Follow on TikTok"
                 className="w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-pink-600/30 border border-white/10 hover:border-pink-500/50 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
               >
-                <Video className="w-5 h-5" />
+                <img
+  src="/tiktok.svg"
+  alt="TikTok"
+  className="w-5 h-5"
+/>
               </a>
               <a
                 href={SERVER_CONFIG.twitterUrl}
@@ -76,7 +84,11 @@ export const Footer: React.FC = () => {
                 aria-label="Follow on X (Twitter)"
                 className="w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-sky-600/30 border border-white/10 hover:border-sky-500/50 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
               >
-                <Twitter className="w-5 h-5" />
+                <img
+  src="/X.svg"
+  alt="X"
+  className="w-5 h-5"
+/>
               </a>
             </div>
           </div>
@@ -123,18 +135,18 @@ export const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a href={SERVER_CONFIG.youtubeUrl} target="_blank" rel="noreferrer" className="hover:text-purple-300 transition-colors">
-                  YouTube Channel
+                <a href={SERVER_CONFIG.facebookUrl} target="_blank" rel="noreferrer" className="hover:text-purple-300 transition-colors">
+                  Facebook 
                 </a>
               </li>
               <li>
                 <a href={SERVER_CONFIG.tiktokUrl} target="_blank" rel="noreferrer" className="hover:text-purple-300 transition-colors">
-                  TikTok Highlights
+                  TikTok 
                 </a>
               </li>
               <li>
                 <a href={SERVER_CONFIG.twitterUrl} target="_blank" rel="noreferrer" className="hover:text-purple-300 transition-colors">
-                  X (Twitter) Updates
+                  X (Twitter) 
                 </a>
               </li>
               <li>
@@ -159,7 +171,7 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex justify-between items-center text-slate-300">
                 <span className="text-slate-400">Port:</span>
-                <span className="font-mono text-purple-300">{SERVER_CONFIG.port}</span>
+                <span className="font-mono text-purple-300">{SERVER_CONFIG.bedrockPort}</span>
               </div>
               <div className="pt-2">
                 <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy Server IP" variant="compact" className="w-full" />

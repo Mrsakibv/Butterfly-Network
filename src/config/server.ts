@@ -11,7 +11,7 @@ export interface ServerConfig {
   bedrockPort: number;
   version: string;
   discordUrl: string;
-  youtubeUrl: string;
+  facebookUrl: string;
   tiktokUrl: string;
   twitterUrl: string;
   storeUrl: string;
@@ -29,9 +29,9 @@ export const SERVER_CONFIG: ServerConfig = {
   bedrockPort: 19132,
   version: "1.8.x - 1.21.x",
   discordUrl: "https://discord.com/invite/d57g4gjXuc",
-  youtubeUrl: "#",
-  tiktokUrl: "#",
-  twitterUrl: "#",
+  facebookUrl: "https://www.facebook.com/mrsakib232/",
+  tiktokUrl: "https://www.tiktok.com/@mrsakib.232?is_from_webapp=1&sender_device=pc",
+  twitterUrl: "https://x.com/Mrsakib_",
   storeUrl: "#",
   voteUrl: "#",
   // Leave empty or set to custom endpoint. If empty, will use public mcstatus.io API with demo fallback
