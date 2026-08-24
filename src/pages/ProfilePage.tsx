@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from '../hooks/useRouter';
@@ -24,9 +19,9 @@ interface ProfileData {
   id: string;
   full_name: string | null;
   username: string | null;
-  minecraft_username: string | null;
   bio: string | null;
   created_at: string | null;
+  minecraft_username: string | null;
 }
 
 export const ProfilePage: React.FC = () => {
@@ -36,16 +31,12 @@ export const ProfilePage: React.FC = () => {
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
-  const [minecraftUsername, setMinecraftUsername] = useState('');
   const [bio, setBio] = useState('');
-
   const [email, setEmail] = useState('');
-  const [showEmail, setShowEmail] = useState(false);
 
+  const [showEmail, setShowEmail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingMinecraft, setSavingMinecraft] = useState(false);
-
   const [message, setMessage] = useState('');
 
   const [showPasswordBox, setShowPasswordBox] = useState(false);
@@ -59,33 +50,14 @@ export const ProfilePage: React.FC = () => {
 
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [minecraftHeadUrl, setMinecraftHeadUrl] = useState<string | null>(
-    null
-  );
+  // Minecraft
+  const [minecraftUsername, setMinecraftUsername] = useState('');
+  const [minecraftHeadUrl, setMinecraftHeadUrl] = useState<string | null>(null);
+  const [savingMinecraft, setSavingMinecraft] = useState(false);
 
-  /*
-   * Minecraft username validation
-   *
-   * Minecraft Java usernames:
-   * - 3 to 16 characters
-   * - Letters, numbers and underscore
-   */
-  const isValidMinecraftUsername = (value: string) => {
-    return /^[A-Za-z0-9_]{3,16}$/.test(value);
-  };
-
-  /*
-   * Generate Minecraft head URL
-   *
-   * mc-heads.net provides the player's current skin head
-   * based on Minecraft username.
-   */
-  const getMinecraftHeadUrl = (value: string) => {
-    if (!value) return null;
-
-    return `https://mc-heads.net/avatar/${encodeURIComponent(
-      value
-    )}/128`;
+  // Minecraft head URL
+  const getMinecraftHeadUrl = (name: string) => {
+    return `https://mc-heads.net/avatar/${encodeURIComponent(name)}/64`;
   };
 
   useEffect(() => {
@@ -108,7 +80,7 @@ export const ProfilePage: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'id, full_name, username, minecraft_username, bio, created_at'
+          'id, full_name, username, bio, created_at, minecraft_username'
         )
         .eq('id', user.id)
         .single();
@@ -123,13 +95,18 @@ export const ProfilePage: React.FC = () => {
 
       setFullName(data.full_name ?? '');
       setUsername(data.username ?? '');
-      setMinecraftUsername(data.minecraft_username ?? '');
       setBio(data.bio ?? '');
 
-      if (data.minecraft_username) {
+      const savedMinecraftUsername = data.minecraft_username ?? '';
+
+      setMinecraftUsername(savedMinecraftUsername);
+
+      if (savedMinecraftUsername.length >= 3) {
         setMinecraftHeadUrl(
-          getMinecraftHeadUrl(data.minecraft_username)
+          getMinecraftHeadUrl(savedMinecraftUsername)
         );
+      } else {
+        setMinecraftHeadUrl(null);
       }
 
       setLoading(false);
@@ -151,9 +128,6 @@ export const ProfilePage: React.FC = () => {
       : `${localPart.slice(0, 2)}****${domain}`;
   };
 
-  /*
-   * Save normal website profile
-   */
   const handleSaveProfile = async () => {
     if (!profile) return;
 
@@ -191,71 +165,31 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
-    setProfile((current) =>
-      current
-        ? {
-            ...current,
-            ...data,
-          }
-        : data
-    );
+    setProfile((prev) => ({
+      ...(prev as ProfileData),
+      ...data,
+    }));
 
     setMessage('Profile updated successfully.');
     setSaving(false);
   };
 
-  /*
-   * Save Minecraft username
-   */
+  // ==========================================
+  // SAVE MINECRAFT USERNAME
+  // ==========================================
+
   const handleSaveMinecraftUsername = async () => {
     if (!profile) return;
 
-    setMessage('');
-
     const cleanMinecraftUsername = minecraftUsername.trim();
 
-    /*
-     * Empty username means user wants to remove
-     * their Minecraft username.
-     */
-    if (cleanMinecraftUsername.length === 0) {
-      setSavingMinecraft(true);
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          minecraft_username: null,
-        })
-        .eq('id', profile.id)
-        .select()
-        .single();
-
-      if (error) {
-        setMessage(error.message);
-        setSavingMinecraft(false);
-        return;
-      }
-
-      setProfile(data);
-      setMinecraftUsername('');
-      setMinecraftHeadUrl(null);
-
-      setMessage('Minecraft username removed successfully.');
-      setSavingMinecraft(false);
-      return;
-    }
-
-    /*
-     * Validate username before saving
-     */
-    if (!isValidMinecraftUsername(cleanMinecraftUsername)) {
-      setMessage(
-        'Minecraft username must be 3-16 characters and can only contain letters, numbers, and underscores.'
-      );
+    if (cleanMinecraftUsername.length < 3) {
+      setMessage('Minecraft username must be at least 3 characters.');
       return;
     }
 
     setSavingMinecraft(true);
+    setMessage('');
 
     const { data, error } = await supabase
       .from('profiles')
@@ -268,34 +202,31 @@ export const ProfilePage: React.FC = () => {
 
     if (error) {
       setMessage(
-        error.code === '23505'
-          ? 'This Minecraft username is already linked to another account.'
-          : error.message
+        `Could not save Minecraft username: ${error.message}`
       );
 
       setSavingMinecraft(false);
       return;
     }
 
-    setProfile(data);
+    setProfile((prev) => ({
+      ...(prev as ProfileData),
+      ...data,
+    }));
 
-    setMinecraftUsername(
-      data.minecraft_username ?? cleanMinecraftUsername
-    );
-
+    setMinecraftUsername(cleanMinecraftUsername);
     setMinecraftHeadUrl(
-      getMinecraftHeadUrl(
-        data.minecraft_username ?? cleanMinecraftUsername
-      )
+      getMinecraftHeadUrl(cleanMinecraftUsername)
     );
 
-    setMessage('Minecraft username saved successfully.');
+    setMessage('Minecraft username linked successfully.');
     setSavingMinecraft(false);
   };
 
-  /*
-   * Remove Minecraft username
-   */
+  // ==========================================
+  // REMOVE MINECRAFT USERNAME
+  // ==========================================
+
   const handleRemoveMinecraftUsername = async () => {
     if (!profile) return;
 
@@ -312,12 +243,19 @@ export const ProfilePage: React.FC = () => {
       .single();
 
     if (error) {
-      setMessage(error.message);
+      setMessage(
+        `Could not remove Minecraft username: ${error.message}`
+      );
+
       setSavingMinecraft(false);
       return;
     }
 
-    setProfile(data);
+    setProfile((prev) => ({
+      ...(prev as ProfileData),
+      ...data,
+    }));
+
     setMinecraftUsername('');
     setMinecraftHeadUrl(null);
 
@@ -325,9 +263,10 @@ export const ProfilePage: React.FC = () => {
     setSavingMinecraft(false);
   };
 
-  /*
-   * Verify password to reveal email
-   */
+  // ==========================================
+  // VERIFY PASSWORD
+  // ==========================================
+
   const handleVerifyPassword = async () => {
     if (!currentPassword) {
       setMessage('Please enter your current password.');
@@ -365,9 +304,10 @@ export const ProfilePage: React.FC = () => {
     setVerifyingPassword(false);
   };
 
-  /*
-   * Change password
-   */
+  // ==========================================
+  // CHANGE PASSWORD
+  // ==========================================
+
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) {
       setMessage('Please fill in all password fields.');
@@ -417,9 +357,10 @@ export const ProfilePage: React.FC = () => {
     setChangingPassword(false);
   };
 
-  /*
-   * Forgot password
-   */
+  // ==========================================
+  // FORGOT PASSWORD
+  // ==========================================
+
   const handleForgotPassword = async () => {
     if (!email) {
       setMessage('Email address is not available.');
@@ -445,89 +386,84 @@ export const ProfilePage: React.FC = () => {
     setIsResettingPassword(false);
   };
 
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4">
         <div className="text-center">
-
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-purple-500/30 border-t-purple-500" />
+          <div className="w-10 h-10 mx-auto mb-4 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
 
           <p className="text-slate-400">
             Loading profile...
           </p>
-
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] px-4 py-24 text-white">
-
-      <div className="mx-auto w-full max-w-2xl">
+    <div className="min-h-screen bg-[#050505] text-white px-4 py-24">
+      <div className="w-full max-w-2xl mx-auto">
 
         {/* Back */}
         <button
           onClick={() => navigate('/')}
-          className="mb-6 flex items-center gap-2 text-slate-400 transition-colors hover:text-white"
+          className="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
-
+          <ArrowLeft className="w-4 h-4" />
           Back to Home
         </button>
 
-        <div className="rounded-2xl border border-purple-500/20 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+        <div className="rounded-2xl border border-purple-500/20 bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 shadow-2xl">
 
           {/* Header */}
-          <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-8">
 
-            {/* Minecraft head */}
-            <div className="relative h-20 w-20 shrink-0">
+            {/* ==========================================
+                MAIN PROFILE AVATAR
+                MINECRAFT HEAD AFTER SAVE
+            ========================================== */}
 
-              {minecraftHeadUrl ? (
-                <div className="h-20 w-20 overflow-hidden rounded-2xl border border-purple-500/30 bg-black/50 shadow-lg shadow-purple-950/40">
+            <div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden border border-purple-500/30 bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-950/40">
 
-                  <img
-                    src={minecraftHeadUrl}
-                    alt={
-                      minecraftUsername
-                        ? `${minecraftUsername} Minecraft head`
-                        : 'Minecraft head'
-                    }
-                    className="h-full w-full object-cover pixelated"
-                    onError={() => {
-                      setMinecraftHeadUrl(null);
-                    }}
-                  />
-
-                </div>
+              {profile?.minecraft_username ? (
+                <img
+                  src={getMinecraftHeadUrl(
+                    profile.minecraft_username
+                  )}
+                  alt={`${profile.minecraft_username} Minecraft avatar`}
+                  className="w-full h-full object-cover"
+                  style={{
+                    imageRendering: 'pixelated',
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 shadow-lg shadow-purple-950/40">
-
-                  <User className="h-10 w-10 text-white" />
-
-                </div>
+                <User className="w-10 h-10 text-white" />
               )}
 
             </div>
 
             <div>
-
-              <h1 className="text-2xl font-bold sm:text-3xl">
+              <h1 className="text-2xl sm:text-3xl font-bold">
                 My Profile
               </h1>
 
               <p className="mt-1 text-slate-400">
                 Manage your Butterfly Network profile
               </p>
-
             </div>
 
           </div>
 
           {/* Message */}
           {message && (
-            <div className="mb-6 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm text-purple-200">
+            <div className="mb-6 rounded-xl bg-purple-500/10 border border-purple-500/20 px-4 py-3 text-sm text-purple-200">
               {message}
             </div>
           )}
@@ -536,31 +472,25 @@ export const ProfilePage: React.FC = () => {
 
             {/* Full Name */}
             <div>
-
-              <label className="mb-2 block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Full Name
               </label>
 
               <input
                 type="text"
                 value={fullName}
-                onChange={(e) =>
-                  setFullName(e.target.value)
-                }
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500"
               />
-
             </div>
 
-            {/* Website Username */}
+            {/* Username */}
             <div>
-
-              <label className="mb-2 block text-sm font-medium text-slate-300">
-                Website Username
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Username
               </label>
 
               <div className="relative">
-
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400">
                   @
                 </span>
@@ -569,197 +499,43 @@ export const ProfilePage: React.FC = () => {
                   type="text"
                   value={username}
                   onChange={(e) =>
-                    setUsername(
-                      e.target.value.toLowerCase()
-                    )
+                    setUsername(e.target.value.toLowerCase())
                   }
                   maxLength={30}
-                  className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-9 pr-4 text-white outline-none focus:border-purple-500"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 pl-9 pr-4 py-3 text-white outline-none focus:border-purple-500"
                 />
-
               </div>
-
-              <p className="mt-2 text-xs text-slate-500">
-                This is your Butterfly Network account username.
-              </p>
-
-            </div>
-
-            {/* =================================================
-                MINECRAFT USERNAME
-            ================================================= */}
-            <div className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.04] p-5">
-
-              <div className="mb-4 flex items-start gap-3">
-
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10">
-                  <Gamepad2 className="h-5 w-5 text-purple-400" />
-                </div>
-
-                <div>
-
-                  <h2 className="font-semibold text-white">
-                    Minecraft Account
-                  </h2>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    Link your Minecraft username to show your
-                    Minecraft head on your profile.
-                  </p>
-
-                </div>
-
-              </div>
-
-              {/* Minecraft head preview */}
-              {minecraftHeadUrl && minecraftUsername && (
-                <div className="mb-4 flex items-center gap-4 rounded-xl border border-white/10 bg-black/30 p-4">
-
-                  <div className="h-16 w-16 overflow-hidden rounded-xl border border-purple-500/20 bg-black">
-
-                    <img
-                      src={minecraftHeadUrl}
-                      alt={`${minecraftUsername} Minecraft head`}
-                      className="h-full w-full object-cover"
-                      onError={() => {
-                        setMinecraftHeadUrl(null);
-                        setMessage(
-                          'Could not load the Minecraft head for this username.'
-                        );
-                      }}
-                    />
-
-                  </div>
-
-                  <div className="min-w-0">
-
-                    <p className="text-xs text-slate-500">
-                      Minecraft Username
-                    </p>
-
-                    <p className="mt-1 truncate font-semibold text-white">
-                      {minecraftUsername}
-                    </p>
-
-                    <p className="mt-1 text-xs text-green-400">
-                      Minecraft account linked
-                    </p>
-
-                  </div>
-
-                </div>
-              )}
-
-              {/* Input */}
-              <label className="mb-2 block text-sm font-medium text-slate-300">
-                Minecraft Username
-              </label>
-
-              <input
-                type="text"
-                value={minecraftUsername}
-                onChange={(e) => {
-                  const value = e.target.value
-                    .replace(/[^A-Za-z0-9_]/g, '')
-                    .slice(0, 16);
-
-                  setMinecraftUsername(value);
-
-                  if (value.length >= 3) {
-                    setMinecraftHeadUrl(
-                      getMinecraftHeadUrl(value)
-                    );
-                  } else {
-                    setMinecraftHeadUrl(null);
-                  }
-                }}
-                placeholder="Enter your Minecraft username"
-                maxLength={16}
-                autoComplete="off"
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-colors placeholder:text-slate-600 focus:border-purple-500"
-              />
-
-              <p className="mt-2 text-xs text-slate-500">
-                3-16 characters. Letters, numbers and underscores only.
-              </p>
-
-              {/* Buttons */}
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-
-                <button
-                  type="button"
-                  onClick={handleSaveMinecraftUsername}
-                  disabled={savingMinecraft}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3 font-semibold transition-all hover:from-purple-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-
-                  {savingMinecraft ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Gamepad2 className="h-4 w-4" />
-                      Save Minecraft Username
-                    </>
-                  )}
-
-                </button>
-
-                {minecraftUsername && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveMinecraftUsername}
-                    disabled={savingMinecraft}
-                    className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                )}
-
-              </div>
-
             </div>
 
             {/* Bio */}
             <div>
-
-              <label className="mb-2 block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Bio
               </label>
 
               <textarea
                 value={bio}
-                onChange={(e) =>
-                  setBio(e.target.value)
-                }
+                onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell us a little about yourself..."
                 maxLength={150}
                 rows={3}
-                className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500 resize-none"
               />
-
-              <p className="mt-1 text-right text-xs text-slate-600">
-                {bio.length}/150
-              </p>
-
             </div>
 
             {/* Email */}
             <div>
-
-              <label className="mb-2 block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Email
               </label>
 
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
+              <div className="rounded-xl bg-black/40 border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
 
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
 
-                  <Mail className="h-5 w-5 shrink-0 text-purple-400" />
+                  <Mail className="w-5 h-5 text-purple-400 shrink-0" />
 
-                  <span className="truncate text-slate-200">
+                  <span className="text-slate-200 truncate">
                     {showEmail
                       ? email
                       : getMaskedEmail(email)}
@@ -781,51 +557,246 @@ export const ProfilePage: React.FC = () => {
                   className="shrink-0 text-purple-400 hover:text-purple-300"
                 >
                   {showEmail ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
+
+              </div>
+            </div>
+
+            {/* Save Profile */}
+            <button
+              type="button"
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3 font-semibold transition-all disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+
+              {saving
+                ? 'Saving...'
+                : 'Save Changes'}
+            </button>
+
+            {/* ==========================================
+                MINECRAFT ACCOUNT
+            ========================================== */}
+
+            <div className="pt-4">
+
+              <div className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.04] p-5">
+
+                {/* Header */}
+                <div className="mb-4 flex items-start gap-3">
+
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10">
+                    <Gamepad2 className="h-5 w-5 text-purple-400" />
+                  </div>
+
+                  <div>
+                    <h2 className="font-semibold text-white">
+                      Minecraft Account
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Link your Minecraft username to your profile.
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* Input */}
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Minecraft Username
+                </label>
+
+                <input
+                  type="text"
+                  value={minecraftUsername}
+                  onChange={(e) => {
+                    const value = e.target.value
+                      .replace(/[^A-Za-z0-9_]/g, '')
+                      .slice(0, 16);
+
+                    setMinecraftUsername(value);
+
+                    if (value.length >= 3) {
+                      setMinecraftHeadUrl(
+                        getMinecraftHeadUrl(value)
+                      );
+                    } else {
+                      setMinecraftHeadUrl(null);
+                    }
+                  }}
+                  placeholder="Enter your Minecraft username"
+                  maxLength={16}
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-colors placeholder:text-slate-600 focus:border-purple-500"
+                />
+
+                <p className="mt-2 text-xs text-slate-500">
+                  3-16 characters. Letters, numbers and underscores only.
+                </p>
+
+                {/* LIVE PREVIEW */}
+
+                {minecraftUsername.length >= 3 &&
+                  minecraftUsername !==
+                    (profile?.minecraft_username ?? '') && (
+
+                  <div className="mt-4 rounded-xl border border-purple-500/20 bg-black/30 p-4">
+
+                    <div className="mb-3 flex items-center gap-2">
+
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-purple-400" />
+
+                      <span className="text-xs font-medium text-purple-300">
+                        Minecraft Head Preview
+                      </span>
+
+                    </div>
+
+                    <div className="flex items-center gap-4">
+
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-purple-500/30 bg-black shadow-lg shadow-purple-950/30">
+
+                        {minecraftHeadUrl ? (
+                          <img
+                            src={minecraftHeadUrl}
+                            alt={`${minecraftUsername} Minecraft head`}
+                            className="h-full w-full object-cover"
+                            style={{
+                              imageRendering: 'pixelated',
+                            }}
+                            onError={() => {
+                              setMinecraftHeadUrl(null);
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <RefreshCw className="h-5 w-5 animate-spin text-purple-400" />
+                          </div>
+                        )}
+
+                      </div>
+
+                      <div className="min-w-0">
+
+                        <p className="text-xs text-slate-500">
+                          Preview for
+                        </p>
+
+                        <p className="mt-1 truncate font-semibold text-white">
+                          {minecraftUsername}
+                        </p>
+
+                        <p className="mt-1 text-xs text-purple-400">
+                          Live Minecraft head
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+                )}
+
+                {/* SAVED ACCOUNT - USERNAME ONLY */}
+
+                {profile?.minecraft_username &&
+                  minecraftUsername ===
+                    profile.minecraft_username && (
+
+                  <div className="mt-4 flex items-center justify-between rounded-xl border border-green-500/20 bg-green-500/[0.05] px-4 py-3">
+
+                    <div className="min-w-0">
+
+                      <p className="text-xs text-slate-500">
+                        Minecraft Username
+                      </p>
+
+                      <p className="mt-1 truncate font-semibold text-white">
+                        {profile.minecraft_username}
+                      </p>
+
+                      <p className="mt-1 text-xs text-green-400">
+                        Minecraft account linked
+                      </p>
+
+                    </div>
+
+                    <div className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-500/10">
+                      <Gamepad2 className="h-4 w-4 text-green-400" />
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+
+                  <button
+                    type="button"
+                    onClick={handleSaveMinecraftUsername}
+                    disabled={
+                      savingMinecraft ||
+                      minecraftUsername.trim().length < 3
+                    }
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3 font-semibold transition-all hover:from-purple-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+
+                    {savingMinecraft ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Gamepad2 className="h-4 w-4" />
+                        Save Minecraft Username
+                      </>
+                    )}
+
+                  </button>
+
+                  {minecraftUsername && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveMinecraftUsername}
+                      disabled={savingMinecraft}
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  )}
+
+                </div>
 
               </div>
 
             </div>
 
-            {/* Save normal profile */}
-            <button
-              type="button"
-              onClick={handleSaveProfile}
-              disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3 font-semibold transition-all disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-
-              {saving
-                ? 'Saving...'
-                : 'Save Profile Changes'}
-            </button>
-
           </div>
 
-          {/* Email verification */}
+          {/* EMAIL PASSWORD VERIFICATION */}
+
           {showPasswordBox && (
             <div className="mt-8 rounded-2xl border border-white/10 bg-black/30 p-5">
 
-              <div className="mb-4 flex items-start gap-3">
+              <div className="flex items-start gap-3 mb-4">
 
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-purple-400" />
+                <ShieldCheck className="w-5 h-5 text-purple-400 mt-0.5 shrink-0" />
 
                 <div>
-
                   <h2 className="font-semibold text-white">
                     Verify your password
                   </h2>
 
                   <p className="mt-1 text-xs text-slate-500">
-                    Enter your current password to reveal
-                    your full email.
+                    Enter your current password to reveal your full email.
                   </p>
-
                 </div>
 
               </div>
@@ -838,7 +809,7 @@ export const ProfilePage: React.FC = () => {
                 }
                 placeholder="Current password"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500"
               />
 
               <button
@@ -866,15 +837,15 @@ export const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {/* Account Security */}
-          <div className="mt-8 border-t border-white/10 pt-8">
+          {/* ACCOUNT SECURITY */}
 
-            <div className="mb-4 flex items-center gap-3">
+          <div className="mt-8 pt-8 border-t border-white/10">
 
-              <KeyRound className="h-5 w-5 text-purple-400" />
+            <div className="flex items-center gap-3 mb-4">
+
+              <KeyRound className="w-5 h-5 text-purple-400" />
 
               <div>
-
                 <h2 className="font-semibold text-white">
                   Account Security
                 </h2>
@@ -882,12 +853,12 @@ export const ProfilePage: React.FC = () => {
                 <p className="text-xs text-slate-500">
                   Manage your password
                 </p>
-
               </div>
 
             </div>
 
             {!showChangePassword ? (
+
               <button
                 type="button"
                 onClick={() => {
@@ -896,14 +867,15 @@ export const ProfilePage: React.FC = () => {
                   setMessage('');
                   setCurrentPassword('');
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] py-3 font-semibold transition-colors"
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] py-3 font-semibold transition-colors"
               >
-                <Lock className="h-4 w-4" />
-
+                <Lock className="w-4 h-4" />
                 Change Password
               </button>
+
             ) : (
-              <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4">
 
                 <input
                   type="password"
@@ -913,7 +885,7 @@ export const ProfilePage: React.FC = () => {
                   }
                   placeholder="Current password"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500"
                 />
 
                 <input
@@ -924,7 +896,7 @@ export const ProfilePage: React.FC = () => {
                   }
                   placeholder="New password"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500"
                 />
 
                 <input
@@ -935,7 +907,7 @@ export const ProfilePage: React.FC = () => {
                   }
                   placeholder="Confirm new password"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none focus:border-purple-500"
                 />
 
                 <button
@@ -976,9 +948,7 @@ export const ProfilePage: React.FC = () => {
           </div>
 
         </div>
-
       </div>
-
     </div>
   );
 };
