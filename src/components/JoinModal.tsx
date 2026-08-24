@@ -146,9 +146,9 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose }) => {
                   <div className="space-y-1">
                     <span className="text-xs uppercase tracking-wider text-purple-300 font-semibold">Port (Default)</span>
                     <div className="text-lg sm:text-xl font-bold font-mono text-white">
-                      {SERVER_CONFIG.port}
+                      {SERVER_CONFIG.bedrockPort}
                     </div>
-                    <CopyIpButton ip={SERVER_CONFIG.port.toString()} label="Copy Port" variant="glass" className="w-full mt-2" />
+                    <CopyIpButton ip={SERVER_CONFIG.bedrockPort.toString()} label="Copy Port" variant="glass" className="w-full mt-2" />
                   </div>
                 </div>
 
@@ -166,7 +166,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
                       <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold shrink-0">3</span>
-                      <span>Enter <strong>{SERVER_CONFIG.bedrockIp}</strong> and Port <strong>{SERVER_CONFIG.port}</strong>, then save and connect!</span>
+                      <span>Enter <strong>{SERVER_CONFIG.bedrockIp}</strong> and Port <strong>{SERVER_CONFIG.bedrockPort}</strong>, then save and connect!</span>
                     </div>
                   </div>
                 </div>

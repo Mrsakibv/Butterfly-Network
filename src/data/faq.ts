@@ -5,13 +5,13 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'how-to-join',
     category: 'Connection',
     question: 'How do I join Butterfly Network?',
-    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.firemc.fun) and default port 25565.'
+    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.hypixel.net) and default port 19132.'
   },
   {
     id: 'bedrock-support',
     category: 'Connection',
     question: 'Does Butterfly Network support Bedrock?',
-    answer: 'Yes! Butterfly Network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.firemc.fun" on port 25565.'
+    answer: 'Yes! Butterfly Network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.hypixel.net" on port  19132.'
   },
   {
     id: 'versions-supported',
@@ -42,6 +42,12 @@ export const FAQ_DATA: FaqItem[] = [
     category: 'Support',
     question: 'How can I join the Discord community?',
     answer: 'Click any "Join Discord" button across our website, or visit directly via https://discord.com/invite/d57g4gjXuc. Once you join, you will gain access to server announcements, giveaways, tournament signups, and community voice channels.'
+  },
+  {
+    id: 'Buy-Rank',
+    category: 'Support',
+    question: 'How can I buy ranks and golds?',
+    answer: 'Yes you can buy Ranks and golds in our discord server because our online store status is developing so if you interest to buy rank you must check our discord server.'
   },
   {
     id: 'contact-staff',

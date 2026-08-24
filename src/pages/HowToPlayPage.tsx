@@ -183,8 +183,8 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
                       </div>
                       <div className="p-3 rounded-xl bg-black/50 border border-purple-500/20">
                         <span className="text-[11px] text-slate-400 uppercase font-semibold">Port (Default)</span>
-                        <div className="font-mono font-bold text-purple-300 text-sm">{SERVER_CONFIG.port}</div>
-                        <CopyIpButton ip={SERVER_CONFIG.port.toString()} label="Copy Port" variant="glass" className="w-full mt-2" />
+                        <div className="font-mono font-bold text-purple-300 text-sm">{SERVER_CONFIG.bedrockPort}</div>
+                        <CopyIpButton ip={SERVER_CONFIG.bedrockPort.toString()} label="Copy Port" variant="glass" className="w-full mt-2" />
                       </div>
                     </div>
                   </div>
