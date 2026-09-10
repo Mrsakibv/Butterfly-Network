@@ -5,7 +5,7 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'how-to-join',
     category: 'Connection',
     question: 'How do I join Butterfly Network?',
-    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.hypixel.net) and default port 19132.'
+    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.hypixel.net" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.hypixel.net) and default port 19132.'
   },
   {
     id: 'bedrock-support',

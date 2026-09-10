@@ -232,7 +232,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
               <span className="font-semibold text-white">"Cannot resolve hostname":</span>
               <p className="text-slate-400 leading-relaxed">
-                Check for trailing spaces when copying the IP address. Verify you typed <code className="text-purple-300">play.firemc.fun</code> without http:// or https://.
+                Check for trailing spaces when copying the IP address. Verify you typed <code className="text-purple-300">play.hypixel.net</code> without http:// or https://.
               </p>
             </div>
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
