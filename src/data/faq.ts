@@ -5,13 +5,13 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'how-to-join',
     category: 'Connection',
     question: 'How do I join Butterfly Network?',
-    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.hypixel.net" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.hypixel.net) and default port 19132.'
+    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.firemc.fun) and default port 19132.'
   },
   {
     id: 'bedrock-support',
     category: 'Connection',
     question: 'Does Butterfly Network support Bedrock?',
-    answer: 'Yes! Butterfly Network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.hypixel.net" on port  19132.'
+    answer: 'Yes! Butterfly Network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.firemc.fun" on port  19132.'
   },
   {
     id: 'versions-supported',

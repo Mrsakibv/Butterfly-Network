@@ -200,7 +200,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
                 {/* Big Copy IP Button */}
                 <CopyIpButton
                   ip={activeTab === 'java' ? SERVER_CONFIG.javaIp : SERVER_CONFIG.bedrockIp}
-                  label={activeTab === 'java' ? 'Copy Java IP (play.hypixel.net)' : 'Copy Bedrock IP'}
+                  label={activeTab === 'java' ? 'Copy Java IP (play.firemc.fun)' : 'Copy Bedrock IP'}
                   variant="primary"
                   className="w-full py-3.5 text-base"
                 />

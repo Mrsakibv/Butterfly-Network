@@ -288,7 +288,10 @@ export const AdminGameModes: React.FC = () => {
               <input value={form.icon_name} onChange={(e) => setForm({ ...form, icon_name: e.target.value })} className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 outline-none focus:border-purple-500" />
             </div>
             <div>
-              <FieldLabel label="Custom Icon" help="Upload a PNG, JPG, WEBP, or SVG image to use as the game mode icon." />
+              <div className="mb-1 flex items-center gap-2">
+                <FieldLabel label="Custom Icon" help="Upload a PNG, JPG, WEBP, or SVG image to use as the game mode icon." />
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">URL Recommended</span>
+              </div>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -302,9 +305,13 @@ export const AdminGameModes: React.FC = () => {
               <input
                 value={form.icon_url}
                 onChange={(e) => setForm({ ...form, icon_url: e.target.value })}
-                placeholder="Or paste a public image URL"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2 text-xs outline-none focus:border-purple-500"
+                placeholder="Paste a public image URL (recommended)"
+                className="mt-2 w-full rounded-xl border border-emerald-400/30 bg-black/40 px-4 py-2 text-xs outline-none focus:border-emerald-400"
               />
+              <p className="mt-1 text-xs text-emerald-300/80">If upload takes time, use an image URL. It is faster and lightweight.</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                Free hosting: <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">ImgBB</a>, <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">Postimages</a>, or <a href="https://myimgs.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">MyImgs</a>. Upload, copy the direct image URL, and paste it above.
+              </p>
               {(iconPreviewUrl || form.icon_url) && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-emerald-400">
                   <img src={iconPreviewUrl || form.icon_url} alt="Icon preview" className="h-8 w-8 rounded-lg object-contain" />

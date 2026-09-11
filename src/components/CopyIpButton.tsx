@@ -12,7 +12,7 @@ interface CopyIpButtonProps {
 }
 
 export const CopyIpButton: React.FC<CopyIpButtonProps> = ({
-  ip = 'play.hypixel.net',
+  ip = 'play.firemc.fun',
   label = 'Copy IP',
   variant = 'primary',
   className = '',

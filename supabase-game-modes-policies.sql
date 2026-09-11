@@ -251,7 +251,8 @@ values
   ('events', 'Events', 'Events', '/events', 'more', 40),
   ('gallery', 'Gallery', 'Gallery', '/gallery', 'more', 50),
   ('commands', 'Commands', 'Commands', '/commands', 'more', 60),
-  ('vote', 'Vote', 'Vote', '/vote', 'more', 70)
+  ('vote', 'Vote', 'Vote', '/vote', 'more', 70),
+  ('players', 'Players Online', 'Players Online', '/players', 'more', 80)
 on conflict (route) do nothing;
 
 -- Structured content items for the More pages.

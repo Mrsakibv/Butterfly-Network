@@ -12,6 +12,7 @@ export interface ServerStatusData {
   error?: string | null;
   lastUpdated: number;
   isDemo: boolean;
+  playerList: { name: string; uuid?: string }[];
 }
 
 export interface GameMode {

@@ -16,6 +16,7 @@ export interface UseServerStatusReturn {
   icon?: string;
   isDemo: boolean;
   lastUpdated: number;
+  playerList: { name: string; uuid?: string }[];
   refetch: () => Promise<void>;
 }
 
@@ -32,6 +33,7 @@ export function useServerStatus(customIp?: string): UseServerStatusReturn {
     error: null,
     lastUpdated: 0,
     isDemo: false,
+    playerList: [],
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -52,6 +54,7 @@ export function useServerStatus(customIp?: string): UseServerStatusReturn {
         error: 'Unable to reach Minecraft status service',
         lastUpdated: Date.now(),
         isDemo: true,
+        playerList: [],
       });
     } finally {
       setLoading(false);
@@ -78,6 +81,7 @@ export function useServerStatus(customIp?: string): UseServerStatusReturn {
     icon: data.icon,
     isDemo: data.isDemo,
     lastUpdated: data.lastUpdated,
+    playerList: data.playerList,
     refetch: loadStatus,
   };
 }

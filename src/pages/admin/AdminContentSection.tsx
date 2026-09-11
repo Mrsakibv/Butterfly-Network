@@ -235,7 +235,15 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
               <label className="mb-1 block text-xs text-slate-500">{field.label}</label>
               {field.key === 'image_url' && pageKey === 'contact' ? (
                 <div className="space-y-3">
-                  <input value={getField(field)} onChange={(event) => setField(field, event.target.value)} placeholder="https://..." className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-300">Image URL</span>
+                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Recommended</span>
+                  </div>
+                  <input value={getField(field)} onChange={(event) => setField(field, event.target.value)} placeholder="https://..." className="w-full rounded-xl border border-emerald-400/30 bg-black/40 px-4 py-3 text-white outline-none focus:border-emerald-400" />
+                  <p className="text-xs text-emerald-300/80">If upload takes time, use an image URL. It is faster and lightweight.</p>
+                  <p className="text-xs leading-relaxed text-slate-500">
+                    Free hosting: <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">ImgBB</a>, <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">Postimages</a>, or <a href="https://myimgs.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">MyImgs</a>. Upload image, copy the direct image URL, then paste it here.
+                  </p>
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 hover:bg-white/5">
                       <Upload className="h-4 w-4" /> Upload image

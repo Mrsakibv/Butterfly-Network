@@ -47,6 +47,11 @@ export async function fetchLiveServerStatus(ip: string = SERVER_CONFIG.javaIp): 
           error: null,
           lastUpdated: Date.now(),
           isDemo: false,
+          playerList: Array.isArray(data.players?.list)
+            ? data.players.list.map((player: { name?: string; uuid?: string } | string) => typeof player === 'string'
+              ? { name: player }
+              : { name: player.name || 'Unknown player', uuid: player.uuid })
+            : [],
         };
       } else {
         return {
@@ -60,6 +65,7 @@ export async function fetchLiveServerStatus(ip: string = SERVER_CONFIG.javaIp): 
           error: null,
           lastUpdated: Date.now(),
           isDemo: false,
+          playerList: [],
         };
       }
     }
@@ -81,6 +87,7 @@ export async function fetchLiveServerStatus(ip: string = SERVER_CONFIG.javaIp): 
       error: `Live query unavailable (${errorMessage}). Showing live simulated metrics.`,
       lastUpdated: Date.now(),
       isDemo: true,
+      playerList: [],
     };
   }
 }

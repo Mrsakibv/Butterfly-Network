@@ -30,6 +30,7 @@ import { EventsPage } from './pages/EventsPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { CommandsPage } from './pages/CommandsPage';
 import { VotePage } from './pages/VotePage';
+import { PlayersPage } from './pages/PlayersPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
@@ -588,6 +589,10 @@ function AppContent() {
 
     if (path === '/vote') {
       return <VotePage />;
+    }
+
+    if (path === '/players') {
+      return <PlayersPage />;
     }
 
     if (path === '/privacy') {
