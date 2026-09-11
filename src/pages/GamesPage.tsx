@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { GAME_MODES } from '../data/gameModes';
+import { fetchGameModes } from '../lib/gameModes';
+import { GameModeIcon } from '../lib/gameModeIcons';
 import { useRouter } from '../hooks/useRouter';
 import { SERVER_CONFIG } from '../config/server';
 import { CopyIpButton } from '../components/CopyIpButton';
 import { 
-  Gamepad2, 
-  Crown, 
-  BedDouble, 
-  Swords, 
-  Compass, 
-  HeartCrack, 
-  Skull, 
+  Gamepad2,
   Users, 
   ArrowRight, 
   Sparkles, 
@@ -25,7 +19,7 @@ interface GamesPageProps {
 
 export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
   const { navigate } = useRouter();
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<GameMode[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTag, setSelectedTag] = useState<string>('All');
 
@@ -35,21 +29,9 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
     async function fetchGamesFromSupabase() {
       try {
         setLoading(true);
-        // Supabase-এর 'games' অথবা 'game_modes' টেবিল থেকে ডাটা ফেচ করা
-        const { data, error } = await supabase.from('games').select('*');
-
-        if (error) {
-          console.warn('Supabase fetch error, using local fallback:', error.message);
-          setGames(GAME_MODES); // ব্যাকআপ লোকাল ডাটা
-        } else if (data && data.length > 0) {
-          setGames(data);
-        } else {
-          // Supabase-এ ডাটা ফাঁকা থাকলে ডিফল্ট গেম মোডগুলো দেখাবে
-          setGames(GAME_MODES);
-        }
+        setGames(await fetchGameModes());
       } catch (err) {
         console.error('Failed to load games:', err);
-        setGames(GAME_MODES);
       } finally {
         setLoading(false);
       }
@@ -58,25 +40,23 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
     fetchGamesFromSupabase();
   }, []);
 
-  const allTags = ['All', 'PvP', 'Economy', 'SMP', 'Hardcore', 'Co-op', 'Competitive'];
+  const allTags = [
+    'All',
+    ...Array.from(
+      new Set(
+        games
+          .flatMap((mode) => mode.tags)
+          .filter(Boolean)
+          .map((tag) => tag.trim())
+      )
+    ).sort((a, b) => a.localeCompare(b)),
+  ];
 
   const filteredModes = games.filter((mode) => {
     if (selectedTag === 'All') return true;
     const tags = mode.tags || [];
     return tags.some((t: string) => t.toLowerCase() === selectedTag.toLowerCase());
   });
-
-  const getIcon = (name: string) => {
-    switch (name) {
-      case 'Crown': return <Crown className="w-8 h-8 text-purple-400" />;
-      case 'BedDouble': return <BedDouble className="w-8 h-8 text-rose-400" />;
-      case 'Swords': return <Swords className="w-8 h-8 text-cyan-400" />;
-      case 'Compass': return <Compass className="w-8 h-8 text-emerald-400" />;
-      case 'HeartCrack': return <HeartCrack className="w-8 h-8 text-red-400" />;
-      case 'Skull': return <Skull className="w-8 h-8 text-violet-400" />;
-      default: return <Gamepad2 className="w-8 h-8 text-purple-400" />;
-    }
-  };
 
   if (loading) {
     return (
@@ -137,7 +117,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-                    {getIcon(mode.iconName || mode.icon_name)}
+                    <GameModeIcon name={mode.iconName} url={mode.iconUrl} className="h-8 w-8 text-purple-400" />
                   </div>
                   {mode.badge && (
                     <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
@@ -174,7 +154,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
               <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
                   <Users className="w-3.5 h-3.5 text-purple-400" />
-                  <span>{mode.playerCountEstimate || mode.player_count || 'Online'}</span>
+                  <span>{mode.playerCountEstimate}</span>
                 </div>
 
                 <div className="flex items-center gap-2">

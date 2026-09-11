@@ -23,6 +23,7 @@ export interface GameMode {
   badge: string;
   accentColor: string;
   iconName: string;
+  iconUrl?: string;
   playerCountEstimate: string;
   status: 'Online' | 'Beta' | 'Maintenance';
   features: string[];

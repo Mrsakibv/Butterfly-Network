@@ -1,14 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { GAME_MODES } from '../data/gameModes';
+import { fetchGameModes } from '../lib/gameModes';
+import { GameModeIcon } from '../lib/gameModeIcons';
 import { useRouter } from '../hooks/useRouter';
 import { GameMode } from '../types';
 import { 
-  Crown, 
-  BedDouble, 
-  Swords, 
-  Compass, 
-  HeartCrack, 
-  Skull, 
   Users, 
   ArrowUpRight, 
   Sparkles, 
@@ -24,19 +20,11 @@ interface GameModesSectionProps {
 
 export const GameModesSection: React.FC<GameModesSectionProps> = ({ onOpenPlayModal, showAll = true }) => {
   const { navigate } = useRouter();
+  const [modes, setModes] = useState(GAME_MODES);
 
-  const getIcon = (name: string) => {
-    const props = { className: 'w-6 h-6' };
-    switch (name) {
-      case 'Crown': return <Crown {...props} className="w-6 h-6 text-purple-400" />;
-      case 'BedDouble': return <BedDouble {...props} className="w-6 h-6 text-rose-400" />;
-      case 'Swords': return <Swords {...props} className="w-6 h-6 text-cyan-400" />;
-      case 'Compass': return <Compass {...props} className="w-6 h-6 text-emerald-400" />;
-      case 'HeartCrack': return <HeartCrack {...props} className="w-6 h-6 text-red-400" />;
-      case 'Skull': return <Skull {...props} className="w-6 h-6 text-violet-400" />;
-      default: return <Gamepad2 {...props} className="w-6 h-6 text-purple-400" />;
-    }
-  };
+  useEffect(() => {
+    fetchGameModes().then(setModes);
+  }, []);
 
   const getGradientBorder = (id: string) => {
     switch (id) {
@@ -84,7 +72,7 @@ export const GameModesSection: React.FC<GameModesSectionProps> = ({ onOpenPlayMo
 
         {/* Game Modes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {GAME_MODES.map((mode, index) => (
+          {modes.map((mode, index) => (
             <motion.div
               key={mode.id}
               initial={{ opacity: 0, y: 25 }}
@@ -100,7 +88,7 @@ export const GameModesSection: React.FC<GameModesSectionProps> = ({ onOpenPlayMo
               <div>
                 <div className="flex items-start justify-between gap-3 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                    {getIcon(mode.iconName)}
+                    <GameModeIcon name={mode.iconName} url={mode.iconUrl} className="h-6 w-6 text-purple-400" />
                   </div>
 
                   <div className="flex items-center gap-2">

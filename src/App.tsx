@@ -24,6 +24,7 @@ import { FaqPage } from './pages/FaqPage';
 import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { PricingPage } from './pages/PricingPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
@@ -529,6 +530,10 @@ function AppContent() {
 
     if (path === '/privacy') {
       return <PrivacyPage />;
+    }
+
+    if (path === '/pricing') {
+      return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
     }
 
     // 404 Fallback

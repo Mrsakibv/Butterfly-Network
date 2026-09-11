@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
-import { GAME_MODES } from '../data/gameModes';
+import React, { useEffect, useState } from 'react';
+import { fetchGameModeBySlug } from '../lib/gameModes';
+import { GameModeIcon } from '../lib/gameModeIcons';
 import { useRouter } from '../hooks/useRouter';
 import { SERVER_CONFIG } from '../config/server';
 import { CopyIpButton } from '../components/CopyIpButton';
+import { GameMode } from '../types';
 import { 
   Crown, 
   BedDouble, 
@@ -28,23 +30,31 @@ interface GameDetailPageProps {
 
 export const GameDetailPage: React.FC<GameDetailPageProps> = ({ slug, onOpenPlayModal }) => {
   const { navigate } = useRouter();
-  const gameMode = GAME_MODES.find((m) => m.slug.toLowerCase() === slug.toLowerCase()) || GAME_MODES[0];
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
 
   useEffect(() => {
-    document.title = `${gameMode.name} - Butterfly Network`;
+    let cancelled = false;
+
+    fetchGameModeBySlug(slug).then((mode) => {
+      if (!cancelled) setGameMode(mode);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    if (gameMode) document.title = `${gameMode.name} - Butterfly Network`;
   }, [gameMode]);
 
-  const getIcon = (name: string) => {
-    switch (name) {
-      case 'Crown': return <Crown className="w-10 h-10 text-purple-400" />;
-      case 'BedDouble': return <BedDouble className="w-10 h-10 text-rose-400" />;
-      case 'Swords': return <Swords className="w-10 h-10 text-cyan-400" />;
-      case 'Compass': return <Compass className="w-10 h-10 text-emerald-400" />;
-      case 'HeartCrack': return <HeartCrack className="w-10 h-10 text-red-400" />;
-      case 'Skull': return <Skull className="w-10 h-10 text-violet-400" />;
-      default: return <Sparkles className="w-10 h-10 text-purple-400" />;
-    }
-  };
+  if (!gameMode) {
+    return (
+      <div className="pt-28 pb-20 text-center text-white">
+        <p className="animate-pulse text-lg">Loading Game Mode...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-28 pb-20">
@@ -68,7 +78,7 @@ export const GameDetailPage: React.FC<GameDetailPageProps> = ({ slug, onOpenPlay
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/15 flex items-center justify-center shadow-inner">
-                  {getIcon(gameMode.iconName)}
+                  <GameModeIcon name={gameMode.iconName} url={gameMode.iconUrl} className="h-10 w-10 text-purple-400" />
                 </div>
                 <div>
                   <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
