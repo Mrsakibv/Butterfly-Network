@@ -1,9 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { SERVER_RULES } from '../data/rules';
 import { SERVER_CONFIG } from '../config/server';
 import { Shield, AlertTriangle, CheckCircle, Scale, MessageSquare, ExternalLink } from 'lucide-react';
+import { usePageItems } from '../hooks/usePageItems';
 
 export const RulesPage: React.FC = () => {
+  const pageItems = usePageItems('rules');
+
+  const ruleCategories = useMemo(() => {
+    if (pageItems.length === 0) return SERVER_RULES;
+
+    const categories = new Map<string, { title: string; description: string; rules: { ruleNumber: string; title: string; description: string; punishment: string }[] }>();
+    pageItems.forEach((item) => {
+      const categoryTitle = item.extra?.category || 'Community Rules';
+      const category = categories.get(categoryTitle) ?? { title: categoryTitle, description: item.subtitle, rules: [] };
+      category.rules.push({
+        ruleNumber: item.extra?.ruleNumber || String(category.rules.length + 1),
+        title: item.title,
+        description: item.description,
+        punishment: item.extra?.punishment || 'Follow staff instructions.',
+      });
+      categories.set(categoryTitle, category);
+    });
+    return Array.from(categories.values());
+  }, [pageItems]);
+
   useEffect(() => {
     document.title = 'Server Rules | Butterfly Network';
   }, []);
@@ -29,7 +50,7 @@ export const RulesPage: React.FC = () => {
 
         {/* Rule Categories */}
         <div className="space-y-8">
-          {SERVER_RULES.map((category, idx) => (
+          {ruleCategories.map((category, idx) => (
             <div key={idx} className="glass-panel rounded-3xl p-6 sm:p-8 border space-y-6">
               <div>
                 <h2 className="text-2xl font-bold text-white font-heading">{category.title}</h2>

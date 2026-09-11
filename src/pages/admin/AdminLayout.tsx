@@ -1,27 +1,51 @@
 import React from 'react';
 import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../hooks/useRouter';
-import { LayoutDashboard, Settings, Gamepad2, Users, LogOut, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
+import { AnimatePresence, motion } from 'motion/react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  active: 'dashboard' | 'settings' | 'gamemodes' | 'users';
+  active: AdminSectionKey;
   permission?: AdminPermission;
 }
 
+export type AdminSectionKey =
+  | 'dashboard'
+  | 'settings'
+  | 'gamemodes'
+  | 'pages'
+  | 'rules'
+  | 'terms'
+  | 'contact'
+  | 'events'
+  | 'gallery'
+  | 'commands'
+  | 'vote'
+  | 'users';
+
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, permission = active }) => {
   const { loading, isStaff, can, email, role } = useAuth();
-  const { navigate } = useRouter();
+  const { navigate, path } = useRouter();
+  const accessPermission: AdminPermission = permission === 'dashboard' || permission === 'settings' || permission === 'gamemodes' || permission === 'pages' || permission === 'users'
+    ? permission
+    : active === 'dashboard'
+      ? 'dashboard'
+      : active === 'gamemodes'
+        ? 'gamemodes'
+        : active === 'users'
+          ? 'users'
+          : 'settings';
 
   React.useEffect(() => {
-    if (!loading && (!isStaff || !can(permission))) {
+    if (!loading && (!isStaff || !can(accessPermission))) {
       navigate('/login');
     }
-  }, [loading, isStaff, can, permission, navigate]);
+  }, [loading, isStaff, can, accessPermission, navigate]);
 
-  if (loading || !isStaff || !can(permission)) {
+  if (loading || !isStaff || !can(accessPermission)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         Loading...
@@ -38,6 +62,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     ...(can('settings') ? [{ key: 'settings', label: 'Site Settings', icon: Settings, path: '/admin/settings' }] : []),
     ...(can('gamemodes') ? [{ key: 'gamemodes', label: 'Game Modes', icon: Gamepad2, path: '/admin/gamemodes' }] : []),
+    { key: 'pages', label: 'Pages', icon: FileText, path: '/admin/pages' },
+    { key: 'rules', label: 'Rules Content', icon: Scale, path: '/admin/rules' },
+    { key: 'terms', label: 'Terms Content', icon: FileSignature, path: '/admin/terms' },
+    { key: 'contact', label: 'Contact Content', icon: Mail, path: '/admin/contact' },
+    { key: 'events', label: 'Events Content', icon: CalendarDays, path: '/admin/events' },
+    { key: 'gallery', label: 'Gallery Content', icon: Image, path: '/admin/gallery' },
+    { key: 'commands', label: 'Commands Content', icon: Terminal, path: '/admin/commands' },
+    { key: 'vote', label: 'Vote Content', icon: Vote, path: '/admin/vote' },
     ...(can('users') ? [{ key: 'users', label: 'Manage Roles', icon: Users, path: '/admin/users' }] : []),
   ];
 
@@ -93,7 +125,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto p-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={path}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.24, ease: 'easeOut' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

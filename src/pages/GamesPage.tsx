@@ -12,6 +12,7 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { GameMode } from '../types';
 
 interface GamesPageProps {
   onOpenPlayModal: () => void;
@@ -131,7 +132,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
                 </h3>
 
                 <p className="text-sm text-slate-300 leading-relaxed mb-5 min-h-[60px]">
-                  {mode.shortDescription || mode.short_description || mode.longDescription}
+                  {mode.shortDescription || mode.longDescription}
                 </p>
 
                 {/* Features Preview */}

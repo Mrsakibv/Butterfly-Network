@@ -25,6 +25,11 @@ import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { PricingPage } from './pages/PricingPage';
+import { ContactPage } from './pages/ContactPage';
+import { EventsPage } from './pages/EventsPage';
+import { GalleryPage } from './pages/GalleryPage';
+import { CommandsPage } from './pages/CommandsPage';
+import { VotePage } from './pages/VotePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
@@ -33,7 +38,10 @@ import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminGameModes } from './pages/admin/AdminGameModes';
+import { AdminPages } from './pages/admin/AdminPages';
 import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminContentSection } from './pages/admin/AdminContentSection';
+import { DynamicPage } from './pages/DynamicPage';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -443,6 +451,8 @@ function AppContent() {
 
   // Route selector
   const renderCurrentPage = () => {
+    const dynamicRoute = path.startsWith('/') ? path : '/';
+
     if (path === '/' || path === '') {
       return (
         <HomePage
@@ -492,6 +502,38 @@ function AppContent() {
       return <AdminGameModes />;
     }
 
+    if (path === '/admin/pages') {
+      return <AdminPages />;
+    }
+
+    if (path === '/admin/rules') {
+      return <AdminContentSection pageKey="rules" title="Rules Content" description="Add, edit, reorder, hide, or remove server rules." />;
+    }
+
+    if (path === '/admin/terms') {
+      return <AdminContentSection pageKey="terms" title="Terms Content" description="Manage the sections displayed on the Terms page." />;
+    }
+
+    if (path === '/admin/contact') {
+      return <AdminContentSection pageKey="contact" title="Contact Content" description="Manage contact cards, descriptions, and links." />;
+    }
+
+    if (path === '/admin/events') {
+      return <AdminContentSection pageKey="events" title="Events Content" description="Manage events, schedules, descriptions, and images." />;
+    }
+
+    if (path === '/admin/gallery') {
+      return <AdminContentSection pageKey="gallery" title="Gallery Content" description="Add or remove gallery images and captions." />;
+    }
+
+    if (path === '/admin/commands') {
+      return <AdminContentSection pageKey="commands" title="Commands Content" description="Manage the in-game command list and descriptions." />;
+    }
+
+    if (path === '/admin/vote') {
+      return <AdminContentSection pageKey="vote" title="Vote Content" description="Manage vote rewards and vote links." />;
+    }
+
     if (path === '/admin/users') {
       return <AdminUsers />;
     }
@@ -528,6 +570,26 @@ function AppContent() {
       return <TermsPage />;
     }
 
+    if (path === '/contact') {
+      return <ContactPage />;
+    }
+
+    if (path === '/events') {
+      return <EventsPage />;
+    }
+
+    if (path === '/gallery') {
+      return <GalleryPage />;
+    }
+
+    if (path === '/commands') {
+      return <CommandsPage />;
+    }
+
+    if (path === '/vote') {
+      return <VotePage />;
+    }
+
     if (path === '/privacy') {
       return <PrivacyPage />;
     }
@@ -536,33 +598,56 @@ function AppContent() {
       return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
     }
 
-    // 404 Fallback
+    if (path === '/admin/pages') {
+      return <AdminPages />;
+    }
+
     return (
-      <div className="mx-auto max-w-xl space-y-6 px-4 pb-24 pt-36 text-center">
-
-        <h1 className="font-heading text-6xl font-extrabold text-purple-400">
-          404
-        </h1>
-
-        <h2 className="text-2xl font-bold text-white">
-          Page Not Found
-        </h2>
-
-        <p className="text-sm text-slate-400">
-          The quadrant of the server network you requested does not
-          exist or has been warped.
-        </p>
-
-        <button
-          onClick={() => navigate('/')}
-          className="rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500"
-        >
-          Return to Hub (Home)
-        </button>
-
-      </div>
+      <DynamicFallbackPage path={path} />
     );
   };
+
+  function DynamicFallbackPage({ path }: { path: string }) {
+    const [page, setPage] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const load = async () => {
+        const { data } = await supabase
+          .from('site_pages')
+          .select('*')
+          .eq('route', path)
+          .eq('is_visible', true)
+          .maybeSingle();
+
+        setPage(data || null);
+        setLoading(false);
+      };
+
+      load();
+    }, [path]);
+
+    if (loading) {
+      return (
+        <div className="pt-28 pb-20 text-center text-white">
+          <p className="animate-pulse text-lg">Loading page...</p>
+        </div>
+      );
+    }
+
+    if (!page) {
+      return (
+        <div className="mx-auto max-w-xl space-y-6 px-4 pb-24 pt-36 text-center">
+          <h1 className="font-heading text-6xl font-extrabold text-purple-400">404</h1>
+          <h2 className="text-2xl font-bold text-white">Page Not Found</h2>
+          <p className="text-sm text-slate-400">The quadrant of the server network you requested does not exist or has been warped.</p>
+          <button onClick={() => navigate('/')} className="rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500">Return to Hub (Home)</button>
+        </div>
+      );
+    }
+
+    return <DynamicPage page={page} />;
+  }
 
   if (isAdminRoute) {
     return (
