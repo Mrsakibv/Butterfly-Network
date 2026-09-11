@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { RouterProvider, useRouter } from './hooks/useRouter';
 import { ToastProvider } from './hooks/useToast';
+import { AuthProvider } from './hooks/useAuth';
 import { ToastContainer } from './components/ToastContainer';
 import { ParticleBackground } from './components/ParticleBackground';
 import { Navbar } from './components/Navbar';
@@ -19,7 +20,6 @@ import { GamesPage } from './pages/GamesPage';
 import { GameDetailPage } from './pages/GameDetailPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { HowToPlayPage } from './pages/HowToPlayPage';
-import { PricingPage } from './pages/PricingPage';
 import { FaqPage } from './pages/FaqPage';
 import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
@@ -27,6 +27,12 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
+
+// Admin Pages
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminSettings } from './pages/admin/AdminSettings';
+import { AdminGameModes } from './pages/admin/AdminGameModes';
+import { AdminUsers } from './pages/admin/AdminUsers';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -414,6 +420,8 @@ function AppContent() {
   const { path, gameSlug, navigate } = useRouter();
   const [playModalOpen, setPlayModalOpen] = useState(false);
 
+  const isAdminRoute = path.startsWith('/admin');
+
   // Password recovery event tracking
   useEffect(() => {
     const {
@@ -471,6 +479,22 @@ function AppContent() {
       return <ProfilePage />;
     }
 
+    if (path === '/admin') {
+      return <AdminDashboard />;
+    }
+
+    if (path === '/admin/settings') {
+      return <AdminSettings />;
+    }
+
+    if (path === '/admin/gamemodes') {
+      return <AdminGameModes />;
+    }
+
+    if (path === '/admin/users') {
+      return <AdminUsers />;
+    }
+
     if (path === '/leaderboard') {
       return (
         <LeaderboardPage
@@ -482,14 +506,6 @@ function AppContent() {
     if (path === '/how-to-play') {
       return (
         <HowToPlayPage
-          onOpenPlayModal={handleOpenPlayModal}
-        />
-      );
-    }
-
-    if (path === '/pricing') {
-      return (
-        <PricingPage
           onOpenPlayModal={handleOpenPlayModal}
         />
       );
@@ -542,6 +558,24 @@ function AppContent() {
       </div>
     );
   };
+
+  if (isAdminRoute) {
+    return (
+      <div className="relative min-h-screen bg-[#050505] text-[#e5e7eb]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={path}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderCurrentPage()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#050505] text-[#e5e7eb] selection:bg-purple-600/30 selection:text-purple-100">
@@ -599,20 +633,22 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <ToastProvider>
+    <AuthProvider>
+      <ToastProvider>
 
-      <RouterProvider>
+        <RouterProvider>
 
-        <AppContent />
+          <AppContent />
 
-        {isLoading && (
-          <LoadingScreen
-            onComplete={() => setIsLoading(false)}
-          />
-        )}
+          {isLoading && (
+            <LoadingScreen
+              onComplete={() => setIsLoading(false)}
+            />
+          )}
 
-      </RouterProvider>
+        </RouterProvider>
 
-    </ToastProvider>
+      </ToastProvider>
+    </AuthProvider>
   );
 }

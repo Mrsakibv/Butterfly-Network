@@ -177,7 +177,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose }) => {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10 text-xs text-slate-400">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>GeyserMC Cross-play Enabled</span>
+                <span>Only available on Java Edition</span>
               </div>
               <a
                 href={SERVER_CONFIG.discordUrl}

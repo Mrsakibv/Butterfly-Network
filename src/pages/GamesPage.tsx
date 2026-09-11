@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { GAME_MODES } from '../data/gameModes';
 import { useRouter } from '../hooks/useRouter';
 import { SERVER_CONFIG } from '../config/server';
@@ -14,10 +15,9 @@ import {
   Users, 
   ArrowRight, 
   Sparkles, 
-  Filter,
-  CheckCircle2
+  CheckCircle2 
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface GamesPageProps {
   onOpenPlayModal: () => void;
@@ -25,17 +25,45 @@ interface GamesPageProps {
 
 export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
   const { navigate } = useRouter();
+  const [games, setGames] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedTag, setSelectedTag] = useState<string>('All');
 
   useEffect(() => {
     document.title = 'Game Modes | Butterfly Network';
+
+    async function fetchGamesFromSupabase() {
+      try {
+        setLoading(true);
+        // Supabase-এর 'games' অথবা 'game_modes' টেবিল থেকে ডাটা ফেচ করা
+        const { data, error } = await supabase.from('games').select('*');
+
+        if (error) {
+          console.warn('Supabase fetch error, using local fallback:', error.message);
+          setGames(GAME_MODES); // ব্যাকআপ লোকাল ডাটা
+        } else if (data && data.length > 0) {
+          setGames(data);
+        } else {
+          // Supabase-এ ডাটা ফাঁকা থাকলে ডিফল্ট গেম মোডগুলো দেখাবে
+          setGames(GAME_MODES);
+        }
+      } catch (err) {
+        console.error('Failed to load games:', err);
+        setGames(GAME_MODES);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchGamesFromSupabase();
   }, []);
 
   const allTags = ['All', 'PvP', 'Economy', 'SMP', 'Hardcore', 'Co-op', 'Competitive'];
 
-  const filteredModes = GAME_MODES.filter((mode) => {
+  const filteredModes = games.filter((mode) => {
     if (selectedTag === 'All') return true;
-    return mode.tags.some((t) => t.toLowerCase() === selectedTag.toLowerCase());
+    const tags = mode.tags || [];
+    return tags.some((t: string) => t.toLowerCase() === selectedTag.toLowerCase());
   });
 
   const getIcon = (name: string) => {
@@ -50,11 +78,19 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="pt-28 pb-20 text-center text-white">
+        <p className="animate-pulse text-lg">Loading Game Modes...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-28 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Page Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-300">
             <Gamepad2 className="w-3.5 h-3.5 text-purple-400" />
             <span>Discover Every Game Mode</span>
@@ -65,7 +101,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg">
-            Explore our diverse suite of custom-engineered Minecraft experiences. Every mode is optimized for 20 TPS performance, balanced gameplay, and fair fun.
+            Explore our custom-engineered Minecraft experiences. Every mode is optimized for maximum performance, balanced gameplay, and fair fun.
           </p>
 
           {/* Filter Pills */}
@@ -90,22 +126,24 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredModes.map((mode, idx) => (
             <motion.div
-              key={mode.id}
+              key={mode.id || mode.slug || idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.05 }}
               onClick={() => navigate(`/games/${mode.slug}`)}
-              className="group glass-panel-interactive rounded-2xl border p-6 flex flex-col justify-between cursor-pointer"
+              className="group rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:scale-[1.02]"
             >
               <div>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-                    {getIcon(mode.iconName)}
+                    {getIcon(mode.iconName || mode.icon_name)}
                   </div>
-                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                    {mode.badge}
-                  </span>
+                  {mode.badge && (
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                      {mode.badge}
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="text-2xl font-bold text-white font-heading group-hover:text-purple-300 transition-colors mb-2">
@@ -113,28 +151,30 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
                 </h3>
 
                 <p className="text-sm text-slate-300 leading-relaxed mb-5 min-h-[60px]">
-                  {mode.shortDescription}
+                  {mode.shortDescription || mode.short_description || mode.longDescription}
                 </p>
 
                 {/* Features Preview */}
-                <div className="space-y-2 mb-6">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Highlights</span>
-                  <ul className="space-y-1.5 text-xs text-slate-300">
-                    {mode.features.slice(0, 3).map((feat, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span className="truncate">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {mode.features && mode.features.length > 0 && (
+                  <div className="space-y-2 mb-6">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Highlights</span>
+                    <ul className="space-y-1.5 text-xs text-slate-300">
+                      {mode.features.slice(0, 3).map((feat: string, i: number) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <span className="truncate">{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
               <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
                   <Users className="w-3.5 h-3.5 text-purple-400" />
-                  <span>{mode.playerCountEstimate}</span>
+                  <span>{mode.playerCountEstimate || mode.player_count || 'Online'}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -158,21 +198,21 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
         </div>
 
         {/* Global Connection Banner */}
-        <div className="mt-16 p-8 rounded-3xl glass-panel border border-purple-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-16 p-8 rounded-3xl bg-white/[0.02] border border-purple-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-1 text-center md:text-left">
             <h3 className="text-xl sm:text-2xl font-bold text-white font-heading">
               Ready to jump into any game mode?
             </h3>
             <p className="text-sm text-slate-300">
-              One server IP gives you instant access to all 6 modes via our interactive hub selector.
+              One server IP gives you instant access to all modes via our interactive hub selector.
             </p>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy Server IP" variant="primary" className="w-full md:w-auto" />
+            <CopyIpButton ip={SERVER_CONFIG?.javaIp} label="Copy Server IP" variant="primary" className="w-full md:w-auto" />
             <button
               onClick={onOpenPlayModal}
-              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10"
+              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
             >
               How to Connect
             </button>
