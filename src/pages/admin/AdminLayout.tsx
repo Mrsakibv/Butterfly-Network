@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../hooks/useRouter';
 import { LayoutDashboard, Settings, Gamepad2, Users, LogOut, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -8,19 +8,20 @@ import { Logo } from '../../components/Logo';
 interface AdminLayoutProps {
   children: React.ReactNode;
   active: 'dashboard' | 'settings' | 'gamemodes' | 'users';
+  permission?: AdminPermission;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active }) => {
-  const { loading, isStaff, canManageUsers, email, role } = useAuth();
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, permission = active }) => {
+  const { loading, isStaff, can, email, role } = useAuth();
   const { navigate } = useRouter();
 
   React.useEffect(() => {
-    if (!loading && !isStaff) {
+    if (!loading && (!isStaff || !can(permission))) {
       navigate('/login');
     }
-  }, [loading, isStaff, navigate]);
+  }, [loading, isStaff, can, permission, navigate]);
 
-  if (loading || !isStaff) {
+  if (loading || !isStaff || !can(permission)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         Loading...
@@ -35,9 +36,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active }) =>
 
   const navItems = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-    { key: 'settings', label: 'Site Settings', icon: Settings, path: '/admin/settings' },
-    { key: 'gamemodes', label: 'Game Modes', icon: Gamepad2, path: '/admin/gamemodes' },
-    ...(canManageUsers ? [{ key: 'users', label: 'Manage Roles', icon: Users, path: '/admin/users' }] : []),
+    ...(can('settings') ? [{ key: 'settings', label: 'Site Settings', icon: Settings, path: '/admin/settings' }] : []),
+    ...(can('gamemodes') ? [{ key: 'gamemodes', label: 'Game Modes', icon: Gamepad2, path: '/admin/gamemodes' }] : []),
+    ...(can('users') ? [{ key: 'users', label: 'Manage Roles', icon: Users, path: '/admin/users' }] : []),
   ];
 
   return (

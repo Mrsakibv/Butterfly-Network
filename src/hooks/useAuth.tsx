@@ -1,32 +1,37 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-type Role = 'owner' | 'admin' | 'gamemod' | 'user';
+export type AdminPermission = 'dashboard' | 'settings' | 'gamemodes' | 'users';
 
 interface AuthContextValue {
   userId: string | null;
   email: string | null;
-  role: Role | null;
+  role: string | null;
+  permissions: AdminPermission[];
   loading: boolean;
   isStaff: boolean;
   canManageSettings: boolean;
   canManageUsers: boolean;
+  can: (permission: AdminPermission) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   userId: null,
   email: null,
   role: null,
+  permissions: [],
   loading: true,
   isStaff: false,
   canManageSettings: false,
   canManageUsers: false,
+  can: () => false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(null);
         setEmail(null);
         setRole(null);
+        setPermissions([]);
         setLoading(false);
         return;
       }
@@ -54,8 +60,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', user.id)
         .single();
 
+      const { data: customRole } = await supabase
+        .from('custom_roles')
+        .select('permissions')
+        .eq('name', profile?.role ?? '')
+        .maybeSingle();
+
+      const customPermissions = Array.isArray(customRole?.permissions)
+        ? customRole.permissions.filter((permission): permission is AdminPermission =>
+            ['dashboard', 'settings', 'gamemodes', 'users'].includes(permission)
+          )
+        : [];
+
       if (mounted) {
-        setRole((profile?.role as Role) ?? 'user');
+        setRole(profile?.role ?? 'user');
+        setPermissions(customPermissions);
         setLoading(false);
       }
     };
@@ -72,12 +91,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const isStaff = role === 'owner' || role === 'admin' || role === 'gamemod';
-  const canManageSettings = role === 'owner' || role === 'admin';
-  const canManageUsers = role === 'owner';
+  const can = useCallback((permission: AdminPermission) => {
+    if (role === 'owner') return true;
+    if (role === 'admin') return permission !== 'users';
+    if (role === 'gamemod') return permission === 'dashboard' || permission === 'gamemodes';
+    return permissions.includes(permission);
+  }, [permissions, role]);
+  const isStaff = role === 'owner' || role === 'admin' || role === 'gamemod' || permissions.length > 0;
+  const canManageSettings = can('settings');
+  const canManageUsers = can('users');
 
   return (
-    <AuthContext.Provider value={{ userId, email, role, loading, isStaff, canManageSettings, canManageUsers }}>
+    <AuthContext.Provider value={{ userId, email, role, permissions, loading, isStaff, canManageSettings, canManageUsers, can }}>
       {children}
     </AuthContext.Provider>
   );

@@ -89,7 +89,7 @@ export const AdminSettings: React.FC = () => {
   ];
 
   return (
-    <AdminLayout active="settings">
+    <AdminLayout active="settings" permission="settings">
       <h2 className="mb-6 text-2xl font-bold">Site Settings</h2>
 
       {message && (

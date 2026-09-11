@@ -235,7 +235,7 @@ export const AdminGameModes: React.FC = () => {
   };
 
   return (
-    <AdminLayout active="gamemodes">
+    <AdminLayout active="gamemodes" permission="gamemodes">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-bold">Game Modes</h2>
         <button

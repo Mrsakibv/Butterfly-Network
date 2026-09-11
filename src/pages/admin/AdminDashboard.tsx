@@ -6,7 +6,7 @@ export const AdminDashboard: React.FC = () => {
   const { email, role } = useAuth();
 
   return (
-    <AdminLayout active="dashboard">
+    <AdminLayout active="dashboard" permission="dashboard">
       <h2 className="mb-2 text-2xl font-bold">Welcome back</h2>
       <p className="mb-8 text-slate-400">Logged in as {email} ({role})</p>
 
