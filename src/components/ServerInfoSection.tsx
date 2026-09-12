@@ -34,19 +34,19 @@ export const ServerInfoSection: React.FC = () => {
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Card 1: Network Identity */}
-          <div className="glass-panel rounded-2xl p-6 border space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                <Globe2 className="w-5 h-5" />
+          <div className="glass-panel rounded-2xl p-8 border space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                <Globe2 className="w-6 h-6" />
               </div>
               <div>
                 <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Network Name</span>
-                <h3 className="text-lg font-bold text-white font-heading">{SERVER_CONFIG.serverName}</h3>
+                <h3 className="text-xl font-bold text-white font-heading">{SERVER_CONFIG.serverName}</h3>
               </div>
             </div>
-            <div className="pt-2 border-t border-white/[0.06] space-y-2 text-xs text-slate-300">
+            <div className="pt-3 border-t border-white/[0.06] space-y-3 text-sm text-slate-300">
               <div className="flex justify-between">
                 <span className="text-slate-400">Supported Versions:</span>
                 <span className="font-mono text-white">{version || SERVER_CONFIG.version}</span>
@@ -63,17 +63,17 @@ export const ServerInfoSection: React.FC = () => {
           </div>
 
           {/* Card 2: Java & Bedrock IPs */}
-          <div className="glass-panel rounded-2xl p-6 border space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
-                <Terminal className="w-5 h-5" />
+          <div className="glass-panel rounded-2xl p-8 border space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
+                <Terminal className="w-6 h-6" />
               </div>
               <div>
                 <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Connection Endpoints</span>
-                <h3 className="text-lg font-bold text-white font-heading font-mono">{SERVER_CONFIG.javaIp}</h3>
+                <h3 className="text-xl font-bold text-white font-heading font-mono">{SERVER_CONFIG.javaIp}</h3>
               </div>
             </div>
-            <div className="pt-2 border-t border-white/[0.06] space-y-2 text-xs text-slate-300">
+            <div className="pt-3 border-t border-white/[0.06] space-y-3 text-sm text-slate-300">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Java Address:</span>
                 <span className="font-mono font-bold text-white">{SERVER_CONFIG.javaIp}</span>
@@ -93,20 +93,20 @@ export const ServerInfoSection: React.FC = () => {
           </div>
 
           {/* Card 3: Live Health & Ping */}
-          <div className="glass-panel rounded-2xl p-6 border space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                <Activity className="w-5 h-5" />
+          <div className="glass-panel rounded-2xl p-8 border space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                <Activity className="w-6 h-6" />
               </div>
               <div>
                 <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Live Health & Node</span>
-                <h3 className="text-lg font-bold text-emerald-400 font-heading flex items-center gap-2">
+                <h3 className="text-xl font-bold text-emerald-400 font-heading flex items-center gap-2">
                   <span>{online ? '100% Operational' : 'Maintenance'}</span>
-                  {isDemo && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">Demo</span>}
+                  {isDemo && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-1 rounded">Demo</span>}
                 </h3>
               </div>
             </div>
-            <div className="pt-2 border-t border-white/[0.06] space-y-2 text-xs text-slate-300">
+            <div className="pt-3 border-t border-white/[0.06] space-y-3 text-sm text-slate-300">
               <div className="flex justify-between">
                 <span className="text-slate-400">Current Load:</span>
                 <span className="font-mono text-white">{playersOnline.toLocaleString()} / {playersMax.toLocaleString()} Active</span>
@@ -124,19 +124,19 @@ export const ServerInfoSection: React.FC = () => {
         </div>
 
         {/* Game Modes Tag Matrix */}
-        <div className="mt-8 p-6 rounded-2xl glass-panel border">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Layers className="w-5 h-5 text-purple-400" />
-              <span className="font-heading font-bold text-white text-base">Active Game Modes:</span>
+        <div className="mt-10 p-8 rounded-2xl glass-panel border">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <Layers className="w-6 h-6 text-purple-400" />
+              <span className="font-heading font-bold text-white text-lg">Active Game Modes:</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {GAME_MODES.map((mode) => (
                 <span
                   key={mode.id}
-                  className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs font-semibold text-slate-200 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-sm font-semibold text-slate-200 flex items-center gap-2"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  <span className="w-2 h-2 rounded-full bg-purple-400" />
                   {mode.name}
                 </span>
               ))}
