@@ -20,6 +20,26 @@ export interface ServerConfig {
   copyrightYear: number;
 }
 
+export interface HeroSettings {
+  kicker: string;
+  kickerVersion: string;
+  titlePrefix: string;
+  titleMain: string;
+  subtitle: string;
+  description: string;
+  backgroundImage: string;
+}
+
+export const DEFAULT_HERO_SETTINGS: HeroSettings = {
+  kicker: 'Next-Gen Minecraft Multiplayer',
+  kickerVersion: 'v1.8.x - 1.21.x',
+  titlePrefix: 'Welcome to',
+  titleMain: 'Butterfly Network',
+  subtitle: 'Your next Minecraft adventure starts here :)',
+  description: 'Join Butterfly Network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
+  backgroundImage: '',
+};
+
 export const SERVER_CONFIG: ServerConfig = {
   serverName: "Butterfly Network",
   tagline: "Your next Minecraft adventure starts here :)",
@@ -38,3 +58,10 @@ export const SERVER_CONFIG: ServerConfig = {
   serverStatusApi: "https://api.mcstatus.io/v2/status/java/play.firemc.fun",
   copyrightYear: 2026,
 };
+
+export const getMergedHeroSettings = <T extends Partial<HeroSettings>>(overrides?: T | null): HeroSettings => ({
+  ...DEFAULT_HERO_SETTINGS,
+  ...Object.fromEntries(
+    Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null)
+  ),
+} as HeroSettings);

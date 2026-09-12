@@ -20,7 +20,41 @@ interface SiteSettings {
   vote_url: string;
   server_status_api: string;
   copyright_year: number;
+  hero_background_image_url: string;
+  hero_kicker: string;
+  hero_kicker_version: string;
+  hero_title_prefix: string;
+  hero_title_main: string;
+  hero_subtitle: string;
+  hero_description: string;
 }
+
+const defaultSettings: SiteSettings = {
+  site_name: 'Butterfly Network',
+  tagline: 'Your next Minecraft adventure starts here :)',
+  logo_url: '',
+  favicon_url: '',
+  java_ip: 'play.firemc.fun',
+  bedrock_ip: 'play.firemc.fun',
+  port: 25565,
+  bedrock_port: 19132,
+  version: '1.8.x - 1.21.x',
+  discord_url: 'https://discord.com/invite/d57g4gjXuc',
+  facebook_url: 'https://www.facebook.com/mrsakib232/',
+  tiktok_url: 'https://www.tiktok.com/@mrsakib.232?is_from_webapp=1&sender_device=pc',
+  twitter_url: 'https://x.com/Mrsakib_',
+  store_url: '#',
+  vote_url: '#',
+  server_status_api: 'https://api.mcstatus.io/v2/status/java/play.firemc.fun',
+  copyright_year: 2026,
+  hero_background_image_url: '',
+  hero_kicker: 'Next-Gen Minecraft Multiplayer',
+  hero_kicker_version: 'v1.8.x - 1.21.x',
+  hero_title_prefix: 'Welcome to',
+  hero_title_main: 'Butterfly Network',
+  hero_subtitle: 'Your next Minecraft adventure starts here :)',
+  hero_description: 'Join Butterfly Network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
+};
 
 export const AdminSettings: React.FC = () => {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -34,9 +68,19 @@ export const AdminSettings: React.FC = () => {
         .from('site_settings')
         .select('*')
         .eq('id', true)
-        .single();
+        .maybeSingle();
 
-      if (!error && data) setSettings(data as SiteSettings);
+      if (error && error.code !== 'PGRST116') {
+        setSettings(defaultSettings);
+      } else if (data) {
+        setSettings({
+          ...defaultSettings,
+          ...data,
+        } as SiteSettings);
+      } else {
+        setSettings(defaultSettings);
+      }
+
       setLoading(false);
     };
     load();
@@ -51,9 +95,20 @@ export const AdminSettings: React.FC = () => {
     setSaving(true);
     setMessage('');
 
+    const normalized = {
+      ...settings,
+      hero_kicker: settings.hero_kicker?.trim() || defaultSettings.hero_kicker,
+      hero_kicker_version: settings.hero_kicker_version?.trim() || defaultSettings.hero_kicker_version,
+      hero_title_prefix: settings.hero_title_prefix?.trim() || defaultSettings.hero_title_prefix,
+      hero_title_main: settings.hero_title_main?.trim() || defaultSettings.hero_title_main,
+      hero_subtitle: settings.hero_subtitle?.trim() || defaultSettings.hero_subtitle,
+      hero_description: settings.hero_description?.trim() || defaultSettings.hero_description,
+      hero_background_image_url: settings.hero_background_image_url?.trim() || defaultSettings.hero_background_image_url,
+    };
+
     const { error } = await supabase
       .from('site_settings')
-      .update(settings)
+      .upsert({ id: true, ...normalized })
       .eq('id', true);
 
     setSaving(false);
@@ -86,6 +141,13 @@ export const AdminSettings: React.FC = () => {
     { key: 'vote_url', label: 'Vote URL' },
     { key: 'server_status_api', label: 'Server Status API' },
     { key: 'copyright_year', label: 'Copyright Year', type: 'number' },
+    { key: 'hero_background_image_url', label: 'Homepage Background Image URL' },
+    { key: 'hero_kicker', label: 'Hero Badge Text' },
+    { key: 'hero_kicker_version', label: 'Hero Badge Version' },
+    { key: 'hero_title_prefix', label: 'Hero Title Prefix' },
+    { key: 'hero_title_main', label: 'Hero Title Main' },
+    { key: 'hero_subtitle', label: 'Hero Subtitle' },
+    { key: 'hero_description', label: 'Hero Description' },
   ];
 
   return (
