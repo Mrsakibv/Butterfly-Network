@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { logAdminActivity } from '../../lib/adminActivity';
 
 interface SiteSettings {
   site_name: string;
@@ -112,6 +113,14 @@ export const AdminSettings: React.FC = () => {
       .eq('id', true);
 
     setSaving(false);
+    if (!error) {
+      await logAdminActivity({
+        action: 'updated',
+        section: 'Site Settings',
+        itemName: normalized.site_name,
+        details: normalized,
+      });
+    }
     setMessage(error ? `Error: ${error.message}` : 'Settings saved. Refresh the site to see changes.');
   };
 
@@ -163,7 +172,14 @@ export const AdminSettings: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {fields.map((field) => (
           <div key={field.key}>
-            <label className="mb-1 block text-xs text-slate-500">{field.label}</label>
+            <div className="mb-1 flex items-center gap-2">
+              <label className="block text-xs text-slate-500">{field.label}</label>
+              {field.key === 'hero_background_image_url' && (
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                  URL Recommended
+                </span>
+              )}
+            </div>
             <input
               type={field.type ?? 'text'}
               value={settings[field.key] as any}
@@ -172,6 +188,16 @@ export const AdminSettings: React.FC = () => {
               }
               className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
             />
+            {field.key === 'hero_background_image_url' && (
+              <>
+                <p className="mt-1 text-xs text-emerald-300/80">
+                  Use a direct public image URL for the clearest homepage background. PNG, JPG, or WEBP works best.
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Upload the image to <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">ImgBB</a>, <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">Postimages</a>, or <a href="https://myimgs.org" target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200">MyImgs</a>, copy the direct image URL, then paste it above.
+                </p>
+              </>
+            )}
           </div>
         ))}
       </div>

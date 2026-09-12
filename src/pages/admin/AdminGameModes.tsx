@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { logAdminActivity } from '../../lib/adminActivity';
 import { Info, Plus, Trash2, Save, X } from 'lucide-react';
 
 interface GameModeRow {
@@ -213,6 +214,7 @@ export const AdminGameModes: React.FC = () => {
         setMessage(`Error: ${error.message}`);
         return;
       }
+      await logAdminActivity({ action: 'created', section: 'Game Modes', itemName: form.name, details: payload });
       setMessage('Game mode added.');
     } else if (editingId) {
       const { error } = await supabase.from('game_modes').update(payload).eq('id', editingId);
@@ -220,6 +222,7 @@ export const AdminGameModes: React.FC = () => {
         setMessage(`Error: ${error.message}`);
         return;
       }
+      await logAdminActivity({ action: 'updated', section: 'Game Modes', itemName: form.name, details: payload });
       setMessage('Game mode updated.');
     }
 
@@ -229,8 +232,13 @@ export const AdminGameModes: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this game mode?')) return;
+    const { data: mode } = await supabase.from('game_modes').select('name, slug').eq('id', id).maybeSingle();
     const { error } = await supabase.from('game_modes').delete().eq('id', id);
-    if (error) setMessage(`Error: ${error.message}`);
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+    } else {
+      await logAdminActivity({ action: 'deleted', section: 'Game Modes', itemName: mode?.name || id, details: mode || { id } });
+    }
     load();
   };
 

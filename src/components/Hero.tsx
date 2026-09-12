@@ -49,9 +49,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
       className="relative flex min-h-[80vh] items-center justify-center overflow-hidden pt-28 pb-10 radial-gradient-hero"
       style={heroBackground}
     >
-      <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.2),rgba(2,6,23,0.72))]" />
-      <div className="absolute left-1/2 top-16 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-violet-600/15 blur-[130px]" />
+      <div className="hero-copy-backdrop" aria-hidden="true" />
 
       <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="hero-shell">
@@ -124,25 +122,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.55, delay: 0.12 }}
-            className="hero-scene"
-            aria-hidden="true"
-          >
-            <div className="hero-scene__mist hero-scene__mist-one" />
-            <div className="hero-scene__mist hero-scene__mist-two" />
-            <div className="hero-scene__island" />
-            <div className="hero-scene__bridge" />
-            <div className="hero-scene__castle">
-              <div className="castle-tower tower-left" />
-              <div className="castle-tower tower-mid" />
-              <div className="castle-tower tower-right" />
-              <div className="castle-wall" />
-              <div className="castle-portal" />
-            </div>
-          </motion.div>
         </div>
 
         <div className="mt-6">

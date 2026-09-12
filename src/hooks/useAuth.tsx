@@ -1,7 +1,19 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export type AdminPermission = 'dashboard' | 'settings' | 'gamemodes' | 'pages' | 'users';
+export type AdminPermission =
+  | 'dashboard'
+  | 'settings'
+  | 'gamemodes'
+  | 'pages'
+  | 'rules'
+  | 'terms'
+  | 'contact'
+  | 'events'
+  | 'gallery'
+  | 'commands'
+  | 'vote'
+  | 'users';
 
 interface AuthContextValue {
   userId: string | null;
@@ -68,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const customPermissions = Array.isArray(customRole?.permissions)
         ? customRole.permissions.filter((permission): permission is AdminPermission =>
-            ['dashboard', 'settings', 'gamemodes', 'pages', 'users'].includes(permission)
+            ['dashboard', 'settings', 'gamemodes', 'pages', 'rules', 'terms', 'contact', 'events', 'gallery', 'commands', 'vote', 'users'].includes(permission)
           )
         : [];
 
@@ -95,7 +107,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (role === 'owner') return true;
     if (role === 'admin') return permission !== 'users';
     if (role === 'gamemod') return permission === 'dashboard' || permission === 'gamemodes';
-    return permissions.includes(permission) || (permission === 'pages' && permissions.includes('settings'));
+    return permissions.includes(permission) || (
+      ['pages', 'rules', 'terms', 'contact', 'events', 'gallery', 'commands', 'vote'].includes(permission)
+      && permissions.includes('settings')
+    );
   }, [permissions, role]);
   const isStaff = role === 'owner' || role === 'admin' || role === 'gamemod' || permissions.length > 0;
   const canManageSettings = can('settings');

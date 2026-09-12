@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { logAdminActivity } from '../../lib/adminActivity';
 import { Plus, Save, Trash2, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
 
 interface SitePage {
@@ -122,6 +123,12 @@ export const AdminPages: React.FC = () => {
       return;
     }
 
+    await logAdminActivity({
+      action: editingId ? 'updated' : 'created',
+      section: 'Pages',
+      itemName: payload.title,
+      details: payload,
+    });
     setMessage(editingId ? 'Page updated successfully.' : 'Page added successfully.');
     resetForm();
     loadPages();
@@ -133,6 +140,7 @@ export const AdminPages: React.FC = () => {
     const confirmed = window.confirm('Delete this page from the site menu?');
     if (!confirmed) return;
 
+    const { data: page } = await supabase.from('site_pages').select('title, route, menu_label, is_visible').eq('id', id).maybeSingle();
     const { error } = await supabase.from('site_pages').delete().eq('id', id);
 
     if (error) {
@@ -140,6 +148,12 @@ export const AdminPages: React.FC = () => {
       return;
     }
 
+    await logAdminActivity({
+      action: 'deleted',
+      section: 'Pages',
+      itemName: page?.title || id,
+      details: page || { id },
+    });
     setMessage('Page deleted.');
     resetForm();
     loadPages();
@@ -166,11 +180,17 @@ export const AdminPages: React.FC = () => {
           : currentPage
       )
     );
+    await logAdminActivity({
+      action: 'visibility_changed',
+      section: 'Pages',
+      itemName: page.title,
+      details: { visible: nextVisibility, route: page.route },
+    });
     setMessage(nextVisibility ? 'Page is now visible in the menu.' : 'Page is now hidden from the menu.');
   };
 
   return (
-    <AdminLayout active="pages" permission="settings">
+    <AdminLayout active="pages">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">Manage Pages</h2>

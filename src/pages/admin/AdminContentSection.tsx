@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Save, Trash2, Eye, EyeOff, Upload, X } from 'lucide-react';
 import { AdminLayout, AdminSectionKey } from './AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { logAdminActivity } from '../../lib/adminActivity';
 
 interface PageItem {
   id?: string;
@@ -165,6 +166,12 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
       return;
     }
 
+    await logAdminActivity({
+      action: editingId ? 'updated' : 'created',
+      section: `${pageKey[0].toUpperCase()}${pageKey.slice(1)} Content`,
+      itemName: payload.title || pageKey,
+      details: payload,
+    });
     setMessage(editingId ? 'Item updated successfully.' : 'Item added successfully.');
     resetForm();
     loadItems();
@@ -172,11 +179,18 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
 
   const handleDelete = async (id?: string) => {
     if (!id || !window.confirm('Remove this item?')) return;
+    const { data: item } = await supabase.from('site_page_items').select('title, page_key, description, is_visible').eq('id', id).maybeSingle();
     const { error } = await supabase.from('site_page_items').delete().eq('id', id);
     if (error) {
       setMessage(`Error: ${error.message}`);
       return;
     }
+    await logAdminActivity({
+      action: 'deleted',
+      section: `${pageKey[0].toUpperCase()}${pageKey.slice(1)} Content`,
+      itemName: item?.title || id,
+      details: item || { id },
+    });
     setMessage('Item removed.');
     loadItems();
   };
@@ -193,6 +207,12 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
       return;
     }
     setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, is_visible: nextValue } : entry));
+    await logAdminActivity({
+      action: 'visibility_changed',
+      section: `${pageKey[0].toUpperCase()}${pageKey.slice(1)} Content`,
+      itemName: item.title || item.id,
+      details: { visible: nextValue },
+    });
   };
 
   const handleImageUpload = async (file: File) => {
@@ -214,7 +234,7 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
   };
 
   return (
-    <AdminLayout active={pageKey} permission="settings">
+    <AdminLayout active={pageKey}>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">{title}</h2>

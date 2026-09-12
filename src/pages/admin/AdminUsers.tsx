@@ -3,6 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { supabase } from '../../lib/supabase';
 import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { Trash2 } from 'lucide-react';
+import { logAdminActivity } from '../../lib/adminActivity';
 
 interface UserRow {
   id: string;
@@ -21,6 +22,14 @@ const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'settings', label: 'Site Settings' },
   { key: 'gamemodes', label: 'Game Modes' },
+  { key: 'pages', label: 'Pages' },
+  { key: 'rules', label: 'Rules Content' },
+  { key: 'terms', label: 'Terms Content' },
+  { key: 'contact', label: 'Contact Content' },
+  { key: 'events', label: 'Events Content' },
+  { key: 'gallery', label: 'Gallery Content' },
+  { key: 'commands', label: 'Commands Content' },
+  { key: 'vote', label: 'Vote Content' },
   { key: 'users', label: 'Manage Users' },
 ];
 
@@ -54,6 +63,7 @@ export const AdminUsers: React.FC = () => {
     const { error } = await supabase.from('custom_roles').insert({ name, permissions: rolePermissions });
     if (error) setMessage(`Error: ${error.message}`);
     else {
+      await logAdminActivity({ action: 'created', section: 'Manage Roles', itemName: name, details: { permissions: rolePermissions } });
       setMessage('Custom role created.');
       setRoleName('');
       setRolePermissions([]);
@@ -62,7 +72,11 @@ export const AdminUsers: React.FC = () => {
   };
 
   const deleteRole = async (id: string) => {
+    const { data: customRole } = await supabase.from('custom_roles').select('name, permissions').eq('id', id).maybeSingle();
     const { error } = await supabase.from('custom_roles').delete().eq('id', id);
+    if (!error) {
+      await logAdminActivity({ action: 'deleted', section: 'Manage Roles', itemName: customRole?.name || id, details: customRole || { id } });
+    }
     setMessage(error ? `Error: ${error.message}` : 'Custom role deleted.');
     load();
   };
@@ -72,10 +86,17 @@ export const AdminUsers: React.FC = () => {
   }, []);
 
   const handleRoleChange = async (id: string, role: string) => {
+    const { data: user } = await supabase.from('profiles').select('username, full_name, role').eq('id', id).maybeSingle();
     const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
     if (error) {
       setMessage(`Error: ${error.message}`);
     } else {
+      await logAdminActivity({
+        action: 'role_changed',
+        section: 'Manage Roles',
+        itemName: user?.full_name || user?.username || id,
+        details: { previousRole: user?.role, newRole: role },
+      });
       setMessage('Role updated.');
       load();
     }
