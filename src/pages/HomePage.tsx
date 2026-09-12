@@ -4,9 +4,7 @@ import { GameModesSection } from '../components/GameModesSection';
 import { FeaturesSection } from '../components/FeaturesSection';
 import { HowToJoinSection } from '../components/HowToJoinSection';
 import { ServerInfoSection } from '../components/ServerInfoSection';
-import { LeaderboardSection } from '../components/LeaderboardSection';
 import { CommunityCTA } from '../components/CommunityCTA';
-import { FaqSection } from '../components/FaqSection';
 import { FinalCTA } from '../components/FinalCTA';
 import { SERVER_CONFIG } from '../config/server';
 
@@ -36,16 +34,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 5. Server Information Table & Specs */}
       <ServerInfoSection />
 
-      {/* 6. Player Leaderboard */}
-      <LeaderboardSection />
-
-      {/* 7. Community CTA */}
+      {/* 6. Community CTA */}
       <CommunityCTA onOpenPlayModal={onOpenPlayModal} />
 
-      {/* 8. FAQ Accordion */}
-      <FaqSection />
-
-      {/* 9. Final CTA */}
+      {/* 7. Final CTA */}
       <FinalCTA onOpenPlayModal={onOpenPlayModal} />
     </div>
   );

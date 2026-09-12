@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase';
 import {
   Menu,
   X,
-  Disc as DiscordIcon,
   Play,
   ChevronRight,
   ChevronDown,
@@ -214,8 +213,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
 
+        const faqItem = { label: 'FAQ', href: '/faq' };
+        const hasFaq = [...moreItems, ...mainItems].some((item) => item.href === '/faq');
+
         setMainNavLinks(mainItems);
-        setMoreNavLinks(moreItems);
+        setMoreNavLinks(hasFaq ? moreItems : [...moreItems, faqItem]);
       } else {
         setMainNavLinks([
           { label: 'Home', href: '/' },
@@ -224,6 +226,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           { label: 'Store', href: '/pricing' },
         ]);
         setMoreNavLinks([
+          { label: 'FAQ', href: '/faq' },
           { label: 'Terms', href: '/terms' },
           { label: 'Rules', href: '/rules' },
           { label: 'Contact', href: '/contact' },
@@ -520,7 +523,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all shadow-sm active:scale-95"
               aria-label="Join Butterfly Network Discord"
             >
-              <DiscordIcon className="w-4 h-4 text-purple-400" />
+              <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
               <span>Discord</span>
             </a>
 
@@ -671,7 +674,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 rel="noreferrer"
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200"
               >
-                <DiscordIcon className="w-4 h-4 text-purple-400" />
+                <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
 
                 <span>Join Discord</span>
 

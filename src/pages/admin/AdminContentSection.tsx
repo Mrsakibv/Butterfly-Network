@@ -47,6 +47,11 @@ const fieldMap: Record<string, FieldConfig[]> = {
     { key: 'subtitle', label: 'Button / Contact Text' },
     { key: 'link_url', label: 'Custom Link URL or Email' },
   ],
+  faq: [
+    { key: 'category', label: 'Category', extra: true, options: ['General', 'Connection', 'Game Modes', 'Support'] },
+    { key: 'title', label: 'Question' },
+    { key: 'description', label: 'Answer', type: 'textarea' },
+  ],
   events: [
     { key: 'title', label: 'Event Title' },
     { key: 'subtitle', label: 'Date or Schedule' },
@@ -77,7 +82,7 @@ const emptyItem = (pageKey: string): PageItem => ({
   description: '',
   image_url: '',
   link_url: '',
-  extra: pageKey === 'contact' ? { icon: 'discord' } : {},
+  extra: pageKey === 'contact' ? { icon: 'discord' } : pageKey === 'faq' ? { category: 'General' } : {},
   sort_order: 999,
   is_visible: true,
 });

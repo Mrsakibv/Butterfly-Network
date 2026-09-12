@@ -1,7 +1,7 @@
 import React from 'react';
 import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../hooks/useRouter';
-import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote } from 'lucide-react';
+import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote, CircleHelp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
 import { AnimatePresence, motion } from 'motion/react';
@@ -20,6 +20,7 @@ export type AdminSectionKey =
   | 'rules'
   | 'terms'
   | 'contact'
+  | 'faq'
   | 'events'
   | 'gallery'
   | 'commands'
@@ -66,6 +67,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
     ...(can('rules') ? [{ key: 'rules', label: 'Rules Content', icon: Scale, path: '/admin/rules' }] : []),
     ...(can('terms') ? [{ key: 'terms', label: 'Terms Content', icon: FileSignature, path: '/admin/terms' }] : []),
     ...(can('contact') ? [{ key: 'contact', label: 'Contact Content', icon: Mail, path: '/admin/contact' }] : []),
+    ...(can('faq') ? [{ key: 'faq', label: 'FAQ Content', icon: CircleHelp, path: '/admin/faq' }] : []),
     ...(can('events') ? [{ key: 'events', label: 'Events Content', icon: CalendarDays, path: '/admin/events' }] : []),
     ...(can('gallery') ? [{ key: 'gallery', label: 'Gallery Content', icon: Image, path: '/admin/gallery' }] : []),
     ...(can('commands') ? [{ key: 'commands', label: 'Commands Content', icon: Terminal, path: '/admin/commands' }] : []),

@@ -113,17 +113,6 @@ export const GameModesSection: React.FC<GameModesSectionProps> = ({ onOpenPlayMo
                   </p>
                 </div>
 
-                {/* Key feature pills */}
-                <div className="flex flex-wrap gap-1.5 mb-6">
-                  {mode.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] text-slate-400 bg-white/[0.03] border border-white/5 px-2 py-0.5 rounded-md font-mono"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
               </div>
 
               {/* Card Footer: Player count & Play button */}

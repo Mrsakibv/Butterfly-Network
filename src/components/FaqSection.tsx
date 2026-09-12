@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FAQ_DATA } from '../data/faq';
 import { ChevronDown, HelpCircle, Search, Sparkles, MessageCircleQuestion } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SERVER_CONFIG } from '../config/server';
+import { CmsPageItem } from '../hooks/usePageItems';
 
-export const FaqSection: React.FC = () => {
-  const [openId, setOpenId] = useState<string | null>('how-to-join');
+interface FaqSectionProps {
+  faqItems?: CmsPageItem[];
+}
+
+export const FaqSection: React.FC<FaqSectionProps> = ({ faqItems = [] }) => {
+  const [openId, setOpenId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  const categories = ['All', 'Connection', 'Game Modes', 'Support', 'General'];
+  const cmsFaqs = (faqItems ?? [])
+    .filter((item) => item.is_visible)
+    .map((item) => ({
+      id: item.id,
+      category: (item.extra?.category as 'General' | 'Connection' | 'Game Modes' | 'Support') || 'General',
+      question: item.title || 'Untitled question',
+      answer: item.description || item.subtitle || 'No answer available.',
+    }));
 
-  const filteredFaqs = FAQ_DATA.filter((item) => {
+  const allFaqs = cmsFaqs.length > 0 ? cmsFaqs : FAQ_DATA;
+
+  useEffect(() => {
+    if (!openId && allFaqs.length > 0) {
+      setOpenId(allFaqs[0].id);
+    }
+  }, [allFaqs, openId]);
+
+  const categories = ['All', ...new Set(allFaqs.map((item) => item.category))];
+
+  const filteredFaqs = allFaqs.filter((item) => {
     const matchesSearch =
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase());

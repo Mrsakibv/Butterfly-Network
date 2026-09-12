@@ -519,6 +519,10 @@ function AppContent() {
       return <AdminContentSection pageKey="contact" title="Contact Content" description="Manage contact cards, descriptions, and links." />;
     }
 
+    if (path === '/admin/faq') {
+      return <AdminContentSection pageKey="faq" title="FAQ Content" description="Manage question and answer entries shown on the FAQ page." />;
+    }
+
     if (path === '/admin/events') {
       return <AdminContentSection pageKey="events" title="Events Content" description="Manage events, schedules, descriptions, and images." />;
     }

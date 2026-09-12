@@ -9,6 +9,7 @@ export type AdminPermission =
   | 'rules'
   | 'terms'
   | 'contact'
+  | 'faq'
   | 'events'
   | 'gallery'
   | 'commands'
@@ -80,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const customPermissions = Array.isArray(customRole?.permissions)
         ? customRole.permissions.filter((permission): permission is AdminPermission =>
-            ['dashboard', 'settings', 'gamemodes', 'pages', 'rules', 'terms', 'contact', 'events', 'gallery', 'commands', 'vote', 'users'].includes(permission)
+            ['dashboard', 'settings', 'gamemodes', 'pages', 'rules', 'terms', 'contact', 'faq', 'events', 'gallery', 'commands', 'vote', 'users'].includes(permission)
           )
         : [];
 
@@ -108,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (role === 'admin') return permission !== 'users';
     if (role === 'gamemod') return permission === 'dashboard' || permission === 'gamemodes';
     return permissions.includes(permission) || (
-      ['pages', 'rules', 'terms', 'contact', 'events', 'gallery', 'commands', 'vote'].includes(permission)
+      ['pages', 'rules', 'terms', 'contact', 'faq', 'events', 'gallery', 'commands', 'vote'].includes(permission)
       && permissions.includes('settings')
     );
   }, [permissions, role]);
