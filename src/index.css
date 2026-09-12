@@ -151,8 +151,19 @@
   -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 72%, transparent 100%);
 }
 
-/* Hide backdrop on mobile for performance */
-@media (max-width: 768px) {
+/* Show backdrop on mobile */
+@media (max-width: 640px) {
+  .hero-copy-backdrop {
+    display: block;
+    width: 100%;
+    inset: 0;
+    mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 100%);
+  }
+}
+
+/* Hide backdrop on tablet for performance */
+@media (max-width: 768px) and (min-width: 641px) {
   .hero-copy-backdrop {
     display: none;
   }
@@ -232,6 +243,14 @@
     line-height: 1;
     gap: 0.25rem;
     letter-spacing: -0.03em;
+  }
+}
+
+/* Phone specific - hero title */
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: clamp(1.5rem, 7vw, 2.5rem);
+    line-height: 1.1;
   }
 }
 
@@ -408,6 +427,59 @@
 
   .hero-scene {
     min-height: 380px;
+  }
+}
+
+/* Phone specific - hero improvements */
+@media (max-width: 640px) {
+  .hero-shell {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    text-align: left;
+  }
+
+  .hero-copy {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .hero-subtitle {
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .hero-button {
+    flex: 1;
+    min-width: auto;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .hero-button-primary {
+    min-width: auto;
+  }
+
+  .hero-button-secondary {
+    min-width: auto;
+  }
+
+  .hero-link-button {
+    display: none;
+  }
+
+  .hero-highlights {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.75rem;
   }
 }
 
