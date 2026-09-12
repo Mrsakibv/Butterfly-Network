@@ -538,7 +538,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           </div>
 
           {/* Mobile Menu */}
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:hidden">
 
             {/* Mobile Minecraft Head */}
             {isLoggedIn && minecraftUsername && (
@@ -553,11 +553,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
             <button
               onClick={onOpenPlayModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
               aria-label="Play Now"
             >
               <Play className="w-3 h-3 fill-white" />
-              <span>Play</span>
+              <span className="hidden xs:inline">Play</span>
             </button>
 
             <button
@@ -573,9 +573,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               ) : (
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
               )}
             </button>
           </div>
@@ -599,7 +599,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               y: -10,
             }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 top-[65px] z-30 md:hidden bg-[#050505]/98 backdrop-blur-2xl border-b border-purple-500/20 shadow-2xl p-6 space-y-5"
+            className="fixed inset-x-0 top-[65px] z-30 md:hidden bg-[#050505]/98 backdrop-blur-2xl border-b border-purple-500/20 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[calc(100vh-65px)] overflow-y-auto"
           >
 
             {/* Navigation */}
@@ -614,7 +614,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                     onClick={(e) =>
                       handleNavClick(link.href, e)
                     }
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-all ${
+                    className={`flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all ${
                       active
                         ? 'bg-purple-600/20 text-purple-200 border border-purple-500/30'
                         : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -622,20 +622,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   >
                     <span>{link.label}</span>
 
-                    <ChevronRight className="w-4 h-4 opacity-50" />
+                    <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50" />
                   </a>
                 );
               })}
             </nav>
 
             {/* Mobile Actions */}
-            <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="pt-3 sm:pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
 
               {/* Mobile Auth */}
               {!isLoggedIn ? (
                 <button
                   onClick={handleLogin}
-                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-400/40 text-slate-200 transition-all"
+                  className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-400/40 text-slate-200 transition-all"
                 >
                   <LogIn className="w-4 h-4 text-purple-400" />
                   <span>Login</span>
@@ -645,11 +645,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   {/* Profile */}
                   <button
                     onClick={handleProfile}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 transition-all"
+                    className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 transition-all min-h-[44px]"
                   >
                     <MinecraftHead size="sm" />
 
-                    <span>
+                    <span className="truncate">
                       {username
                         ? `@${username}`
                         : 'My Profile'}
@@ -659,7 +659,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   {/* Logout */}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-300 transition-all"
+                    className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-300 transition-all"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Logout</span>
@@ -672,13 +672,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 href={SERVER_CONFIG.discordUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200"
+                className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 min-h-[44px]"
               >
                 <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
 
-                <span>Join Discord</span>
+                <span>Discord</span>
 
-                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60" />
               </a>
 
               {/* Play Now */}
@@ -687,7 +687,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   setMobileMenuOpen(false);
                   onOpenPlayModal();
                 }}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50 sm:col-span-2"
+                className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50 sm:col-span-2 min-h-[44px]"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Play Now</span>

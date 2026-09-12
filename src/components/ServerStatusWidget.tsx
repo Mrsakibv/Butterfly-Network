@@ -28,10 +28,10 @@ export const ServerStatusWidget: React.FC<ServerStatusWidgetProps> = ({
 
       <div className="flex flex-col gap-4">
         {/* Top Status & Ping Bar */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center justify-between gap-2 flex-wrap md:flex-nowrap">
           {/* Status Indicator */}
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-3 w-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-3 w-3 flex-shrink-0">
               {online ? (
                 <>
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -41,14 +41,14 @@ export const ServerStatusWidget: React.FC<ServerStatusWidgetProps> = ({
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
               )}
             </span>
-            
-            <div className="flex items-center gap-2">
-              <span className="font-heading font-bold text-sm tracking-wide uppercase text-white">
+
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-heading font-bold text-xs sm:text-sm tracking-wide uppercase text-white truncate">
                 {online ? 'Server Online' : 'Maintenance'}
               </span>
 
               {isDemo && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 flex-shrink-0">
                   <Sparkles className="w-3 h-3 text-purple-400" />
                   Demo Mode
                 </span>
@@ -57,16 +57,16 @@ export const ServerStatusWidget: React.FC<ServerStatusWidgetProps> = ({
           </div>
 
           {/* Ping & Version */}
-          <div className="flex items-center gap-3 text-xs text-slate-300">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/5 font-mono">
-              <Wifi className={`w-3.5 h-3.5 ${ping < 60 ? 'text-emerald-400' : 'text-amber-400'}`} />
-              <span>{ping > 0 ? `${ping}ms` : '24ms'}</span>
+          <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-300">
+            <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/5 font-mono text-[10px] sm:text-xs">
+              <Wifi className={`w-3 h-3 flex-shrink-0 ${ping < 60 ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="whitespace-nowrap">{ping > 0 ? `${ping}ms` : '24ms'}</span>
             </div>
 
             <button
               onClick={() => refetch()}
               disabled={loading}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50 flex-shrink-0"
               title="Refresh server status"
               aria-label="Refresh server status"
             >

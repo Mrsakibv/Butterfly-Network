@@ -425,6 +425,48 @@
   .hero-scene {
     min-height: 300px;
   }
+
+  /* Fix button wrapping on mobile */
+  .hero-button {
+    white-space: nowrap;
+  }
+}
+
+/* Strict mobile phone optimization (< 480px) */
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.75rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem !important;
+  }
+
+  .hero-button,
+  .hero-link-button {
+    min-height: 44px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .hero-button {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .hero-highlights {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    justify-content: flex-start;
+  }
 }
 
 /* Shimmer animation */
@@ -497,6 +539,18 @@
   .text-sm {
     font-size: 0.825rem !important;
   }
+
+  /* Prevent text overflow on small screens */
+  .truncate {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* Improve flex wrapping for small screens */
+  .flex-wrap {
+    gap: 0.75rem;
+  }
 }
 
 /* Extra small phones (320px-375px) */
@@ -532,6 +586,18 @@
     min-height: 44px;
     padding: 0.65rem 0.9rem;
     font-size: 0.85rem;
+  }
+
+  /* Text overflow prevention */
+  p, span, div {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Card text handling */
+  .glass-panel,
+  .glass-panel-interactive {
+    padding: 1rem !important;
   }
 }
 

@@ -42,16 +42,16 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenPlayModal }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="max-w-xl mx-auto p-4 sm:p-5 rounded-2xl glass-panel border border-purple-500/30 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4"
+          className="max-w-xl mx-auto p-3 sm:p-4 lg:p-5 rounded-2xl glass-panel border border-purple-500/30 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4"
         >
-          <div className="text-center sm:text-left">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">Server IP Address</span>
-            <div className="text-xl sm:text-2xl font-mono font-bold text-white tracking-wide">
+          <div className="text-center sm:text-left min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-purple-300 block">Server IP Address</span>
+            <div className="text-lg sm:text-xl lg:text-2xl font-mono font-bold text-white tracking-wide truncate">
               {SERVER_CONFIG.javaIp}
             </div>
           </div>
 
-          <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy IP" variant="primary" className="w-full sm:w-auto" />
+          <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy IP" variant="primary" className="w-full sm:w-auto text-xs sm:text-sm py-2.5 sm:py-3" />
         </motion.div>
 
         {/* Action Buttons */}
@@ -60,13 +60,13 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenPlayModal }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-wrap items-center justify-center gap-4 pt-2"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2"
         >
           <button
             onClick={onOpenPlayModal}
-            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-bold text-base text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-xl shadow-purple-950/60 transition-all duration-200 active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-bold text-sm sm:text-base text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-xl shadow-purple-950/60 transition-all duration-200 active:scale-95 cursor-pointer"
           >
-            <Play className="w-5 h-5 fill-white" />
+            <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white flex-shrink-0" />
             <span>Play Now</span>
           </button>
 
@@ -74,11 +74,11 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenPlayModal }) => {
             href={SERVER_CONFIG.discordUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-base text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/50 shadow-md transition-all duration-200 active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/50 shadow-md transition-all duration-200 active:scale-95"
           >
-            <DiscordIcon className="w-5 h-5 text-purple-400" />
+            <DiscordIcon className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
             <span>Join Discord</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+            <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60 flex-shrink-0" />
           </a>
         </motion.div>
       </div>

@@ -32,23 +32,23 @@ export const CommunityCTA: React.FC<CommunityCTAProps> = ({ onOpenPlayModal }) =
               Connect with players, get updates, participate in events and stay connected with the network.
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4">
               <a
                 href={SERVER_CONFIG.discordUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-bold text-base text-white bg-gradient-to-r from-[#5865F2] to-indigo-600 hover:from-[#4752c4] hover:to-indigo-700 shadow-xl shadow-indigo-950/60 transition-all duration-200 active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base text-white bg-gradient-to-r from-[#5865F2] to-indigo-600 hover:from-[#4752c4] hover:to-indigo-700 shadow-xl shadow-indigo-950/60 transition-all duration-200 active:scale-95 cursor-pointer"
               >
-                <DiscordIcon className="w-5 h-5 fill-white text-white" />
+                <DiscordIcon className="w-4 h-4 sm:w-5 sm:h-5 fill-white text-white flex-shrink-0" />
                 <span>Join Discord</span>
-                <ExternalLink className="w-4 h-4 opacity-70" />
+                <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-70 flex-shrink-0" />
               </a>
 
               <button
                 onClick={onOpenPlayModal}
-                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-semibold text-base text-purple-200 bg-purple-950/60 hover:bg-purple-900/70 border border-purple-500/30 hover:border-purple-400/50 shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-purple-200 bg-purple-950/60 hover:bg-purple-900/70 border border-purple-500/30 hover:border-purple-400/50 shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
               >
-                <Play className="w-5 h-5 fill-purple-300" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-purple-300 flex-shrink-0" />
                 <span>Play Now</span>
               </button>
             </div>

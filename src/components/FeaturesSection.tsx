@@ -49,7 +49,7 @@ export const FeaturesSection: React.FC = () => {
         </div>
 
         {/* 8 Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {SERVER_FEATURES.map((feature, idx) => (
             <motion.div
               key={feature.id}
