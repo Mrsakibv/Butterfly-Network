@@ -27,9 +27,9 @@ export const Footer: React.FC = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-white/[0.06]">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8 lg:gap-8 pb-12 border-b border-white/[0.06]">
           {/* Brand Col */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="col-span-2 md:col-span-1 lg:col-span-2 space-y-4">
             <a
               href="/"
               onClick={(e) => handleLinkClick('/', e)}
@@ -96,7 +96,7 @@ export const Footer: React.FC = () => {
           {/* Navigation Links */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Navigation</h3>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm">
               <li>
                 <a href="/" onClick={(e) => handleLinkClick('/', e)} className="hover:text-purple-300 transition-colors">
                   Home
@@ -128,7 +128,7 @@ export const Footer: React.FC = () => {
           {/* Community Links */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Community</h3>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm">
               <li>
                 <a href={SERVER_CONFIG.discordUrl} target="_blank" rel="noreferrer" className="hover:text-purple-300 transition-colors flex items-center gap-1.5">
                   <span>Discord Server</span>
