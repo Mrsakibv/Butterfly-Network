@@ -18,8 +18,12 @@ interface SiteSettings {
   tiktok_url: string;
   twitter_url: string;
   store_url: string;
-  vote_url: string;
   server_status_api: string;
+  leaderboard_api_url: string;
+  leaderboard_enabled: boolean;
+  leaderboard_refresh_seconds: number;
+  leaderboard_server_id: string;
+  leaderboard_categories: string;
   copyright_year: number;
   hero_background_image_url: string;
   hero_kicker: string;
@@ -45,8 +49,12 @@ const defaultSettings: SiteSettings = {
   tiktok_url: 'https://www.tiktok.com/@mrsakib.232?is_from_webapp=1&sender_device=pc',
   twitter_url: 'https://x.com/Mrsakib_',
   store_url: '#',
-  vote_url: '#',
   server_status_api: 'https://api.mcstatus.io/v2/status/java/play.firemc.fun',
+  leaderboard_api_url: '',
+  leaderboard_enabled: false,
+  leaderboard_refresh_seconds: 60,
+  leaderboard_server_id: 'main',
+  leaderboard_categories: 'playtime,money,kills,wins',
   copyright_year: 2026,
   hero_background_image_url: '',
   hero_kicker: 'Next-Gen Minecraft Multiplayer',
@@ -87,7 +95,7 @@ export const AdminSettings: React.FC = () => {
     load();
   }, []);
 
-  const handleChange = (key: keyof SiteSettings, value: string | number) => {
+  const handleChange = (key: keyof SiteSettings, value: string | number | boolean) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
@@ -147,8 +155,12 @@ export const AdminSettings: React.FC = () => {
     { key: 'tiktok_url', label: 'TikTok URL' },
     { key: 'twitter_url', label: 'Twitter/X URL' },
     { key: 'store_url', label: 'Store URL' },
-    { key: 'vote_url', label: 'Vote URL' },
     { key: 'server_status_api', label: 'Server Status API' },
+    { key: 'leaderboard_api_url', label: 'Leaderboard Bridge/API URL' },
+    { key: 'leaderboard_enabled', label: 'Enable Live Leaderboard' },
+    { key: 'leaderboard_refresh_seconds', label: 'Leaderboard Refresh (seconds)', type: 'number' },
+    { key: 'leaderboard_server_id', label: 'Leaderboard Server ID' },
+    { key: 'leaderboard_categories', label: 'Leaderboard Categories' },
     { key: 'copyright_year', label: 'Copyright Year', type: 'number' },
     { key: 'hero_background_image_url', label: 'Homepage Background Image URL' },
     { key: 'hero_kicker', label: 'Hero Badge Text' },
@@ -180,14 +192,21 @@ export const AdminSettings: React.FC = () => {
                 </span>
               )}
             </div>
-            <input
-              type={field.type ?? 'text'}
-              value={settings[field.key] as any}
-              onChange={(e) =>
-                handleChange(field.key, field.type === 'number' ? Number(e.target.value) : e.target.value)
-              }
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
-            />
+            {field.key === 'leaderboard_enabled' ? (
+              <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-slate-300">
+                <input type="checkbox" checked={settings.leaderboard_enabled} onChange={(e) => handleChange(field.key, e.target.checked)} className="h-4 w-4" />
+                Enable live leaderboard when the server bridge is connected
+              </label>
+            ) : (
+              <input
+                type={field.type ?? 'text'}
+                value={settings[field.key] as any}
+                onChange={(e) => handleChange(field.key, field.type === 'number' ? Number(e.target.value) : e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500"
+              />
+            )}
+            {field.key === 'leaderboard_api_url' && <p className="mt-1 text-xs text-slate-500">Use the future Paper/Spigot bridge endpoint. Do not put a secret key in the browser.</p>}
+            {field.key === 'leaderboard_categories' && <p className="mt-1 text-xs text-slate-500">Comma-separated categories, for example: playtime,money,kills,wins.</p>}
             {field.key === 'hero_background_image_url' && (
               <>
                 <p className="mt-1 text-xs text-emerald-300/80">

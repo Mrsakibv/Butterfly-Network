@@ -1,7 +1,7 @@
 import React from 'react';
 import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../hooks/useRouter';
-import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote, CircleHelp } from 'lucide-react';
+import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote, CircleHelp, ShoppingBag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
 import { AnimatePresence, motion } from 'motion/react';
@@ -25,12 +25,13 @@ export type AdminSectionKey =
   | 'gallery'
   | 'commands'
   | 'vote'
+  | 'store'
   | 'users';
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, permission = active }) => {
   const { loading, isStaff, can, email, role } = useAuth();
   const { navigate, path } = useRouter();
-  const accessPermission: AdminPermission = permission === 'dashboard' || permission === 'settings' || permission === 'gamemodes' || permission === 'pages' || permission === 'users'
+  const accessPermission: AdminPermission = permission === 'dashboard' || permission === 'settings' || permission === 'gamemodes' || permission === 'pages' || permission === 'store' || permission === 'users'
     ? permission
     : active === 'dashboard'
       ? 'dashboard'
@@ -72,6 +73,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
     ...(can('gallery') ? [{ key: 'gallery', label: 'Gallery Content', icon: Image, path: '/admin/gallery' }] : []),
     ...(can('commands') ? [{ key: 'commands', label: 'Commands Content', icon: Terminal, path: '/admin/commands' }] : []),
     ...(can('vote') ? [{ key: 'vote', label: 'Vote Content', icon: Vote, path: '/admin/vote' }] : []),
+    ...(can('store') ? [{ key: 'store', label: 'Minecraft Store', icon: ShoppingBag, path: '/admin/store' }] : []),
     ...(can('users') ? [{ key: 'users', label: 'Manage Roles', icon: Users, path: '/admin/users' }] : []),
   ];
 

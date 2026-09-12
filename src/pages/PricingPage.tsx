@@ -1,190 +1,95 @@
-import React, { useEffect } from 'react';
-import { PRICING_ITEMS, FULL_PACKAGE } from '../data/pricing';
-import { SERVER_CONFIG } from '../config/server';
-import { CommunityCTA } from '../components/CommunityCTA';
-import {
-  Tag,
-  CheckCircle2,
-  FileCode2,
-  Activity,
-  Sparkles,
-  LogIn,
-  PanelTopOpen,
-  Database,
-  Trophy,
-  Crown,
-  ArrowRight,
-  Disc as DiscordIcon,
-  ExternalLink,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Coins, Crown, KeyRound, Package, Sparkles, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePageItems } from '../hooks/usePageItems';
+import { SERVER_CONFIG } from '../config/server';
+
+const defaultCategories: { id: string; label: string; icon: React.ElementType; iconName: string; iconUrl: string }[] = [
+  { id: 'ranks', label: 'Ranks', icon: Crown, iconName: 'crown', iconUrl: '' },
+  { id: 'keys', label: 'Keys', icon: KeyRound, iconName: 'key', iconUrl: '' },
+  { id: 'coins', label: 'Coins', icon: Coins, iconName: 'coins', iconUrl: '' },
+  { id: 'wings', label: 'Wings', icon: Sparkles, iconName: 'sparkles', iconUrl: '' },
+];
 
 interface PricingPageProps {
   onOpenPlayModal: () => void;
 }
 
-const ICONS: Record<string, React.ElementType> = {
-  FileCode2,
-  Activity,
-  Sparkles,
-  LogIn,
-  PanelTopOpen,
-  Database,
-  Trophy,
-};
+export const PricingPage: React.FC<PricingPageProps> = () => {
+  const items = usePageItems('store');
+  const [activeCategory, setActiveCategory] = useState('ranks');
 
-export const PricingPage: React.FC<PricingPageProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
-    document.title = 'Pricing | Butterfly Network';
+    document.title = 'Minecraft Store | Butterfly Network';
   }, []);
 
-  const totalIndividualPrice = PRICING_ITEMS.reduce((sum, item) => sum + item.price, 0);
-  const savings = totalIndividualPrice - FULL_PACKAGE.price;
+  const categories = useMemo(() => {
+    const dynamicCategories: { id: string; label: string; iconName: string; iconUrl: string; icon: React.ElementType }[] = items
+      .map((item) => ({
+        id: item.extra?.category || 'ranks',
+        label: item.extra?.categoryLabel || item.extra?.category || 'Ranks',
+        iconName: item.extra?.categoryIcon || 'package',
+        iconUrl: item.extra?.categoryIconUrl || '',
+      }))
+      .filter((category, index, all) => all.findIndex((entry) => entry.id === category.id) === index)
+      .map((category) => ({ ...category, icon: defaultCategories.find((entry) => entry.iconName === category.iconName)?.icon || Package }));
+    return dynamicCategories.length > 0 ? dynamicCategories : defaultCategories;
+  }, [items]);
+
+  const visibleItems = useMemo(
+    () => items.filter((item) => item.extra?.categoryOnly !== 'true' && (item.extra?.category || 'ranks') === activeCategory),
+    [activeCategory, items]
+  );
+
+  useEffect(() => {
+    if (!categories.some((category) => category.id === activeCategory)) {
+      setActiveCategory(categories[0]?.id || 'ranks');
+    }
+  }, [activeCategory, categories]);
 
   return (
     <div className="pt-24 pb-20">
       <section className="relative py-12">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none -z-10" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-300">
-              <Tag className="w-3.5 h-3.5 text-purple-400" />
-              <span>Template Pricing</span>
+        <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[350px] w-[700px] -translate-x-1/2 rounded-full bg-purple-600/15 blur-[140px]" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mb-10 max-w-3xl space-y-3 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3.5 py-1.5 text-xs font-semibold text-purple-300">
+              <Package className="h-3.5 w-3.5 text-purple-400" /> Minecraft Store
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white font-heading tracking-tight">
-              Pick a Feature, or Get It All
-            </h1>
-            <p className="text-slate-400 text-base sm:text-lg">
-              This website template is available piece by piece, or as one complete package.
-              Choose exactly what your server needs.
-            </p>
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl">Power up your adventure</h1>
+            <p className="text-base text-slate-400 sm:text-lg">Choose ranks, keys, coins, and wings for your Butterfly Network experience.</p>
           </div>
-
-          {/* Individual Feature Pricing Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-16">
-            {PRICING_ITEMS.map((item, index) => {
-              const Icon = ICONS[item.iconName] ?? Sparkles;
-
-              return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.35, delay: index * 0.05 }}
-                  className="relative rounded-2xl glass-panel border border-white/10 p-6 flex flex-col hover:border-purple-400/40 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-purple-300" />
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-extrabold text-white">
-                        ৳{item.price}
-                      </div>
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-white mb-1.5">{item.name}</h3>
-                  <p className="text-sm text-slate-400 mb-4 leading-relaxed">{item.description}</p>
-
-                  <ul className="space-y-2 mt-auto">
-                    {item.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-xs text-slate-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <a
-                    href={SERVER_CONFIG.discordUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-[#5865F2]/70 hover:bg-[#5865F2]/30"
-                  >
-                    <DiscordIcon className="h-4 w-4 fill-white" />
-                    <span>Join Discord to Buy</span>
-                    <ExternalLink className="h-3.5 w-3.5 opacity-70" />
-                  </a>
-                </motion.div>
-              );
-            })}
+          <div className="mb-10 flex flex-wrap justify-center gap-3">
+            {categories.map(({ id, label, icon: Icon, iconUrl }) => (
+              <button key={id} onClick={() => setActiveCategory(id)} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${activeCategory === id ? 'border-purple-400/50 bg-purple-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.08] hover:text-white'}`}>
+                {iconUrl ? <img src={iconUrl} alt="" className="h-4 w-4 rounded object-cover" /> : <Icon className="h-4 w-4" />} {label}
+              </button>
+            ))}
           </div>
-
-          {/* Full Package Highlight */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="relative rounded-3xl overflow-hidden border border-purple-400/40 shadow-2xl shadow-purple-950/40"
-          >
-            <div
-              className="absolute inset-0 -z-10"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(56,189,248,0.10))',
-              }}
-            />
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-violet-400 to-sky-400" />
-
-            <div className="p-8 sm:p-12 grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 items-center">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-xs font-semibold text-purple-200 mb-4">
-                  <Crown className="w-3.5 h-3.5 text-purple-300" />
-                  <span>Best Value</span>
-                </div>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-heading mb-3">
-                  {FULL_PACKAGE.name}
-                </h2>
-
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-                  {FULL_PACKAGE.description}
-                </p>
-
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {FULL_PACKAGE.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-purple-300 mt-0.5 shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-2xl bg-black/30 border border-white/10 p-8 text-center">
-                <div className="text-xs uppercase tracking-widest text-slate-400 mb-2">
-                  One-time price
-                </div>
-                <div className="flex items-end justify-center gap-2 mb-1">
-                  <span className="text-5xl font-extrabold text-white">৳{FULL_PACKAGE.price}</span>
-                </div>
-                {savings > 0 && (
-                  <div className="text-sm text-emerald-400 font-semibold mb-6">
-                    Save ৳{savings} vs buying separately
-                  </div>
-                )}
-
-                <a
-                  href={SERVER_CONFIG.discordUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border border-purple-400/40 shadow-lg shadow-purple-950/50 transition-all active:scale-95"
-                >
-                  <span>Get the Full Package</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              </div>
+          {visibleItems.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-slate-400">No products are available in this category yet.</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleItems.map((item, index) => {
+                const category = categories.find((entry) => entry.id === activeCategory);
+                const Icon = category?.icon || Package;
+                const features = (item.extra?.features || '').split('\n').map((feature) => feature.trim()).filter(Boolean);
+                return (
+                  <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.04 }} className="relative flex h-[390px] flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-purple-400/40">
+                    {item.extra?.badge && <span className="absolute right-4 top-4 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300">{item.extra.badge}</span>}
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">{item.extra?.categoryIconUrl ? <img src={item.extra.categoryIconUrl} alt="" className="h-7 w-7 rounded object-cover" /> : <Icon className="h-5 w-5 text-purple-300" />}</div>
+                    <h2 className="text-lg font-bold text-white">{item.title}</h2>
+                    <p className="mt-1 min-h-12 text-sm leading-relaxed text-slate-400">{item.description}</p>
+                    <div className="mt-4 text-2xl font-extrabold text-white">৳{item.extra?.price || '0'}</div>
+                    {features.length > 0 && <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">{features.map((feature) => <li key={feature} className="flex items-start gap-2 text-xs text-slate-300"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />{feature}</li>)}</ul>}
+                    <a href={SERVER_CONFIG.discordUrl} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 px-4 py-3 text-sm font-semibold text-white hover:bg-[#5865F2]/30">Join Discord to Buy <ExternalLink className="h-3.5 w-3.5 opacity-70" /></a>
+                  </motion.div>
+                );
+              })}
             </div>
-          </motion.div>
+          )}
         </div>
       </section>
-
-      <CommunityCTA onOpenPlayModal={onOpenPlayModal} />
     </div>
   );
 };
