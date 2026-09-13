@@ -1,14 +1,126 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Coins, Crown, KeyRound, Package, Sparkles, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
-import { usePageItems } from '../hooks/usePageItems';
 import { SERVER_CONFIG } from '../config/server';
 
-const defaultCategories: { id: string; label: string; icon: React.ElementType; iconName: string; iconUrl: string }[] = [
-  { id: 'ranks', label: 'Ranks', icon: Crown, iconName: 'crown', iconUrl: '' },
-  { id: 'keys', label: 'Keys', icon: KeyRound, iconName: 'key', iconUrl: '' },
-  { id: 'coins', label: 'Coins', icon: Coins, iconName: 'coins', iconUrl: '' },
-  { id: 'wings', label: 'Wings', icon: Sparkles, iconName: 'sparkles', iconUrl: '' },
+const storeItems = [
+  {
+    id: 'rank-member',
+    title: 'Member Rank',
+    description: 'Join as a Member and enjoy exclusive benefits',
+    category: 'ranks',
+    categoryLabel: 'Ranks',
+    price: '99',
+    features: ['Access to member commands', 'Custom prefix', 'Priority support'],
+  },
+  {
+    id: 'rank-vip',
+    title: 'VIP Rank',
+    description: 'Premium VIP experience with extended features',
+    category: 'ranks',
+    categoryLabel: 'Ranks',
+    price: '299',
+    features: ['All Member benefits', 'Double rewards', 'VIP chat color', 'Custom item name'],
+  },
+  {
+    id: 'rank-elite',
+    title: 'Elite Rank',
+    description: 'The ultimate rank for true enthusiasts',
+    category: 'ranks',
+    categoryLabel: 'Ranks',
+    price: '599',
+    features: ['All VIP benefits', 'Exclusive commands', 'Custom armor', 'Priority queue'],
+    badge: 'Most Popular',
+  },
+  {
+    id: 'keys-common',
+    title: 'Common Key',
+    description: 'Unlock common loot chests',
+    category: 'keys',
+    categoryLabel: 'Keys',
+    price: '49',
+    features: ['1x Common Key', 'Random common rewards'],
+  },
+  {
+    id: 'keys-rare',
+    title: 'Rare Key',
+    description: 'Unlock rare and valuable items',
+    category: 'keys',
+    categoryLabel: 'Keys',
+    price: '149',
+    features: ['1x Rare Key', 'Better rewards', 'Guaranteed rare item'],
+  },
+  {
+    id: 'keys-legendary',
+    title: 'Legendary Key',
+    description: 'The rarest loot awaits',
+    category: 'keys',
+    categoryLabel: 'Keys',
+    price: '499',
+    features: ['1x Legendary Key', 'Epic rewards', 'Guaranteed legendary item'],
+  },
+  {
+    id: 'coins-starter',
+    title: 'Starter Coins',
+    description: 'Get 10,000 coins to start',
+    category: 'coins',
+    categoryLabel: 'Coins',
+    price: '79',
+    features: ['10,000 coins', 'Use in player shops'],
+  },
+  {
+    id: 'coins-bundle',
+    title: 'Coin Bundle',
+    description: 'Get 50,000 coins at a discount',
+    category: 'coins',
+    categoryLabel: 'Coins',
+    price: '349',
+    features: ['50,000 coins', 'Save 15% vs individual'],
+  },
+  {
+    id: 'coins-mega',
+    title: 'Mega Coins',
+    description: 'Maximum coins for ultimate players',
+    category: 'coins',
+    categoryLabel: 'Coins',
+    price: '999',
+    features: ['250,000 coins', 'Huge savings', 'Exclusive access'],
+  },
+  {
+    id: 'wings-basic',
+    title: 'Basic Wings',
+    description: 'Show off with stylish wings',
+    category: 'wings',
+    categoryLabel: 'Wings',
+    price: '129',
+    features: ['1x Wing cosmetic', 'Permanent ownership'],
+  },
+  {
+    id: 'wings-premium',
+    title: 'Premium Wings',
+    description: 'Exclusive wing design for elite players',
+    category: 'wings',
+    categoryLabel: 'Wings',
+    price: '249',
+    features: ['1x Premium Wing', 'Rare design', 'Status symbol'],
+  },
+  {
+    id: 'wings-mythic',
+    title: 'Mythic Wings',
+    description: 'The most legendary wings in the game',
+    category: 'wings',
+    categoryLabel: 'Wings',
+    price: '649',
+    features: ['1x Mythic Wing', 'Unique appearance', 'Particle effects'],
+    badge: 'Exclusive',
+  },
+];
+
+const defaultCategories = [
+  { id: 'ranks', label: 'Ranks', icon: Crown, iconName: 'crown' },
+  { id: 'keys', label: 'Keys', icon: KeyRound, iconName: 'key' },
+  { id: 'coins', label: 'Coins', icon: Coins, iconName: 'coins' },
+  { id: 'wings', label: 'Wings', icon: Sparkles, iconName: 'sparkles' },
 ];
 
 interface PricingPageProps {
@@ -16,7 +128,6 @@ interface PricingPageProps {
 }
 
 export const PricingPage: React.FC<PricingPageProps> = () => {
-  const items = usePageItems('store');
   const [activeCategory, setActiveCategory] = useState('ranks');
 
   useEffect(() => {
@@ -24,21 +135,24 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
   }, []);
 
   const categories = useMemo(() => {
-    const dynamicCategories: { id: string; label: string; iconName: string; iconUrl: string; icon: React.ElementType }[] = items
-      .map((item) => ({
-        id: item.extra?.category || 'ranks',
-        label: item.extra?.categoryLabel || item.extra?.category || 'Ranks',
-        iconName: item.extra?.categoryIcon || 'package',
-        iconUrl: item.extra?.categoryIconUrl || '',
-      }))
-      .filter((category, index, all) => all.findIndex((entry) => entry.id === category.id) === index)
-      .map((category) => ({ ...category, icon: defaultCategories.find((entry) => entry.iconName === category.iconName)?.icon || Package }));
-    return dynamicCategories.length > 0 ? dynamicCategories : defaultCategories;
-  }, [items]);
+    const uniqueCategories = Array.from(
+      new Map(
+        storeItems.map((item) => [
+          item.category,
+          {
+            id: item.category,
+            label: item.categoryLabel,
+            icon: defaultCategories.find((c) => c.id === item.category)?.icon || Package,
+          },
+        ])
+      ).values()
+    );
+    return uniqueCategories.length > 0 ? uniqueCategories : defaultCategories;
+  }, []);
 
   const visibleItems = useMemo(
-    () => items.filter((item) => item.extra?.categoryOnly !== 'true' && (item.extra?.category || 'ranks') === activeCategory),
-    [activeCategory, items]
+    () => storeItems.filter((item) => item.category === activeCategory),
+    [activeCategory]
   );
 
   useEffect(() => {
@@ -60,32 +174,65 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
             <p className="text-base text-slate-400 sm:text-lg">Choose ranks, keys, coins, and wings for your Butterfly Network experience.</p>
           </div>
           <div className="mb-10 flex flex-wrap justify-center gap-3">
-            {categories.map(({ id, label, icon: Icon, iconUrl }) => (
-              <button key={id} onClick={() => setActiveCategory(id)} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${activeCategory === id ? 'border-purple-400/50 bg-purple-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.08] hover:text-white'}`}>
-                {iconUrl ? <img src={iconUrl} alt="" className="h-4 w-4 rounded object-cover" /> : <Icon className="h-4 w-4" />} {label}
+            {categories.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveCategory(id)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${
+                  activeCategory === id
+                    ? 'border-purple-400/50 bg-purple-500/20 text-white'
+                    : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4" /> {label}
               </button>
             ))}
           </div>
           {visibleItems.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-slate-400">No products are available in this category yet.</div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-slate-400">
+              No products are available in this category yet.
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleItems.map((item, index) => {
-                const category = categories.find((entry) => entry.id === activeCategory);
-                const Icon = category?.icon || Package;
-                const features = (item.extra?.features || '').split('\n').map((feature) => feature.trim()).filter(Boolean);
-                return (
-                  <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.04 }} className="relative flex h-[390px] flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-purple-400/40">
-                    {item.extra?.badge && <span className="absolute right-4 top-4 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300">{item.extra.badge}</span>}
-                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">{item.extra?.categoryIconUrl ? <img src={item.extra.categoryIconUrl} alt="" className="h-7 w-7 rounded object-cover" /> : <Icon className="h-5 w-5 text-purple-300" />}</div>
-                    <h2 className="text-lg font-bold text-white">{item.title}</h2>
-                    <p className="mt-1 min-h-12 text-sm leading-relaxed text-slate-400">{item.description}</p>
-                    <div className="mt-4 text-2xl font-extrabold text-white">৳{item.extra?.price || '0'}</div>
-                    {features.length > 0 && <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">{features.map((feature) => <li key={feature} className="flex items-start gap-2 text-xs text-slate-300"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />{feature}</li>)}</ul>}
-                    <a href={SERVER_CONFIG.discordUrl} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 px-4 py-3 text-sm font-semibold text-white hover:bg-[#5865F2]/30">Join Discord to Buy <ExternalLink className="h-3.5 w-3.5 opacity-70" /></a>
-                  </motion.div>
-                );
-              })}
+              {visibleItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.04 }}
+                  className="relative flex h-[390px] flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-purple-400/40"
+                >
+                  {item.badge && (
+                    <span className="absolute right-4 top-4 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300">
+                      {item.badge}
+                    </span>
+                  )}
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">
+                    <Package className="h-5 w-5 text-purple-300" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white">{item.title}</h2>
+                  <p className="mt-1 min-h-12 text-sm leading-relaxed text-slate-400">{item.description}</p>
+                  <div className="mt-4 text-2xl font-extrabold text-white">৳{item.price}</div>
+                  {item.features.length > 0 && (
+                    <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                      {item.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-xs text-slate-300">
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <a
+                    href={SERVER_CONFIG.discordUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 px-4 py-3 text-sm font-semibold text-white hover:bg-[#5865F2]/30"
+                  >
+                    Join Discord to Buy <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                  </a>
+                </motion.div>
+              ))}
             </div>
           )}
         </div>

@@ -158,23 +158,55 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     setMoreMenuOpen(false);
   }, [path]);
 
+  // =========================
+  // Close mobile menu on escape or outside click
+  // =========================
+
   useEffect(() => {
-    if (!moreMenuOpen) return;
+    if (!mobileMenuOpen) return;
 
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+    let touchStartX = 0;
 
-      if (!target.closest('[data-more-menu]')) {
-        setMoreMenuOpen(false);
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
       }
     };
 
+    const handleTouchStart = (event: TouchEvent) => {
+      touchStartX = event.changedTouches[0].screenX;
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const touchEndX = event.changedTouches[0].screenX;
+      // If swiped right (touchEndX > touchStartX by more than 50px), close menu
+      if (touchEndX - touchStartX > 50) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const navbar = document.getElementById('main-navbar');
+      const drawer = navbar?.querySelector('[data-mobile-drawer]');
+
+      if (drawer && !drawer.contains(target) && !navbar?.contains(target)) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
     document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchend', handleTouchEnd);
 
     return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
       document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [moreMenuOpen]);
+  }, [mobileMenuOpen]);
 
   // =========================
   // Minecraft Head URL
@@ -384,7 +416,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           <a
             href="/"
             onClick={(e) => handleNavClick('/', e)}
-            className="focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl"
+            className={`focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl transition-all ${
+              mobileMenuOpen ? 'hidden md:block' : 'block'
+            }`}
             aria-label="Butterfly Network Home"
           >
             <Logo size="md" showText={false} />
@@ -553,7 +587,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
             <button
               onClick={onOpenPlayModal}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
               aria-label="Play Now"
             >
               <Play className="w-3 h-3 fill-white" />
@@ -600,6 +634,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             }}
             transition={{ duration: 0.2 }}
             className="fixed inset-x-0 top-[65px] z-30 md:hidden bg-[#050505]/98 backdrop-blur-2xl border-b border-purple-500/20 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[calc(100vh-65px)] overflow-y-auto"
+            data-mobile-drawer
           >
 
             {/* Navigation */}

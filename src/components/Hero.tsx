@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { SERVER_CONFIG, DEFAULT_HERO_SETTINGS, getMergedHeroSettings } from '../config/server';
 import { supabase } from '../lib/supabase';
 import { ServerStatusWidget } from './ServerStatusWidget';
-import { Play, Disc as DiscordIcon, ExternalLink, Shield, Swords, Layers } from 'lucide-react';
+import { Play, Disc as DiscordIcon, ExternalLink, Shield, Swords, Layers, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HeroProps {
@@ -11,6 +11,7 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
   const [heroSettings, setHeroSettings] = useState(DEFAULT_HERO_SETTINGS);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     const loadHeroSettings = async () => {
@@ -40,8 +41,13 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
 
   const heroBackground = useMemo(() => {
     if (!heroSettings.backgroundImage) return undefined;
-    return { backgroundImage: `url(${heroSettings.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } as React.CSSProperties;
+    return { backgroundImage: `url(${heroSettings.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center top' } as React.CSSProperties;
   }, [heroSettings.backgroundImage]);
+
+  // Get first 8 words for preview
+  const words = heroSettings.description.split(' ');
+  const descriptionPreview = words.slice(0, 8).join(' ');
+  const shouldShowMore = words.length > 8;
 
   return (
     <section
@@ -74,7 +80,18 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
             <p className="hero-subtitle">{heroSettings.subtitle}</p>
 
             <p className="hero-description">
-              {heroSettings.description}
+              {descriptionExpanded ? heroSettings.description : descriptionPreview}
+              {shouldShowMore && !descriptionExpanded && '...'}
+
+              {shouldShowMore && (
+                <button
+                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                  className="ml-2 inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                >
+                  {descriptionExpanded ? 'Show Less' : 'Show More'}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${descriptionExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </p>
 
             <div className="hero-actions">
@@ -82,7 +99,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
                 onClick={onOpenPlayModal}
                 className="hero-button hero-button-primary"
               >
-                <Play className="h-5 w-5 fill-white" />
+                <Play className="h-4 w-4 md:h-5 md:w-5 fill-white" />
                 <span>Play Now</span>
               </button>
 
@@ -92,9 +109,9 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPlayModal }) => {
                 rel="noreferrer"
                 className="hero-button hero-button-secondary"
               >
-                <DiscordIcon className="h-5 w-5 text-purple-300" />
+                <DiscordIcon className="h-4 w-4 md:h-5 md:w-5 text-purple-300" />
                 <span>Join Discord</span>
-                <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                <ExternalLink className="h-3 w-3 md:h-3.5 md:w-3.5 opacity-70" />
               </a>
 
               <button

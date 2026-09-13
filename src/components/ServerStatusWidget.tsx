@@ -101,17 +101,17 @@ export const ServerStatusWidget: React.FC<ServerStatusWidgetProps> = ({
 
         {/* IP & Version Details */}
         {!compact && (
-          <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex flex-col">
+          <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+            <div className="flex flex-col flex-1">
               <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Supported Version</span>
               <span className="text-xs font-mono font-medium text-slate-200">{version || SERVER_CONFIG.version}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="hidden sm:block px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 font-mono text-xs text-purple-200">
                 {SERVER_CONFIG.javaIp}
               </div>
-              <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy IP" variant="primary" className="text-xs py-1.5 px-3" />
+              <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy IP" variant="primary" className="text-xs py-1.5 px-3 flex-1 sm:flex-none" />
             </div>
           </div>
         )}
