@@ -6,7 +6,7 @@ export const EventsPage: React.FC = () => {
   const pageItems = usePageItems('events');
 
   useEffect(() => {
-    document.title = 'Events | Butterfly Network';
+    document.title = 'Events | Butterfly network';
   }, []);
 
   const defaultEvents = [

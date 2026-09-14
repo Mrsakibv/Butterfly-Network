@@ -16,7 +16,7 @@ interface DynamicPageProps {
 
 export const DynamicPage: React.FC<DynamicPageProps> = ({ page }) => {
   useEffect(() => {
-    document.title = page.meta_title || page.title || 'Butterfly Network';
+    document.title = page.meta_title || page.title || 'Butterfly network';
   }, [page]);
 
   const htmlContent = page.content || '<p>Page content coming soon.</p>';

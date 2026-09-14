@@ -131,7 +131,7 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
   const [activeCategory, setActiveCategory] = useState('ranks');
 
   useEffect(() => {
-    document.title = 'Minecraft Store | Butterfly Network';
+    document.title = 'Minecraft Store | Butterfly network';
   }, []);
 
   const categories = useMemo(() => {
@@ -171,7 +171,7 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
               <Package className="h-3.5 w-3.5 text-purple-400" /> Minecraft Store
             </div>
             <h1 className="font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl">Power up your adventure</h1>
-            <p className="text-base text-slate-400 sm:text-lg">Choose ranks, keys, coins, and wings for your Butterfly Network experience.</p>
+            <p className="text-base text-slate-400 sm:text-lg">Choose ranks, keys, coins, and wings for your Butterfly network experience.</p>
           </div>
           <div className="mb-10 flex flex-wrap justify-center gap-3">
             {categories.map(({ id, label, icon: Icon }) => (

@@ -23,7 +23,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
   const [activePlatform, setActivePlatform] = useState<'java' | 'bedrock' | 'console'>('java');
 
   useEffect(() => {
-    document.title = 'How to Join | Butterfly Network';
+    document.title = 'How to Join | Butterfly network';
   }, []);
 
   return (
@@ -37,7 +37,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-heading tracking-tight">
-            How to Connect to Butterfly Network
+            How to Connect to Butterfly network
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg">
@@ -110,7 +110,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
                   <div>
                     <h3 className="font-bold text-white text-base">Add Server Address</h3>
                     <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Click <strong>Multiplayer</strong> &rarr; <strong>Add Server</strong>. Name the server <strong>Butterfly Network</strong> and enter the address below.
+                      Click <strong>Multiplayer</strong> &rarr; <strong>Add Server</strong>. Name the server <strong>Butterfly network</strong> and enter the address below.
                     </p>
                     <div className="mt-3 flex flex-col sm:flex-row items-center gap-3">
                       <div className="px-4 py-2 rounded-xl bg-black/50 border border-purple-500/30 font-mono font-bold text-purple-200 text-sm w-full sm:w-auto">
@@ -128,7 +128,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
                   <div>
                     <h3 className="font-bold text-white text-base">Join and Enjoy</h3>
                     <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Click <strong>Done</strong>, select Butterfly Network in your multiplayer list, and click <strong>Join Server</strong>.
+                      Click <strong>Done</strong>, select Butterfly network in your multiplayer list, and click <strong>Join Server</strong>.
                     </p>
                   </div>
                 </div>
@@ -213,7 +213,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
                     <li>Connect your phone and console to the same local Wi-Fi network.</li>
                     <li>Inside the app, enter IP: <strong className="text-white font-mono">{SERVER_CONFIG.bedrockIp}</strong> and Port: <strong className="text-purple-300 font-mono">{SERVER_CONFIG.port}</strong>.</li>
                     <li>Tap <strong>Run</strong> in the app, then open Minecraft on your console.</li>
-                    <li>Butterfly Network will appear automatically in your in-game <strong>Friends Tab</strong> under LAN games!</li>
+                    <li>Butterfly network will appear automatically in your in-game <strong>Friends Tab</strong> under LAN games!</li>
                   </ol>
                 </div>
               </div>
@@ -238,7 +238,7 @@ export const HowToPlayPage: React.FC<HowToPlayPageProps> = () => {
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
               <span className="font-semibold text-white">"Outdated Client / Server":</span>
               <p className="text-slate-400 leading-relaxed">
-                Butterfly Network supports 1.8.9 through 1.21.x. If using a newer snapshot or preview release, switch to the latest official release version.
+                Butterfly network supports 1.8.9 through 1.21.x. If using a newer snapshot or preview release, switch to the latest official release version.
               </p>
             </div>
           </div>

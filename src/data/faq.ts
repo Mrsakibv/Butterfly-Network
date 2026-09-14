@@ -4,14 +4,14 @@ export const FAQ_DATA: FaqItem[] = [
   {
     id: 'how-to-join',
     category: 'Connection',
-    question: 'How do I join Butterfly Network?',
-    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly Network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.firemc.fun) and default port 19132.'
+    question: 'How do I join Butterfly network?',
+    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly network" as the name and "play.firemc.fun" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.firemc.fun) and default port 19132.'
   },
   {
     id: 'bedrock-support',
     category: 'Connection',
-    question: 'Does Butterfly Network support Bedrock?',
-    answer: 'Yes! Butterfly Network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.firemc.fun" on port  19132.'
+    question: 'Does Butterfly network support Bedrock?',
+    answer: 'Yes! Butterfly network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.firemc.fun" on port  19132.'
   },
   {
     id: 'versions-supported',
@@ -23,7 +23,7 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'game-modes-available',
     category: 'Game Modes',
     question: 'What game modes are available?',
-    answer: 'Butterfly Network offers 6 premier game modes: Skyblock (custom minions & islands), BedWars (fast-paced tactical PvP), SkyWars (chaotic aerial combat), Survival (enhanced grief-free SMP), Lifesteal (high-stakes heart theft PvP), and HeadSteal (collect enemy heads as enchanted relics).'
+    answer: 'Butterfly network offers 6 premier game modes: Skyblock (custom minions & islands), BedWars (fast-paced tactical PvP), SkyWars (chaotic aerial combat), Survival (enhanced grief-free SMP), Lifesteal (high-stakes heart theft PvP), and HeadSteal (collect enemy heads as enchanted relics).'
   },
   {
     id: 'free-to-play',

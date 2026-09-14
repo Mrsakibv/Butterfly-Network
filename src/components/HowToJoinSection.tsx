@@ -22,7 +22,7 @@ export const HowToJoinSection: React.FC = () => {
             <span>Get Connected In Seconds</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white font-heading tracking-tight">
-            How to Join Butterfly Network
+            How to Join Butterfly network
           </h2>
           <p className="text-slate-400 text-base sm:text-lg">
             Follow three simple steps to dive right into the action. Supporting both Java and Bedrock cross-play.
@@ -101,7 +101,7 @@ export const HowToJoinSection: React.FC = () => {
               </h3>
               <p className="text-sm text-slate-400 leading-relaxed">
                 {platform === 'java'
-                  ? 'Navigate to Multiplayer, select "Add Server", and name it "Butterfly Network". Enter the server address below.'
+                  ? 'Navigate to Multiplayer, select "Add Server", and name it "Butterfly network". Enter the server address below.'
                   : 'Click "Play", switch to the "Servers" tab, scroll down and choose "Add Server".'}
               </p>
             </div>
@@ -126,10 +126,10 @@ export const HowToJoinSection: React.FC = () => {
                 3
               </div>
               <h3 className="text-xl font-bold text-white font-heading">
-                STEP 3: Join Butterfly Network
+                STEP 3: Join Butterfly network
               </h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Click "Done", select Butterfly Network from your server list, and hit "Join Server". Welcome to your next adventure!
+                Click "Done", select Butterfly network from your server list, and hit "Join Server". Welcome to your next adventure!
               </p>
             </div>
 

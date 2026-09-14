@@ -1,12 +1,12 @@
-# 🦋 Butterfly Network
+# 🦋 Butterfly network
 
 A modern Minecraft server network website built with React, TypeScript, Vite, Tailwind CSS and Supabase.
 
 ---
 
-## 🎮 About Butterfly Network
+## 🎮 About Butterfly network
 
-Butterfly Network is a Minecraft server network featuring multiple game modes and a modern web interface.
+Butterfly network is a Minecraft server network featuring multiple game modes and a modern web interface.
 
 ### Current Game Modes
 

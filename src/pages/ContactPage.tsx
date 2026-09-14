@@ -16,7 +16,7 @@ export const ContactPage: React.FC = () => {
   };
 
   useEffect(() => {
-    document.title = 'Contact | Butterfly Network';
+    document.title = 'Contact | Butterfly network';
   }, []);
 
   const defaultContactCards = [

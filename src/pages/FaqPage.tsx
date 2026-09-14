@@ -11,7 +11,7 @@ export const FaqPage: React.FC<FaqPageProps> = ({ onOpenPlayModal }) => {
   const faqItems = usePageItems('faq');
 
   useEffect(() => {
-    document.title = 'FAQ & Help | Butterfly Network';
+    document.title = 'FAQ & Help | Butterfly network';
   }, []);
 
   return (

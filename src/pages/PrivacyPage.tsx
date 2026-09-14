@@ -4,7 +4,7 @@ import { Shield, Lock } from 'lucide-react';
 
 export const PrivacyPage: React.FC = () => {
   useEffect(() => {
-    document.title = 'Privacy Policy | Butterfly Network';
+    document.title = 'Privacy Policy | Butterfly network';
   }, []);
 
   return (

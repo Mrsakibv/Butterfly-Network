@@ -419,7 +419,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             className={`focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl transition-all ${
               mobileMenuOpen ? 'hidden md:block' : 'block'
             }`}
-            aria-label="Butterfly Network Home"
+            aria-label="Butterfly network Home"
           >
             <Logo size="md" showText={false} />
           </a>
@@ -555,7 +555,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all shadow-sm active:scale-95"
-              aria-label="Join Butterfly Network Discord"
+              aria-label="Join Butterfly network Discord"
             >
               <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
               <span>Discord</span>

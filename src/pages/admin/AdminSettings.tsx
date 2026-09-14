@@ -35,7 +35,7 @@ interface SiteSettings {
 }
 
 const defaultSettings: SiteSettings = {
-  site_name: 'Butterfly Network',
+  site_name: 'Butterfly network',
   tagline: 'Your next Minecraft adventure starts here :)',
   logo_url: '',
   favicon_url: '',
@@ -60,9 +60,9 @@ const defaultSettings: SiteSettings = {
   hero_kicker: 'Next-Gen Minecraft Multiplayer',
   hero_kicker_version: 'v1.8.x - 1.21.x',
   hero_title_prefix: 'Welcome to',
-  hero_title_main: 'Butterfly Network',
+  hero_title_main: 'Butterfly network',
   hero_subtitle: 'Your next Minecraft adventure starts here :)',
-  hero_description: 'Join Butterfly Network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
+  hero_description: 'Join Butterfly network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
 };
 
 export const AdminSettings: React.FC = () => {

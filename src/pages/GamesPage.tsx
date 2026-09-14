@@ -25,7 +25,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
   const [selectedTag, setSelectedTag] = useState<string>('All');
 
   useEffect(() => {
-    document.title = 'Game Modes | Butterfly Network';
+    document.title = 'Game Modes | Butterfly network';
 
     async function fetchGamesFromSupabase() {
       try {
@@ -78,7 +78,7 @@ export const GamesPage: React.FC<GamesPageProps> = ({ onOpenPlayModal }) => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-heading tracking-tight">
-            Butterfly Network Game Modes
+            Butterfly network Game Modes
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg">

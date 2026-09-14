@@ -6,7 +6,7 @@ export const GalleryPage: React.FC = () => {
   const pageItems = usePageItems('gallery');
 
   useEffect(() => {
-    document.title = 'Gallery | Butterfly Network';
+    document.title = 'Gallery | Butterfly network';
   }, []);
 
   const defaultGalleryItems = [

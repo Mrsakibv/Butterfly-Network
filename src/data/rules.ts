@@ -27,7 +27,7 @@ export const SERVER_RULES: RuleCategory[] = [
   },
   {
     title: 'Client Modifications & Unfair Advantages',
-    description: 'Butterfly Network is committed to 100% fair gameplay. All competitive advantages must come from skill alone.',
+    description: 'Butterfly network is committed to 100% fair gameplay. All competitive advantages must come from skill alone.',
     rules: [
       {
         ruleNumber: '2.1',

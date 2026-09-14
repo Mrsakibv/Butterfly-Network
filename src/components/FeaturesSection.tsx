@@ -41,10 +41,10 @@ export const FeaturesSection: React.FC = () => {
             <span>Engineered for Excellence</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white font-heading tracking-tight">
-            Why Butterfly Network?
+            Why Butterfly network?
           </h2>
           <p className="text-slate-400 text-base sm:text-lg">
-            We built Butterfly Network from the ground up to eliminate lag, prevent cheating, and provide a welcoming, balanced home for all Minecraft enthusiasts.
+            We built Butterfly network from the ground up to eliminate lag, prevent cheating, and provide a welcoming, balanced home for all Minecraft enthusiasts.
           </p>
         </div>
 

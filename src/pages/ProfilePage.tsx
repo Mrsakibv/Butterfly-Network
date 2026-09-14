@@ -455,7 +455,7 @@ export const ProfilePage: React.FC = () => {
               </h1>
 
               <p className="mt-1 text-slate-400">
-                Manage your Butterfly Network profile
+                Manage your Butterfly network profile
               </p>
             </div>
 

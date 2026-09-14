@@ -34,12 +34,12 @@ export const Footer: React.FC = () => {
               href="/"
               onClick={(e) => handleLinkClick('/', e)}
               className="inline-block focus:outline-none"
-              aria-label="Butterfly Network Home"
+              aria-label="Butterfly network Home"
             >
               <Logo size="lg" />
             </a>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
-              Butterfly Network is a premier Minecraft multiplayer experience delivering custom Skyblock, fast-paced BedWars, SMP Survival, and hardcore Lifesteal with zero latency.
+              Butterfly network is a premier Minecraft multiplayer experience delivering custom Skyblock, fast-paced BedWars, SMP Survival, and hardcore Lifesteal with zero latency.
             </p>
             <div className="pt-2 flex items-center gap-3">
               <a

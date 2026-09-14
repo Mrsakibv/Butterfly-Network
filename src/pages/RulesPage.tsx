@@ -26,7 +26,7 @@ export const RulesPage: React.FC = () => {
   }, [pageItems]);
 
   useEffect(() => {
-    document.title = 'Server Rules | Butterfly Network';
+    document.title = 'Server Rules | Butterfly network';
   }, []);
 
   return (
@@ -40,7 +40,7 @@ export const RulesPage: React.FC = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-heading tracking-tight">
-            Butterfly Network Rules & Guidelines
+            Butterfly network Rules & Guidelines
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg">

@@ -1,5 +1,5 @@
 /**
- * Central Server Configuration for Butterfly Network
+ * Central Server Configuration for Butterfly network
  * Update these values to automatically update the entire website.
  */
 export interface ServerConfig {
@@ -34,14 +34,14 @@ export const DEFAULT_HERO_SETTINGS: HeroSettings = {
   kicker: 'Next-Gen Minecraft Multiplayer',
   kickerVersion: 'v1.8.x - 1.21.x',
   titlePrefix: 'Welcome to',
-  titleMain: 'Butterfly Network',
+  titleMain: 'Butterfly network',
   subtitle: 'Your next Minecraft adventure starts here :)',
-  description: 'Join Butterfly Network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
+  description: 'Join Butterfly network and experience an exciting Minecraft network featuring multiple game modes, an active community and an unforgettable adventure.',
   backgroundImage: '',
 };
 
 export const SERVER_CONFIG: ServerConfig = {
-  serverName: "Butterfly Network",
+  serverName: "Butterfly network",
   tagline: "Your next Minecraft adventure starts here :)",
   javaIp: "play.firemc.fun",
   bedrockIp: "play.firemc.fun",

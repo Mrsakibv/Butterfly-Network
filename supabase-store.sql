@@ -40,7 +40,7 @@ values
   ('store', 'store', 'VIP', 'A strong starting rank with useful network perks.', '{"category":"ranks","price":"99","badge":"POPULAR","features":"VIP prefix\nSpecial chat color\nCosmetic perks"}', 10, true),
   ('store', 'store', 'VIP+', 'An upgraded rank for players who want more.', '{"category":"ranks","price":"149","badge":"","features":"VIP+ prefix\nExtra cosmetics\nAdditional commands"}', 20, true),
   ('store', 'store', 'Diamond', 'A premium rank for dedicated players.', '{"category":"ranks","price":"199","badge":"","features":"Diamond prefix\nExclusive cosmetics\nPremium chat perks"}', 30, true),
-  ('store', 'store', 'Grand Master', 'The highest tier Butterfly Network rank.', '{"category":"ranks","price":"699","badge":"ULTIMATE","features":"Grand Master prefix\nMaximum rank perks\nExclusive effects"}', 40, true),
+  ('store', 'store', 'Grand Master', 'The highest tier Butterfly network rank.', '{"category":"ranks","price":"699","badge":"ULTIMATE","features":"Grand Master prefix\nMaximum rank perks\nExclusive effects"}', 40, true),
   ('store', 'store', 'Common Key', 'Open a common crate and discover a reward.', '{"category":"keys","price":"29","badge":"","features":"1 Common Key\nRandom rewards"}', 10, true),
   ('store', 'store', 'Rare Key', 'A key with better reward possibilities.', '{"category":"keys","price":"49","badge":"","features":"1 Rare Key\nRare rewards"}', 20, true),
   ('store', 'store', 'Legendary Key', 'Unlock the legendary reward pool.', '{"category":"keys","price":"129","badge":"RARE","features":"1 Legendary Key\nLegendary rewards"}', 30, true),

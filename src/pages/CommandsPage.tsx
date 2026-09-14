@@ -6,7 +6,7 @@ export const CommandsPage: React.FC = () => {
   const pageItems = usePageItems('commands');
 
   useEffect(() => {
-    document.title = 'Commands | Butterfly Network';
+    document.title = 'Commands | Butterfly network';
   }, []);
 
   const defaultCommands = [

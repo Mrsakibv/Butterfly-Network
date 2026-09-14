@@ -37,7 +37,7 @@ export const LeaderboardSection: React.FC = () => {
             Player Leaderboards
           </h2>
           <p className="text-slate-400 text-base sm:text-lg">
-            Celebrating the greatest champions, wealthiest tycoons, and fiercest duelists on Butterfly Network.
+            Celebrating the greatest champions, wealthiest tycoons, and fiercest duelists on Butterfly network.
           </p>
           <div className="inline-block mt-2">
             <span className="text-[11px] font-semibold text-purple-300 bg-purple-950/60 border border-purple-500/30 px-3 py-1 rounded-full">

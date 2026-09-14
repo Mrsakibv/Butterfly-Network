@@ -14,7 +14,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
-    document.title = 'Butterfly Network | Minecraft Server Network';
+    document.title = 'Butterfly network | Minecraft Server Network';
   }, []);
 
   return (
@@ -25,7 +25,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 2. Featured Game Modes */}
       <GameModesSection onOpenPlayModal={onOpenPlayModal} />
 
-      {/* 3. Why Butterfly Network Features */}
+      {/* 3. Why Butterfly network Features */}
       <FeaturesSection />
 
       {/* 4. How To Join (3 Steps) */}

@@ -45,7 +45,7 @@ export const GameDetailPage: React.FC<GameDetailPageProps> = ({ slug, onOpenPlay
   }, [slug]);
 
   useEffect(() => {
-    if (gameMode) document.title = `${gameMode.name} - Butterfly Network`;
+    if (gameMode) document.title = `${gameMode.name} - Butterfly network`;
   }, [gameMode]);
 
   if (!gameMode) {

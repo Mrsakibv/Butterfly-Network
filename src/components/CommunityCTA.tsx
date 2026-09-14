@@ -25,7 +25,7 @@ export const CommunityCTA: React.FC<CommunityCTAProps> = ({ onOpenPlayModal }) =
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white font-heading tracking-tight">
-              Join the Butterfly Network Community
+              Join the Butterfly network Community
             </h2>
 
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed">

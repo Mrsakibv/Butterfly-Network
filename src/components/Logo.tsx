@@ -35,7 +35,7 @@ export const Logo: React.FC<LogoProps> = ({
         >
           <img
             src="/logo.png"
-            alt="Butterfly Network"
+            alt="Butterfly network"
             onError={() => setImgError(true)}
             className="w-full h-full object-contain drop-shadow-[0_0_18px_rgba(168,85,247,0.7)]"
           />

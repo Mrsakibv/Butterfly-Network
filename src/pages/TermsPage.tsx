@@ -7,7 +7,7 @@ export const TermsPage: React.FC = () => {
   const pageItems = usePageItems('terms');
 
   useEffect(() => {
-    document.title = 'Terms of Service | Butterfly Network';
+    document.title = 'Terms of Service | Butterfly network';
   }, []);
 
   return (

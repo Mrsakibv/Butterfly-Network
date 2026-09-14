@@ -66,7 +66,7 @@ export const GameModesSection: React.FC<GameModesSectionProps> = ({ onOpenPlayMo
             Featured Game Modes
           </h2>
           <p className="text-slate-400 text-base sm:text-lg">
-            Choose your battlefield. From tranquil island management to intense survival combat, Butterfly Network offers an adventure for every playstyle.
+            Choose your battlefield. From tranquil island management to intense survival combat, Butterfly network offers an adventure for every playstyle.
           </p>
         </div>
 
