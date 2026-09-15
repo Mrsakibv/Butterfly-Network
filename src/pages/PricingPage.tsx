@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Coins, Crown, KeyRound, Package, Sparkles, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SERVER_CONFIG } from '../config/server';
+import { usePageItems } from '../hooks/usePageItems';
 
 const storeItems = [
   {
@@ -130,29 +131,89 @@ interface PricingPageProps {
 export const PricingPage: React.FC<PricingPageProps> = () => {
   const [activeCategory, setActiveCategory] = useState('ranks');
 
+  // Get Store items from Supabase
+  const pageItems = usePageItems('store');
+
+  // Convert Supabase Store data into the same format
+  // used by the existing Pricing Page design.
+    const liveStoreItems = useMemo(
+    () =>
+      pageItems
+        .filter((item) => item.item_type === 'store')
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          category: item.extra?.category || 'ranks',
+          categoryLabel: item.extra?.categoryLabel || 'Ranks',
+          categoryIcon: item.extra?.categoryIcon || 'package',
+          categoryIconUrl: item.extra?.categoryIconUrl || '',
+          price: item.extra?.price || '0',
+          features: item.extra?.features
+            ? item.extra.features
+                .split('\n')
+                .map((feature) => feature.trim())
+                .filter(Boolean)
+            : [],
+          badge: item.extra?.badge || undefined,
+        })),
+    [pageItems]
+  );
+
+  // If Supabase has Store data, use it.
+  // Otherwise, use the original hard-coded Store items.
+  const displayStoreItems = liveStoreItems.length > 0 ? liveStoreItems : storeItems;
+
   useEffect(() => {
     document.title = 'Minecraft Store | Butterfly network';
   }, []);
 
-  const categories = useMemo(() => {
+            const getCategoryIcon = (category: string, iconName?: string, iconUrl?: string) => {
+      if (iconUrl) {
+        return function CustomCategoryIcon({ className }: { className?: string }) {
+          return <img src={iconUrl} alt="" className={`${className || 'h-5 w-5'} rounded object-cover`} />;
+        };
+      }
+
+      const iconToUse = iconName || category;
+
+      switch (iconToUse) {
+        case 'ranks':
+        case 'crown':
+          return Crown;
+        case 'keys':
+        case 'key':
+          return KeyRound;
+        case 'coins':
+          return Coins;
+        case 'wings':
+        case 'sparkles':
+          return Sparkles;
+        default:
+          return Package;
+      }
+    };
+
+        const categories = useMemo(() => {
     const uniqueCategories = Array.from(
       new Map(
-        storeItems.map((item) => [
+        displayStoreItems.map((item) => [
           item.category,
           {
             id: item.category,
             label: item.categoryLabel,
-            icon: defaultCategories.find((c) => c.id === item.category)?.icon || Package,
+            icon: getCategoryIcon(item.category, (item as any).categoryIcon, (item as any).categoryIconUrl),
           },
         ])
       ).values()
     );
+
     return uniqueCategories.length > 0 ? uniqueCategories : defaultCategories;
-  }, []);
+  }, [displayStoreItems]);
 
   const visibleItems = useMemo(
-    () => storeItems.filter((item) => item.category === activeCategory),
-    [activeCategory]
+    () => displayStoreItems.filter((item) => item.category === activeCategory),
+    [displayStoreItems, activeCategory]
   );
 
   useEffect(() => {
@@ -165,14 +226,22 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
     <div className="pt-24 pb-20">
       <section className="relative py-12">
         <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[350px] w-[700px] -translate-x-1/2 rounded-full bg-purple-600/15 blur-[140px]" />
+
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto mb-10 max-w-3xl space-y-3 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3.5 py-1.5 text-xs font-semibold text-purple-300">
               <Package className="h-3.5 w-3.5 text-purple-400" /> Minecraft Store
             </div>
-            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl">Power up your adventure</h1>
-            <p className="text-base text-slate-400 sm:text-lg">Choose ranks, keys, coins, and wings for your Butterfly network experience.</p>
+
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
+              Power up your adventure
+            </h1>
+
+            <p className="text-base text-slate-400 sm:text-lg">
+              Choose ranks, keys, coins, and wings for your Butterfly network experience.
+            </p>
           </div>
+
           <div className="mb-10 flex flex-wrap justify-center gap-3">
             {categories.map(({ id, label, icon: Icon }) => (
               <button
@@ -188,51 +257,69 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
               </button>
             ))}
           </div>
+
           {visibleItems.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-slate-400">
               No products are available in this category yet.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleItems.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.04 }}
-                  className="relative flex h-[390px] flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-purple-400/40"
-                >
-                  {item.badge && (
-                    <span className="absolute right-4 top-4 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300">
-                      {item.badge}
-                    </span>
-                  )}
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">
-                    <Package className="h-5 w-5 text-purple-300" />
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleItems.map((item, index) => {
+                const ItemIcon = getCategoryIcon(item.category, (item as any).categoryIcon, (item as any).categoryIconUrl);
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.04 }}
+                    className="relative flex h-[390px] flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-purple-400/40"
+                  >
+                    {item.badge && (
+                      <span className="absolute right-4 top-4 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300">
+                        {item.badge}
+                      </span>
+                    )}
+
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">
+                      <ItemIcon className="h-5 w-5 text-purple-300" />
+                    </div>
+
+                    <h2 className="text-lg font-bold text-white">{item.title}</h2>
+
+                  <p className="mt-1 min-h-12 text-sm leading-relaxed text-slate-400">
+                    {item.description}
+                  </p>
+
+                  <div className="mt-4 text-2xl font-extrabold text-white">
+                    ৳{item.price}
                   </div>
-                  <h2 className="text-lg font-bold text-white">{item.title}</h2>
-                  <p className="mt-1 min-h-12 text-sm leading-relaxed text-slate-400">{item.description}</p>
-                  <div className="mt-4 text-2xl font-extrabold text-white">৳{item.price}</div>
+
                   {item.features.length > 0 && (
                     <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                       {item.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-xs text-slate-300">
+                        <li
+                          key={feature}
+                          className="flex items-start gap-2 text-xs text-slate-300"
+                        >
                           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                   )}
-                  <a
+
+                                    <a
                     href={SERVER_CONFIG.discordUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 px-4 py-3 text-sm font-semibold text-white hover:bg-[#5865F2]/30"
                   >
-                    Join Discord to Buy <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                    Join Discord to Buy
+                    <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                   </a>
                 </motion.div>
-              ))}
+              );
+            })}
             </div>
           )}
         </div>

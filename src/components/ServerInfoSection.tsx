@@ -122,27 +122,6 @@ export const ServerInfoSection: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Game Modes Tag Matrix */}
-        <div className="mt-10 p-8 rounded-2xl glass-panel border">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <Layers className="w-6 h-6 text-purple-400" />
-              <span className="font-heading font-bold text-white text-lg">Active Game Modes:</span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {GAME_MODES.map((mode) => (
-                <span
-                  key={mode.id}
-                  className="px-4 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-sm font-semibold text-slate-200 flex items-center gap-2"
-                >
-                  <span className="w-2 h-2 rounded-full bg-purple-400" />
-                  {mode.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

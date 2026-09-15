@@ -41,8 +41,9 @@ export type AdminSectionKey =
   | 'events'
   | 'gallery'
   | 'commands'
-  | 'vote'
+    | 'vote'
   | 'store'
+  | 'home'
   | 'users';
 
 const ADMIN_NAV_ITEMS: {
@@ -79,6 +80,13 @@ const ADMIN_NAV_ITEMS: {
     label: 'Pages',
     icon: FileText,
     path: '/admin/pages',
+  },
+  {
+    key: 'home',
+    permission: 'home',
+    label: 'Home Content',
+    icon: LayoutDashboard,
+    path: '/admin/home',
   },
   {
     key: 'rules',

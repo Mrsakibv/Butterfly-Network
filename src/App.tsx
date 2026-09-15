@@ -539,8 +539,12 @@ function AppContent() {
       return <AdminContentSection pageKey="vote" title="Vote Content" description="Manage vote rewards and vote links." />;
     }
 
-    if (path === '/admin/store') {
+        if (path === '/admin/store') {
       return <AdminContentSection pageKey="store" title="Minecraft Store" description="Add, edit, reorder, hide, or remove ranks, keys, coins, and wings." />;
+    }
+
+    if (path === '/admin/home') {
+      return <AdminContentSection pageKey="home" title="Home Content" description="Manage the slider/team section on the home page." />;
     }
 
     if (path === '/admin/users') {

@@ -203,16 +203,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
         .eq('is_visible', true)
         .order('sort_order', { ascending: true });
 
-      if (!error && data) {
+            if (!error && data) {
         const mainItems = data
           .filter((item) => item.menu_group === 'main')
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
 
-        const moreItems = data
+        const dbMoreItems = data
           .filter((item) => item.menu_group === 'more')
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
+
+        // Ensure FAQ is included if not present in DB pages
+        const hasFaq = [...mainItems, ...dbMoreItems].some(
+          (item) => item.href === '/faq' || item.label.toLowerCase() === 'faq'
+        );
+
+        const moreItems = hasFaq
+          ? dbMoreItems
+          : [{ label: 'FAQ', href: '/faq' }, ...dbMoreItems];
 
         setMainNavLinks(mainItems);
         setMoreNavLinks(moreItems);
@@ -223,7 +232,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           { label: 'Leaderboard', href: '/leaderboard' },
           { label: 'Store', href: '/pricing' },
         ]);
-        setMoreNavLinks([
+                setMoreNavLinks([
+          { label: 'FAQ', href: '/faq' },
           { label: 'Terms', href: '/terms' },
           { label: 'Rules', href: '/rules' },
           { label: 'Contact', href: '/contact' },

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Hero } from '../components/Hero';
-import { GameModesSection } from '../components/GameModesSection';
+import { HomeSlider } from '../components/HomeSlider';
 import { FeaturesSection } from '../components/FeaturesSection';
 import { HowToJoinSection } from '../components/HowToJoinSection';
 import { ServerInfoSection } from '../components/ServerInfoSection';
@@ -22,8 +22,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 1. Hero Section */}
       <Hero onOpenPlayModal={onOpenPlayModal} />
 
-      {/* 2. Featured Game Modes */}
-      <GameModesSection onOpenPlayModal={onOpenPlayModal} />
+      {/* 2. Custom Home Content Slider */}
+      <HomeSlider />
 
       {/* 3. Why Butterfly network Features */}
       <FeaturesSection />

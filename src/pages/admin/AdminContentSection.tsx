@@ -71,12 +71,22 @@ const fieldMap: Record<string, FieldConfig[]> = {
     { key: 'title', label: 'Reward or Vote Site Title' },
     { key: 'description', label: 'Description', type: 'textarea' },
   ],
-  store: [
+    store: [
     { key: 'price', label: 'Price (BDT)', extra: true },
     { key: 'badge', label: 'Badge, optional', extra: true },
     { key: 'title', label: 'Product Name' },
     { key: 'description', label: 'Product Description', type: 'textarea' },
     { key: 'features', label: 'Features, one per line', type: 'textarea', extra: true },
+  ],
+        home: [
+    { key: 'subtitle', label: 'Top Left Subtitle (Small uppercase)' },
+    { key: 'title', label: 'Top Left Name (Title)' },
+    { key: 'description', label: 'Introduction Text', type: 'textarea' },
+    { key: 'displayName', label: 'Display Name (Bottom Left)', extra: true },
+    { key: 'nameIconUrl', label: 'Logo Icon (Beside bottom name) URL', extra: true },
+    { key: 'rank', label: 'Current Rank (Below bottom name)', extra: true },
+    { key: 'largeImageUrl', label: 'Large Character Image URL', extra: true },
+    { key: 'socialLinks', label: 'Social Links (JSON Format)', extra: true },
   ],
 };
 
@@ -135,6 +145,8 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
     { id: 'coins', label: 'Coins', icon: 'coins' },
     { id: 'wings', label: 'Wings', icon: 'sparkles' },
   ]);
+
+    const [socialDraft, setSocialDraft] = useState({ iconUrl: '', link: '' });
 
   const fields = useMemo(() => fieldMap[pageKey] ?? fieldMap.terms, [pageKey]);
 
@@ -296,6 +308,33 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
     setCategoryDraft(null);
     setSaving(false);
     setMessage('Category deleted.');
+  };
+
+  const getSocialLinks = () => {
+    try {
+      return JSON.parse(form.extra.socialLinks || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+    const addSocialLink = () => {
+    if (!socialDraft.iconUrl.trim() || !socialDraft.link.trim()) return;
+    
+    // Auto-add https:// if missing
+    let finalLink = socialDraft.link.trim();
+    if (!/^https?:\/\//i.test(finalLink)) {
+      finalLink = `https://${finalLink}`;
+    }
+
+    const links = [...getSocialLinks(), { ...socialDraft, link: finalLink }];
+    setForm((current) => ({ ...current, extra: { ...current.extra, socialLinks: JSON.stringify(links) } }));
+    setSocialDraft({ iconUrl: '', link: '' });
+  };
+
+  const removeSocialLink = (index: number) => {
+    const links = getSocialLinks().filter((_: any, i: number) => i !== index);
+    setForm((current) => ({ ...current, extra: { ...current.extra, socialLinks: JSON.stringify(links) } }));
   };
 
   const addFeature = () => {
@@ -606,6 +645,31 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
                     {form.image_url && <button type="button" onClick={() => setForm((current) => ({ ...current, image_url: '' }))} className="inline-flex items-center gap-1 text-sm text-red-300 hover:text-red-200"><X className="h-4 w-4" /> Remove image</button>}
                   </div>
                   {form.image_url && <img src={form.image_url} alt="Custom icon preview" className="h-16 w-16 rounded-xl border border-white/10 object-cover" />}
+                </div>
+              ) : field.key === 'socialLinks' && pageKey === 'home' ? (
+                <div className="space-y-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                  <div className="flex flex-wrap gap-3">
+                                          {getSocialLinks().map((link: any, index: number) => (
+                      <div key={index} className="group relative flex items-center gap-2 rounded-lg bg-white/5 p-2 pr-8">
+                        <img src={link.iconUrl} alt="" className="h-5 w-5 rounded object-cover" />
+                        <a 
+                          href={link.link} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="max-w-[100px] truncate text-xs text-sky-400 hover:underline"
+                        >
+                          {link.link}
+                        </a>
+                        <button type="button" onClick={() => removeSocialLink(index)} className="absolute right-1 top-1 hidden text-red-400 group-hover:block"><X className="h-3 w-3" /></button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <input value={socialDraft.iconUrl} onChange={(e) => setSocialDraft({ ...socialDraft, iconUrl: e.target.value })} placeholder="Icon Image URL" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                    <input value={socialDraft.link} onChange={(e) => setSocialDraft({ ...socialDraft, link: e.target.value })} placeholder="Link URL" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                  </div>
+                  <button type="button" onClick={addSocialLink} className="w-full rounded-lg bg-white/5 py-2 text-xs font-semibold hover:bg-white/10">+ Add Social Link</button>
+                  <p className="text-[10px] text-slate-500 italic text-center">Manage social links as image icons with custom URLs.</p>
                 </div>
               ) : field.key === 'features' && (pageKey === 'store' || pageKey === 'vote') ? (
                 <div className="space-y-2">

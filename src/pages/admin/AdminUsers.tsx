@@ -26,11 +26,13 @@ const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'rules', label: 'Rules Content' },
   { key: 'terms', label: 'Terms Content' },
   { key: 'contact', label: 'Contact Content' },
+  { key: 'faq', label: 'FAQ Content' },
   { key: 'events', label: 'Events Content' },
   { key: 'gallery', label: 'Gallery Content' },
   { key: 'commands', label: 'Commands Content' },
-  { key: 'vote', label: 'Vote Content' },
+    { key: 'vote', label: 'Vote Content' },
   { key: 'store', label: 'Minecraft Store' },
+  { key: 'home', label: 'Home Content' },
   { key: 'users', label: 'Manage Users' },
 ];
 
