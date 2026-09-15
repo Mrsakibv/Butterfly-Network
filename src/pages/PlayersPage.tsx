@@ -7,7 +7,7 @@ export const PlayersPage: React.FC = () => {
   const { loading, online, playersOnline, playersMax, playerList, error, isDemo, refetch } = useServerStatus();
 
   useEffect(() => {
-    document.title = 'Players Online | Butterfly network';
+    document.title = 'Players Online | Butterfly Network';
   }, []);
 
   return (

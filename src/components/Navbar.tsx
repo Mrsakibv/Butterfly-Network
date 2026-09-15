@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import {
   Menu,
   X,
+  Disc as DiscordIcon,
   Play,
   ChevronRight,
   ChevronDown,
@@ -158,55 +159,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     setMoreMenuOpen(false);
   }, [path]);
 
-  // =========================
-  // Close mobile menu on escape or outside click
-  // =========================
-
   useEffect(() => {
-    if (!mobileMenuOpen) return;
-
-    let touchStartX = 0;
-
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      touchStartX = event.changedTouches[0].screenX;
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      const touchEndX = event.changedTouches[0].screenX;
-      // If swiped right (touchEndX > touchStartX by more than 50px), close menu
-      if (touchEndX - touchStartX > 50) {
-        setMobileMenuOpen(false);
-      }
-    };
+    if (!moreMenuOpen) return;
 
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      const navbar = document.getElementById('main-navbar');
-      const drawer = navbar?.querySelector('[data-mobile-drawer]');
 
-      if (drawer && !drawer.contains(target) && !navbar?.contains(target)) {
-        setMobileMenuOpen(false);
+      if (!target.closest('[data-more-menu]')) {
+        setMoreMenuOpen(false);
       }
     };
 
-    document.addEventListener('keydown', handleEscapeKey);
     document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchend', handleTouchEnd);
 
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
       document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [mobileMenuOpen]);
+  }, [moreMenuOpen]);
 
   // =========================
   // Minecraft Head URL
@@ -245,11 +214,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
 
-        const faqItem = { label: 'FAQ', href: '/faq' };
-        const hasFaq = [...moreItems, ...mainItems].some((item) => item.href === '/faq');
-
         setMainNavLinks(mainItems);
-        setMoreNavLinks(hasFaq ? moreItems : [...moreItems, faqItem]);
+        setMoreNavLinks(moreItems);
       } else {
         setMainNavLinks([
           { label: 'Home', href: '/' },
@@ -258,7 +224,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           { label: 'Store', href: '/pricing' },
         ]);
         setMoreNavLinks([
-          { label: 'FAQ', href: '/faq' },
           { label: 'Terms', href: '/terms' },
           { label: 'Rules', href: '/rules' },
           { label: 'Contact', href: '/contact' },
@@ -416,10 +381,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           <a
             href="/"
             onClick={(e) => handleNavClick('/', e)}
-            className={`focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl transition-all ${
-              mobileMenuOpen ? 'hidden md:block' : 'block'
-            }`}
-            aria-label="Butterfly network Home"
+            className="focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl"
+            aria-label="Butterfly Network Home"
           >
             <Logo size="md" showText={false} />
           </a>
@@ -555,9 +518,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all shadow-sm active:scale-95"
-              aria-label="Join Butterfly network Discord"
+              aria-label="Join Butterfly Network Discord"
             >
-              <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
+              <DiscordIcon className="w-4 h-4 text-purple-400" />
               <span>Discord</span>
             </a>
 
@@ -572,7 +535,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           </div>
 
           {/* Mobile Menu */}
-          <div className="flex items-center gap-1.5 sm:gap-2 md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
 
             {/* Mobile Minecraft Head */}
             {isLoggedIn && minecraftUsername && (
@@ -587,11 +550,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
             <button
               onClick={onOpenPlayModal}
-              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
               aria-label="Play Now"
             >
               <Play className="w-3 h-3 fill-white" />
-              <span className="hidden xs:inline">Play</span>
+              <span>Play</span>
             </button>
 
             <button
@@ -607,9 +570,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                <X className="w-6 h-6" />
               ) : (
-                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Menu className="w-6 h-6" />
               )}
             </button>
           </div>
@@ -633,8 +596,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               y: -10,
             }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 top-[65px] z-30 md:hidden bg-[#050505]/98 backdrop-blur-2xl border-b border-purple-500/20 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[calc(100vh-65px)] overflow-y-auto"
-            data-mobile-drawer
+            className="fixed inset-x-0 top-[65px] z-30 md:hidden bg-[#050505]/98 backdrop-blur-2xl border-b border-purple-500/20 shadow-2xl p-6 space-y-5"
           >
 
             {/* Navigation */}
@@ -649,7 +611,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                     onClick={(e) =>
                       handleNavClick(link.href, e)
                     }
-                    className={`flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all ${
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-all ${
                       active
                         ? 'bg-purple-600/20 text-purple-200 border border-purple-500/30'
                         : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -657,20 +619,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   >
                     <span>{link.label}</span>
 
-                    <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50" />
+                    <ChevronRight className="w-4 h-4 opacity-50" />
                   </a>
                 );
               })}
             </nav>
 
             {/* Mobile Actions */}
-            <div className="pt-3 sm:pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+            <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
 
               {/* Mobile Auth */}
               {!isLoggedIn ? (
                 <button
                   onClick={handleLogin}
-                  className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-400/40 text-slate-200 transition-all"
+                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-400/40 text-slate-200 transition-all"
                 >
                   <LogIn className="w-4 h-4 text-purple-400" />
                   <span>Login</span>
@@ -680,11 +642,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   {/* Profile */}
                   <button
                     onClick={handleProfile}
-                    className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 transition-all min-h-[44px]"
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 transition-all"
                   >
                     <MinecraftHead size="sm" />
 
-                    <span className="truncate">
+                    <span>
                       {username
                         ? `@${username}`
                         : 'My Profile'}
@@ -694,7 +656,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   {/* Logout */}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-300 transition-all"
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-300 transition-all"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Logout</span>
@@ -707,13 +669,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 href={SERVER_CONFIG.discordUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200 min-h-[44px]"
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200"
               >
-                <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
+                <DiscordIcon className="w-4 h-4 text-purple-400" />
 
-                <span>Discord</span>
+                <span>Join Discord</span>
 
-                <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60" />
+                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
               </a>
 
               {/* Play Now */}
@@ -722,7 +684,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   setMobileMenuOpen(false);
                   onOpenPlayModal();
                 }}
-                className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50 sm:col-span-2 min-h-[44px]"
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50 sm:col-span-2"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Play Now</span>

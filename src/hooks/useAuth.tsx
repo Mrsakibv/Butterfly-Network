@@ -17,6 +17,23 @@ export type AdminPermission =
   | 'store'
   | 'users';
 
+const VALID_PERMISSIONS: AdminPermission[] = [
+  'dashboard',
+  'settings',
+  'gamemodes',
+  'pages',
+  'rules',
+  'terms',
+  'contact',
+  'faq',
+  'events',
+  'gallery',
+  'commands',
+  'vote',
+  'store',
+  'users',
+];
+
 interface AuthContextValue {
   userId: string | null;
   email: string | null;
@@ -48,78 +65,170 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadSession = useCallback(async () => {
+    setLoading(true);
 
-    const loadSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!mounted) return;
+      if (userError) {
+        console.error('Auth user error:', userError);
+      }
 
       if (!user) {
         setUserId(null);
         setEmail(null);
         setRole(null);
         setPermissions([]);
-        setLoading(false);
         return;
       }
 
       setUserId(user.id);
       setEmail(user.email ?? null);
 
-      const { data: profile } = await supabase
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
-
-      const { data: customRole } = await supabase
-        .from('custom_roles')
-        .select('permissions')
-        .eq('name', profile?.role ?? '')
         .maybeSingle();
 
-      const customPermissions = Array.isArray(customRole?.permissions)
-        ? customRole.permissions.filter((permission): permission is AdminPermission =>
-            ['dashboard', 'settings', 'gamemodes', 'pages', 'rules', 'terms', 'contact', 'faq', 'events', 'gallery', 'commands', 'vote', 'store', 'users'].includes(permission)
+      if (profileError) {
+        console.error('Profile loading error:', profileError);
+        setRole(null);
+        setPermissions([]);
+        return;
+      }
+
+      const currentRole = profile?.role ?? 'user';
+
+      setRole(currentRole);
+
+      // Built-in roles do not use custom_roles permissions.
+      if (
+        currentRole === 'owner' ||
+        currentRole === 'admin' ||
+        currentRole === 'gamemod' ||
+        currentRole === 'user'
+      ) {
+        setPermissions([]);
+        return;
+      }
+
+      const {
+        data: customRole,
+        error: customRoleError,
+      } = await supabase
+        .from('custom_roles')
+        .select('permissions')
+        .eq('name', currentRole)
+        .maybeSingle();
+
+      if (customRoleError) {
+        console.error('Custom role loading error:', customRoleError);
+        setPermissions([]);
+        return;
+      }
+
+      const customPermissions: AdminPermission[] = Array.isArray(customRole?.permissions)
+        ? customRole.permissions.filter(
+            (permission): permission is AdminPermission =>
+              VALID_PERMISSIONS.includes(permission as AdminPermission)
           )
         : [];
 
+      setPermissions(customPermissions);
+    } catch (error) {
+      console.error('Session loading error:', error);
+      setUserId(null);
+      setEmail(null);
+      setRole(null);
+      setPermissions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initialize = async () => {
       if (mounted) {
-        setRole(profile?.role ?? 'user');
-        setPermissions(customPermissions);
-        setLoading(false);
+        await loadSession();
       }
     };
 
-    loadSession();
+    initialize();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadSession();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      if (mounted) {
+        loadSession();
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadSession]);
 
-  const can = useCallback((permission: AdminPermission) => {
-    if (role === 'owner') return true;
-    if (role === 'admin') return permission !== 'users';
-    if (role === 'gamemod') return permission === 'dashboard' || permission === 'gamemodes';
-    return permissions.includes(permission) || (
-      ['pages', 'rules', 'terms', 'contact', 'faq', 'events', 'gallery', 'commands', 'vote', 'store'].includes(permission)
-      && permissions.includes('settings')
-    );
-  }, [permissions, role]);
-  const isStaff = role === 'owner' || role === 'admin' || role === 'gamemod' || permissions.length > 0;
+  const can = useCallback(
+    (permission: AdminPermission) => {
+      // Owner has complete access.
+      if (role === 'owner') {
+        return true;
+      }
+
+      // Built-in admin permissions.
+      if (role === 'admin') {
+        return permission !== 'users';
+      }
+
+      // Built-in gamemod permissions.
+      if (role === 'gamemod') {
+        return permission === 'dashboard' || permission === 'gamemodes';
+      }
+
+      // CUSTOM ROLES:
+      // Exact permissions only.
+      // No inheritance.
+      // No automatic dashboard.
+      // No automatic settings access.
+      return permissions.includes(permission);
+    },
+    [permissions, role]
+  );
+
+  const isStaff =
+    role === 'owner' ||
+    role === 'admin' ||
+    role === 'gamemod' ||
+    permissions.length > 0;
+
   const canManageSettings = can('settings');
   const canManageUsers = can('users');
 
   return (
-    <AuthContext.Provider value={{ userId, email, role, permissions, loading, isStaff, canManageSettings, canManageUsers, can }}>
+    <AuthContext.Provider
+      value={{
+        userId,
+        email,
+        role,
+        permissions,
+        loading,
+        isStaff,
+        canManageSettings,
+        canManageUsers,
+        can,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

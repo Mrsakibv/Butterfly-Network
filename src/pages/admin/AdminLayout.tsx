@@ -1,7 +1,24 @@
 import React from 'react';
 import { AdminPermission, useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../hooks/useRouter';
-import { LayoutDashboard, Settings, Gamepad2, FileText, Users, LogOut, ArrowLeft, Scale, FileSignature, Mail, CalendarDays, Image, Terminal, Vote, CircleHelp, ShoppingBag } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Settings,
+  Gamepad2,
+  FileText,
+  Users,
+  LogOut,
+  ArrowLeft,
+  Scale,
+  FileSignature,
+  Mail,
+  CalendarDays,
+  Image,
+  Terminal,
+  Vote,
+  CircleHelp,
+  ShoppingBag,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
 import { AnimatePresence, motion } from 'motion/react';
@@ -28,26 +45,162 @@ export type AdminSectionKey =
   | 'store'
   | 'users';
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, permission = active }) => {
-  const { loading, isStaff, can, email, role } = useAuth();
+const ADMIN_NAV_ITEMS: {
+  key: AdminSectionKey;
+  permission: AdminPermission;
+  label: string;
+  icon: React.ElementType;
+  path: string;
+}[] = [
+  {
+    key: 'dashboard',
+    permission: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/admin',
+  },
+  {
+    key: 'settings',
+    permission: 'settings',
+    label: 'Site Settings',
+    icon: Settings,
+    path: '/admin/settings',
+  },
+  {
+    key: 'gamemodes',
+    permission: 'gamemodes',
+    label: 'Game Modes',
+    icon: Gamepad2,
+    path: '/admin/gamemodes',
+  },
+  {
+    key: 'pages',
+    permission: 'pages',
+    label: 'Pages',
+    icon: FileText,
+    path: '/admin/pages',
+  },
+  {
+    key: 'rules',
+    permission: 'rules',
+    label: 'Rules Content',
+    icon: Scale,
+    path: '/admin/rules',
+  },
+  {
+    key: 'terms',
+    permission: 'terms',
+    label: 'Terms Content',
+    icon: FileSignature,
+    path: '/admin/terms',
+  },
+  {
+    key: 'contact',
+    permission: 'contact',
+    label: 'Contact Content',
+    icon: Mail,
+    path: '/admin/contact',
+  },
+  {
+    key: 'faq',
+    permission: 'faq',
+    label: 'FAQ Content',
+    icon: CircleHelp,
+    path: '/admin/faq',
+  },
+  {
+    key: 'events',
+    permission: 'events',
+    label: 'Events Content',
+    icon: CalendarDays,
+    path: '/admin/events',
+  },
+  {
+    key: 'gallery',
+    permission: 'gallery',
+    label: 'Gallery Content',
+    icon: Image,
+    path: '/admin/gallery',
+  },
+  {
+    key: 'commands',
+    permission: 'commands',
+    label: 'Commands Content',
+    icon: Terminal,
+    path: '/admin/commands',
+  },
+  {
+    key: 'vote',
+    permission: 'vote',
+    label: 'Vote Content',
+    icon: Vote,
+    path: '/admin/vote',
+  },
+  {
+    key: 'store',
+    permission: 'store',
+    label: 'Minecraft Store',
+    icon: ShoppingBag,
+    path: '/admin/store',
+  },
+  {
+    key: 'users',
+    permission: 'users',
+    label: 'Manage Roles',
+    icon: Users,
+    path: '/admin/users',
+  },
+];
+
+export const AdminLayout: React.FC<AdminLayoutProps> = ({
+  children,
+  active,
+  permission,
+}) => {
+  const { loading, isStaff, can, email, role, permissions } = useAuth();
   const { navigate, path } = useRouter();
-  const accessPermission: AdminPermission = permission === 'dashboard' || permission === 'settings' || permission === 'gamemodes' || permission === 'pages' || permission === 'store' || permission === 'users'
-    ? permission
-    : active === 'dashboard'
-      ? 'dashboard'
-      : active === 'gamemodes'
-        ? 'gamemodes'
-        : active === 'users'
-          ? 'users'
-          : 'settings';
+
+  // The page's own permission is always used.
+  // No permission inheritance.
+  const accessPermission: AdminPermission = permission ?? active;
+
+  const firstAllowedItem = ADMIN_NAV_ITEMS.find((item) =>
+    can(item.permission)
+  );
 
   React.useEffect(() => {
-    if (!loading && (!isStaff || !can(accessPermission))) {
-      navigate('/login');
-    }
-  }, [loading, isStaff, can, accessPermission, navigate]);
+    if (loading) return;
 
-  if (loading || !isStaff || !can(accessPermission)) {
+    // Not logged in / not staff.
+    if (!isStaff) {
+      navigate('/login');
+      return;
+    }
+
+    // User is staff but does not have this specific permission.
+    if (!can(accessPermission)) {
+      // If they have another permission, send them to the first
+      // page they actually have access to.
+      if (firstAllowedItem) {
+        navigate(firstAllowedItem.path);
+      } else {
+        navigate('/login');
+      }
+    }
+  }, [
+    loading,
+    isStaff,
+    can,
+    accessPermission,
+    firstAllowedItem,
+    navigate,
+  ]);
+
+  if (
+    loading ||
+    !isStaff ||
+    !can(accessPermission)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         Loading...
@@ -60,22 +213,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
     navigate('/login');
   };
 
-  const navItems = [
-    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-    ...(can('settings') ? [{ key: 'settings', label: 'Site Settings', icon: Settings, path: '/admin/settings' }] : []),
-    ...(can('gamemodes') ? [{ key: 'gamemodes', label: 'Game Modes', icon: Gamepad2, path: '/admin/gamemodes' }] : []),
-    ...(can('pages') ? [{ key: 'pages', label: 'Pages', icon: FileText, path: '/admin/pages' }] : []),
-    ...(can('rules') ? [{ key: 'rules', label: 'Rules Content', icon: Scale, path: '/admin/rules' }] : []),
-    ...(can('terms') ? [{ key: 'terms', label: 'Terms Content', icon: FileSignature, path: '/admin/terms' }] : []),
-    ...(can('contact') ? [{ key: 'contact', label: 'Contact Content', icon: Mail, path: '/admin/contact' }] : []),
-    ...(can('faq') ? [{ key: 'faq', label: 'FAQ Content', icon: CircleHelp, path: '/admin/faq' }] : []),
-    ...(can('events') ? [{ key: 'events', label: 'Events Content', icon: CalendarDays, path: '/admin/events' }] : []),
-    ...(can('gallery') ? [{ key: 'gallery', label: 'Gallery Content', icon: Image, path: '/admin/gallery' }] : []),
-    ...(can('commands') ? [{ key: 'commands', label: 'Commands Content', icon: Terminal, path: '/admin/commands' }] : []),
-    ...(can('vote') ? [{ key: 'vote', label: 'Vote Content', icon: Vote, path: '/admin/vote' }] : []),
-    ...(can('store') ? [{ key: 'store', label: 'Minecraft Store', icon: ShoppingBag, path: '/admin/store' }] : []),
-    ...(can('users') ? [{ key: 'users', label: 'Manage Roles', icon: Users, path: '/admin/users' }] : []),
-  ];
+  const navItems = ADMIN_NAV_ITEMS.filter((item) =>
+    can(item.permission)
+  );
 
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
@@ -99,6 +239,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.key;
+
             return (
               <button
                 key={item.key}
@@ -117,8 +258,21 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
         </nav>
 
         <div className="mt-8 border-t border-white/10 pt-4">
-          <p className="truncate text-xs text-slate-500">{email}</p>
-          <p className="text-xs text-purple-400">{role}</p>
+          <p className="truncate text-xs text-slate-500">
+            {email}
+          </p>
+
+          <p className="text-xs text-purple-400">
+            {role}
+          </p>
+
+          {permissions.length > 0 && (
+            <p className="mt-1 text-[10px] text-slate-600">
+              {permissions.length} permission
+              {permissions.length !== 1 ? 's' : ''}
+            </p>
+          )}
+
           <button
             onClick={handleLogout}
             className="mt-3 flex w-full items-center gap-2 rounded-xl px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
@@ -136,7 +290,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, active, perm
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.24, ease: 'easeOut' }}
+            transition={{
+              duration: 0.24,
+              ease: 'easeOut',
+            }}
           >
             {children}
           </motion.div>
