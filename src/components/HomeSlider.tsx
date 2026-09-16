@@ -57,7 +57,7 @@ export const HomeSlider: React.FC = () => {
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#08080a] shadow-2xl min-h-[600px] flex flex-col">
+        <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 bg-[#08080a] shadow-2xl min-h-auto h-auto flex flex-col">
           
           {/* Background Elements */}
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/3" />
@@ -70,7 +70,7 @@ export const HomeSlider: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6 }}
-              className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 sm:p-14"
+              className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 sm:p-14"
             >
               {/* Left Column (Content) - 7 cols */}
               <div className="lg:col-span-7 flex flex-col h-full">
@@ -145,9 +145,9 @@ export const HomeSlider: React.FC = () => {
 
               {/* Right Column (Image & Socials) - 5 cols */}
               <div className="lg:col-span-5 flex flex-col items-center justify-center lg:items-end">
-                <div className="relative w-full max-w-[450px]">
+                <div className="relative w-full max-w-[280px] sm:max-w-[450px] mx-auto">
                   {/* Character Image */}
-                  <div className="relative aspect-[3/4] flex items-center justify-center">
+                  <div className="relative w-full aspect-[3/4] flex items-center justify-center">
                     <div className="absolute inset-0 bg-purple-600/10 blur-[80px] rounded-full" />
                     {currentItem.extra?.largeImageUrl ? (
                       <motion.img
@@ -191,9 +191,9 @@ export const HomeSlider: React.FC = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Slider Controls (Red Box area: now centered at bottom) */}
+          {/* Slider Controls */}
           {visibleItems.length > 1 && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-8 z-30 px-6 py-3 rounded-full bg-black/40 border border-white/5 backdrop-blur-xl">
+            <div className="relative mb-6 mx-auto flex items-center gap-6 z-30 px-6 py-2.5 rounded-full bg-black/40 border border-white/5 backdrop-blur-xl w-fit">
               <button 
                 onClick={handlePrev}
                 className="text-slate-400 hover:text-white transition-colors"
