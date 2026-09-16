@@ -33,6 +33,7 @@ import { VotePage } from './pages/VotePage';
 import { PlayersPage } from './pages/PlayersPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { BlogPage } from './pages/BlogPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 
 // Admin Pages
@@ -543,8 +544,12 @@ function AppContent() {
       return <AdminContentSection pageKey="store" title="Minecraft Store" description="Add, edit, reorder, hide, or remove ranks, keys, coins, and wings." />;
     }
 
-    if (path === '/admin/home') {
+        if (path === '/admin/home') {
       return <AdminContentSection pageKey="home" title="Home Content" description="Manage the slider/team section on the home page." />;
+    }
+
+    if (path === '/admin/blog') {
+      return <AdminContentSection pageKey="blog" title="Blog Content" description="Create and manage blog posts, news, and updates." />;
     }
 
     if (path === '/admin/users') {
@@ -605,6 +610,10 @@ function AppContent() {
 
     if (path === '/players') {
       return <PlayersPage />;
+    }
+
+    if (path === '/blog') {
+      return <BlogPage />;
     }
 
     if (path === '/privacy') {

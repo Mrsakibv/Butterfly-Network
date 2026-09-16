@@ -209,10 +209,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
 
-        const dbMoreItems = data
+                const dbMoreItems = data
           .filter((item) => item.menu_group === 'more')
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
+
+        // Add Blog to more items if not already there
+        if (!dbMoreItems.some(item => item.href === '/blog')) {
+          dbMoreItems.push({ label: 'Blog', href: '/blog' });
+        }
 
         // Ensure FAQ is included if not present in DB pages
         const hasFaq = [...mainItems, ...dbMoreItems].some(
@@ -233,6 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           { label: 'Store', href: '/pricing' },
         ]);
                 setMoreNavLinks([
+          { label: 'Blog', href: '/blog' },
           { label: 'FAQ', href: '/faq' },
           { label: 'Terms', href: '/terms' },
           { label: 'Rules', href: '/rules' },

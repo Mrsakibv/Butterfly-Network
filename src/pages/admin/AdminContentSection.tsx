@@ -85,9 +85,21 @@ const fieldMap: Record<string, FieldConfig[]> = {
     { key: 'displayName', label: 'Display Name (Bottom Left)', extra: true },
     { key: 'nameIconUrl', label: 'Logo Icon (Beside bottom name) URL', extra: true },
     { key: 'rank', label: 'Current Rank (Below bottom name)', extra: true },
-    { key: 'largeImageUrl', label: 'Large Character Image URL', extra: true },
+        { key: 'largeImageUrl', label: 'Large Character Image URL', extra: true },
     { key: 'socialLinks', label: 'Social Links (JSON Format)', extra: true },
   ],
+    blog: [
+      { key: 'author', label: 'Author Name', extra: true },
+      { key: 'authorRank', label: 'Author Rank (e.g. Founder)', extra: true },
+      { key: 'authorRankColor', label: 'Author Rank Color Code (e.g. #a855f7)', extra: true },
+      { key: 'authorImageUrl', label: 'Author Profile Image URL', extra: true },
+      { key: 'title', label: 'Blog Title' },
+      { key: 'subtitle', label: 'Publish Date (e.g. October 24, 2023)' },
+      { key: 'image_url', label: 'Main Cover Image URL' },
+      { key: 'description', label: 'Intro Description', type: 'textarea' },
+      { key: 'qna', label: 'QnA Section', extra: true },
+      { key: 'sections', label: 'Additional Content (Images & Topics)', extra: true },
+    ],
 };
 
 const CategoryIcon: React.FC<{ icon: string; iconUrl?: string }> = ({ icon, iconUrl }) => {
@@ -110,9 +122,11 @@ const emptyItem = (pageKey: string): PageItem => ({
     ? { icon: 'discord' }
     : pageKey === 'faq'
       ? { category: 'General' }
-      : pageKey === 'store'
+            : pageKey === 'store'
         ? { category: 'ranks', price: '', badge: '', features: '' }
-        : pageKey === 'vote'
+                : pageKey === 'blog'
+                  ? { author: '', authorRank: '', authorRankColor: '', authorImageUrl: '', qna: '[]', sections: '[]' }
+                : pageKey === 'vote'
           ? { features: '' }
         : {},
   sort_order: 999,
@@ -137,6 +151,9 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
   const [message, setMessage] = useState('');
   const [newFeature, setNewFeature] = useState('');
   const [newFeatureIcon, setNewFeatureIcon] = useState('sparkles');
+  const [newQna, setNewQna] = useState({ q: '', a: '' });
+  const [newLink, setNewLink] = useState({ label: '', url: '' });
+  const [newSection, setNewSection] = useState({ type: 'text', title: '', content: '', imageUrl: '' });
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState<{ id: string; label: string; icon: string; iconUrl: string } | null>(null);
   const [storeCategories, setStoreCategories] = useState<{ id: string; label: string; icon: string; iconUrl?: string }[]>([
@@ -332,9 +349,72 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
     setSocialDraft({ iconUrl: '', link: '' });
   };
 
-  const removeSocialLink = (index: number) => {
+    const removeSocialLink = (index: number) => {
     const links = getSocialLinks().filter((_: any, i: number) => i !== index);
     setForm((current) => ({ ...current, extra: { ...current.extra, socialLinks: JSON.stringify(links) } }));
+  };
+
+  const getBlogQna = () => {
+    try {
+      return JSON.parse(form.extra.qna || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const addBlogQna = () => {
+    if (!newQna.q.trim() || !newQna.a.trim()) return;
+    const qna = [...getBlogQna(), { ...newQna }];
+    setForm((current) => ({ ...current, extra: { ...current.extra, qna: JSON.stringify(qna) } }));
+    setNewQna({ q: '', a: '' });
+  };
+
+  const removeBlogQna = (index: number) => {
+    const qna = getBlogQna().filter((_: any, i: number) => i !== index);
+    setForm((current) => ({ ...current, extra: { ...current.extra, qna: JSON.stringify(qna) } }));
+  };
+
+  const getBlogLinks = () => {
+    try {
+      return JSON.parse(form.extra.links || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const addBlogLink = () => {
+    if (!newLink.url.trim()) return;
+    const links = [...getBlogLinks(), { ...newLink }];
+    setForm((current) => ({ ...current, extra: { ...current.extra, links: JSON.stringify(links) } }));
+    setNewLink({ label: '', url: '' });
+  };
+
+    const removeBlogLink = (index: number) => {
+    const links = getBlogLinks().filter((_: any, i: number) => i !== index);
+    setForm((current) => ({ ...current, extra: { ...current.extra, links: JSON.stringify(links) } }));
+  };
+
+  const getBlogSections = () => {
+    try {
+      return JSON.parse(form.extra.sections || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const addBlogSection = () => {
+    if (newSection.type === 'text' && !newSection.content.trim()) return;
+    if (newSection.type === 'image' && !newSection.imageUrl.trim()) return;
+    if (newSection.type === 'points' && !newSection.content.trim()) return;
+
+    const sections = [...getBlogSections(), { ...newSection }];
+    setForm((current) => ({ ...current, extra: { ...current.extra, sections: JSON.stringify(sections) } }));
+    setNewSection({ type: 'text', title: '', content: '', imageUrl: '' });
+  };
+
+  const removeBlogSection = (index: number) => {
+    const sections = getBlogSections().filter((_: any, i: number) => i !== index);
+    setForm((current) => ({ ...current, extra: { ...current.extra, sections: JSON.stringify(sections) } }));
   };
 
   const addFeature = () => {
@@ -671,9 +751,119 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
                   <button type="button" onClick={addSocialLink} className="w-full rounded-lg bg-white/5 py-2 text-xs font-semibold hover:bg-white/10">+ Add Social Link</button>
                   <p className="text-[10px] text-slate-500 italic text-center">Manage social links as image icons with custom URLs.</p>
                 </div>
-              ) : field.key === 'features' && (pageKey === 'store' || pageKey === 'vote') ? (
+              ) : field.key === 'qna' && pageKey === 'blog' ? (
+                <div className="space-y-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                  <div className="space-y-3">
+                    {getBlogQna().map((qna: any, index: number) => (
+                      <div key={index} className="relative rounded-lg bg-white/5 p-3 pr-10 text-xs">
+                        <p className="font-bold text-purple-300">Q: {qna.q}</p>
+                        <p className="mt-1 text-slate-400">A: {qna.a}</p>
+                        <button type="button" onClick={() => removeBlogQna(index)} className="absolute right-2 top-2 text-red-400 hover:text-red-300">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <input value={newQna.q} onChange={(e) => setNewQna({ ...newQna, q: e.target.value })} placeholder="Question" className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                    <textarea value={newQna.a} onChange={(e) => setNewQna({ ...newQna, a: e.target.value })} placeholder="Answer" rows={2} className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                    <button type="button" onClick={addBlogQna} className="w-full rounded-lg bg-purple-600/20 py-2 text-xs font-semibold text-purple-300 hover:bg-purple-600/30">
+                      + Add QnA Pair
+                    </button>
+                  </div>
+                </div>
+              ) : field.key === 'sections' && pageKey === 'blog' ? (
+                <div className="space-y-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                  <div className="space-y-4">
+                    {getBlogSections().map((section: any, index: number) => (
+                      <div key={index} className="relative rounded-lg border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-purple-300">
+                            {section.type}
+                          </span>
+                          {section.title && <span className="text-xs font-bold text-white">{section.title}</span>}
+                        </div>
+                        {section.imageUrl && <img src={section.imageUrl} alt="" className="mb-2 h-20 w-full rounded object-cover" />}
+                        {section.content && <p className="text-[10px] text-slate-400 line-clamp-2">{section.content}</p>}
+                        <button type="button" onClick={() => removeBlogSection(index)} className="absolute right-2 top-2 text-red-400 hover:text-red-300">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="space-y-3 rounded-lg border border-white/10 bg-black/40 p-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['text', 'image', 'points'] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setNewSection({ ...newSection, type })}
+                          className={`rounded-lg py-2 text-xs font-bold transition-all ${
+                            newSection.type === type ? 'bg-purple-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                          }`}
+                        >
+                          {type.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+
+                    {newSection.type !== 'image' && (
+                      <input
+                        value={newSection.title}
+                        onChange={(e) => setNewSection({ ...newSection, title: e.target.value })}
+                        placeholder="Section Title (Optional)"
+                        className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs outline-none focus:border-purple-500"
+                      />
+                    )}
+
+                    {newSection.type === 'image' ? (
+                      <input
+                        value={newSection.imageUrl}
+                        onChange={(e) => setNewSection({ ...newSection, imageUrl: e.target.value })}
+                        placeholder="Image URL"
+                        className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs outline-none focus:border-purple-500"
+                      />
+                    ) : (
+                      <textarea
+                        value={newSection.content}
+                        onChange={(e) => setNewSection({ ...newSection, content: e.target.value })}
+                        placeholder={newSection.type === 'points' ? "Points (one per line)" : "Content text..."}
+                        rows={3}
+                        className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs outline-none focus:border-purple-500"
+                      />
+                    )}
+
+                    <button type="button" onClick={addBlogSection} className="w-full rounded-lg bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-500">
+                      + Add to Content Flow
+                    </button>
+                  </div>
+                </div>
+              ) : field.key === 'links' && pageKey === 'blog' ? (
+                <div className="space-y-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {getBlogLinks().map((link: any, index: number) => (
+                      <div key={index} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs">
+                        <span className="text-purple-300">{link.label || 'Link'}</span>
+                        <span className="text-slate-500">|</span>
+                        <span className="max-w-[100px] truncate text-slate-400">{link.url}</span>
+                        <button type="button" onClick={() => removeBlogLink(index)} className="ml-1 text-red-400 hover:text-red-300">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={newLink.label} onChange={(e) => setNewLink({ ...newLink, label: e.target.value })} placeholder="Label (e.g. Discord)" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                    <input value={newLink.url} onChange={(e) => setNewLink({ ...newLink, url: e.target.value })} placeholder="URL" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs outline-none focus:border-purple-500" />
+                  </div>
+                  <button type="button" onClick={addBlogLink} className="w-full rounded-lg bg-purple-600/20 py-2 text-xs font-semibold text-purple-300 hover:bg-purple-600/30">
+                    + Add Link
+                  </button>
+                </div>
+                            ) : field.key === 'features' && (pageKey === 'store' || pageKey === 'vote' || pageKey === 'blog') ? (
                 <div className="space-y-2">
-                  <div className="max-h-36 space-y-2 overflow-y-auto pr-1">{form.extra.features.split('\n').filter(Boolean).map((feature, index) => <div key={`${feature}-${index}`} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-300"><span>{feature}</span><button type="button" onClick={() => removeFeature(index)} className="text-red-300 hover:text-red-200" title="Remove feature"><X className="h-4 w-4" /></button></div>)}</div>
+                  <div className="max-h-36 space-y-2 overflow-y-auto pr-1">{getField(field).split('\n').filter(Boolean).map((feature: string, index: number) => <div key={`${feature}-${index}`} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-300"><span>{feature}</span><button type="button" onClick={() => removeFeature(index)} className="text-red-300 hover:text-red-200" title="Remove feature"><X className="h-4 w-4" /></button></div>)}</div>
                   <div className="flex gap-2"><input value={newFeature} onChange={(event) => setNewFeature(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addFeature(); } }} placeholder="Add a feature" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-purple-500" /><button type="button" onClick={addFeature} className="inline-flex items-center gap-1 rounded-xl border border-purple-400/40 px-3 py-2 text-sm text-purple-200 hover:bg-purple-500/10"><Plus className="h-4 w-4" /> Add</button></div>
                 </div>
               ) : field.options ? (

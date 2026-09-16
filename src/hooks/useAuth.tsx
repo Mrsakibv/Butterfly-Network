@@ -14,8 +14,9 @@ export type AdminPermission =
   | 'gallery'
   | 'commands'
     | 'vote'
-  | 'store'
+    | 'store'
   | 'home'
+  | 'blog'
   | 'users';
 
 const VALID_PERMISSIONS: AdminPermission[] = [
@@ -33,6 +34,7 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'vote',
   'store',
   'home',
+  'blog',
   'users',
 ];
 

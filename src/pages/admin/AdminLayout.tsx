@@ -42,8 +42,9 @@ export type AdminSectionKey =
   | 'gallery'
   | 'commands'
     | 'vote'
-  | 'store'
+    | 'store'
   | 'home'
+  | 'blog'
   | 'users';
 
 const ADMIN_NAV_ITEMS: {
@@ -149,7 +150,14 @@ const ADMIN_NAV_ITEMS: {
     permission: 'store',
     label: 'Minecraft Store',
     icon: ShoppingBag,
-    path: '/admin/store',
+        path: '/admin/store',
+  },
+  {
+    key: 'blog',
+    permission: 'blog',
+    label: 'Blog Content',
+    icon: FileText,
+    path: '/admin/blog',
   },
   {
     key: 'users',
