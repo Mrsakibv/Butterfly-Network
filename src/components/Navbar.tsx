@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase';
 import {
   Menu,
   X,
-  Disc as DiscordIcon,
   Play,
   ChevronRight,
   ChevronDown,
@@ -290,6 +289,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       return;
     }
 
+    if (href === '/') {
+      window.location.href = '/';
+      return;
+    }
+
     navigate(href);
   };
 
@@ -397,7 +401,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           <a
             href="/"
             onClick={(e) => handleNavClick('/', e)}
-            className="focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl"
+            className={`${mobileMenuOpen ? 'hidden' : 'block'} md:block focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl`}
             aria-label="Butterfly Network Home"
           >
             <Logo size="md" showText={false} />
@@ -536,7 +540,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all shadow-sm active:scale-95"
               aria-label="Join Butterfly Network Discord"
             >
-              <DiscordIcon className="w-4 h-4 text-purple-400" />
+              <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
               <span>Discord</span>
             </a>
 
@@ -563,15 +567,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 <MinecraftHead size="md" />
               </button>
             )}
-
-            <button
-              onClick={onOpenPlayModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow-sm"
-              aria-label="Play Now"
-            >
-              <Play className="w-3 h-3 fill-white" />
-              <span>Play</span>
-            </button>
 
             <button
               onClick={() =>
@@ -687,7 +682,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 rel="noreferrer"
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-purple-950/60 border border-purple-500/40 text-purple-200"
               >
-                <DiscordIcon className="w-4 h-4 text-purple-400" />
+                <img src="/discord.svg" alt="Discord" className="w-4 h-4" />
 
                 <span>Join Discord</span>
 

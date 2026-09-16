@@ -430,8 +430,18 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
 function AppContent() {
   const { path, gameSlug, navigate } = useRouter();
   const [playModalOpen, setPlayModalOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const isAdminRoute = path.startsWith('/admin');
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const shouldSkipAnimation = isMobile && path === '/';
 
   // Password recovery event tracking
   useEffect(() => {
@@ -711,10 +721,10 @@ function AppContent() {
 
           <motion.div
             key={path}
-            initial={{ opacity: 0 }}
+            initial={shouldSkipAnimation ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={shouldSkipAnimation ? false : { opacity: 0 }}
+            transition={shouldSkipAnimation ? { duration: 0 } : { duration: 0.2 }}
           >
             {renderCurrentPage()}
           </motion.div>
@@ -745,8 +755,12 @@ function AppContent() {
 ========================================================= */
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(() => !sessionStorage.getItem('hasLoaded'));
 
-  const [isLoading, setIsLoading] = useState(true);
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    sessionStorage.setItem('hasLoaded', 'true');
+  };
 
   return (
     <AuthProvider>
@@ -758,7 +772,7 @@ export default function App() {
 
           {isLoading && (
             <LoadingScreen
-              onComplete={() => setIsLoading(false)}
+              onComplete={handleLoadingComplete}
             />
           )}
 
