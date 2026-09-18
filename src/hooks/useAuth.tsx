@@ -13,11 +13,12 @@ export type AdminPermission =
   | 'events'
   | 'gallery'
   | 'commands'
-    | 'vote'
-    | 'store'
+  | 'vote'
+  | 'store'
   | 'home'
   | 'blog'
-  | 'users';
+  | 'users'
+  | 'social';
 
 const VALID_PERMISSIONS: AdminPermission[] = [
   'dashboard',
@@ -36,9 +37,11 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'home',
   'blog',
   'users',
+  'social',
 ];
 
 interface AuthContextValue {
+  user: { id: string } | null;
   userId: string | null;
   email: string | null;
   role: string | null;
@@ -51,6 +54,7 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue>({
+  user: null,
   userId: null,
   email: null,
   role: null,
@@ -69,12 +73,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const user = userId ? { id: userId } : null;
+
   const loadSession = useCallback(async () => {
     setLoading(true);
 
     try {
       const {
-        data: { user },
+        data: { user: authUser },
         error: userError,
       } = await supabase.auth.getUser();
 
@@ -82,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Auth user error:', userError);
       }
 
-      if (!user) {
+      if (!authUser) {
         setUserId(null);
         setEmail(null);
         setRole(null);
@@ -90,8 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setUserId(user.id);
-      setEmail(user.email ?? null);
+      setUserId(authUser.id);
+      setEmail(authUser.email ?? null);
 
       const {
         data: profile,
@@ -99,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', authUser.id)
         .maybeSingle();
 
       if (profileError) {
@@ -210,18 +216,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [permissions, role]
   );
 
+  const canManageSettings = can('settings');
+  const canManageUsers = can('users');
+
   const isStaff =
     role === 'owner' ||
     role === 'admin' ||
     role === 'gamemod' ||
     permissions.length > 0;
 
-  const canManageSettings = can('settings');
-  const canManageUsers = can('users');
-
   return (
     <AuthContext.Provider
       value={{
+        user,
         userId,
         email,
         role,

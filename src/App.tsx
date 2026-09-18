@@ -35,6 +35,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { BlogPage } from './pages/BlogPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
+import { SocialPage } from './pages/SocialPage';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -43,6 +44,7 @@ import { AdminGameModes } from './pages/admin/AdminGameModes';
 import { AdminPages } from './pages/admin/AdminPages';
 import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminContentSection } from './pages/admin/AdminContentSection';
+import { AdminSocial } from './pages/admin/AdminSocial';
 import { DynamicPage } from './pages/DynamicPage';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -566,6 +568,14 @@ function AppContent() {
       return <AdminUsers />;
     }
 
+    if (path === '/admin/social') {
+      return <AdminSocial />;
+    }
+
+    if (path === '/social') {
+      return <SocialPage />;
+    }
+
     if (path === '/leaderboard') {
       return (
         <LeaderboardPage
@@ -699,6 +709,7 @@ function AppContent() {
             {renderCurrentPage()}
           </motion.div>
         </AnimatePresence>
+        <ToastContainer />
       </div>
     );
   }

@@ -18,6 +18,7 @@ import {
   Vote,
   CircleHelp,
   ShoppingBag,
+  MessageSquare,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
@@ -41,11 +42,12 @@ export type AdminSectionKey =
   | 'events'
   | 'gallery'
   | 'commands'
-    | 'vote'
-    | 'store'
+  | 'vote'
+  | 'store'
   | 'home'
   | 'blog'
-  | 'users';
+  | 'users'
+  | 'social';
 
 const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
@@ -158,6 +160,13 @@ const ADMIN_NAV_ITEMS: {
     label: 'Blog Content',
     icon: FileText,
     path: '/admin/blog',
+  },
+  {
+    key: 'social',
+    permission: 'social',
+    label: 'Social Management',
+    icon: MessageSquare,
+    path: '/admin/social',
   },
   {
     key: 'users',

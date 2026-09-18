@@ -202,16 +202,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
         .eq('is_visible', true)
         .order('sort_order', { ascending: true });
 
-            if (!error && data) {
+      if (!error && data) {
         const mainItems = data
           .filter((item) => item.menu_group === 'main')
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
 
-                const dbMoreItems = data
+        const dbMoreItems = data
           .filter((item) => item.menu_group === 'more')
           .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
           .filter((item) => item.href);
+
+        // Add Social to main items if not already there
+        if (!mainItems.some(item => item.href === '/social')) {
+          mainItems.push({ label: 'Social', href: '/social' });
+        }
+
+        // Remove Games from main items if present
+        const filteredMainItems = mainItems.filter(item => item.href !== '/games');
+
+        // Add Games to more items if not already there
+        if (!dbMoreItems.some(item => item.href === '/games')) {
+          dbMoreItems.push({ label: 'Games', href: '/games' });
+        }
 
         // Add Blog to more items if not already there
         if (!dbMoreItems.some(item => item.href === '/blog')) {
@@ -219,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
         }
 
         // Ensure FAQ is included if not present in DB pages
-        const hasFaq = [...mainItems, ...dbMoreItems].some(
+        const hasFaq = [...filteredMainItems, ...dbMoreItems].some(
           (item) => item.href === '/faq' || item.label.toLowerCase() === 'faq'
         );
 
@@ -227,16 +240,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           ? dbMoreItems
           : [{ label: 'FAQ', href: '/faq' }, ...dbMoreItems];
 
-        setMainNavLinks(mainItems);
+        setMainNavLinks(filteredMainItems);
         setMoreNavLinks(moreItems);
       } else {
         setMainNavLinks([
           { label: 'Home', href: '/' },
-          { label: 'Games', href: '/games' },
+          { label: 'Social', href: '/social' },
           { label: 'Leaderboard', href: '/leaderboard' },
           { label: 'Store', href: '/pricing' },
         ]);
-                setMoreNavLinks([
+        setMoreNavLinks([
+          { label: 'Games', href: '/games' },
           { label: 'Blog', href: '/blog' },
           { label: 'FAQ', href: '/faq' },
           { label: 'Terms', href: '/terms' },
