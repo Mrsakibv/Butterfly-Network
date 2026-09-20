@@ -23,12 +23,13 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const navigate = useCallback((newPath: string) => {
-    if (newPath === window.location.pathname) {
+    const currentFullPath = window.location.pathname + window.location.search;
+    if (newPath === currentFullPath) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     window.history.pushState({}, '', newPath);
-    setPath(newPath);
+    setPath(newPath.split('?')[0]); // Extract pathname without query
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

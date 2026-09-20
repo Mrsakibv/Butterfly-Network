@@ -7,7 +7,8 @@ import {
   deletePost
 } from '../../services/social';
 import { useToast } from '../../hooks/useToast';
-import { Users, FileText, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, FileText, Trash2, ChevronDown, ChevronRight, Loader2, Award } from 'lucide-react';
+import { BadgeManagement } from './BadgeManagement';
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface Post {
 
 export const AdminSocial: React.FC = () => {
   const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<'moderation' | 'badges'>('moderation');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -159,10 +161,45 @@ export const AdminSocial: React.FC = () => {
     <AdminLayout active="social" permission="users">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Social Media Management</h1>
-        <p className="text-slate-400 mt-1">Manage posting permissions and moderate content</p>
+        <p className="text-slate-400 mt-1">Manage posting permissions, badges, and moderate content</p>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mt-6 border-b border-white/10">
+          <button
+            onClick={() => setActiveTab('moderation')}
+            className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors relative ${
+              activeTab === 'moderation'
+                ? 'text-purple-400'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Moderation & Permissions
+            {activeTab === 'moderation' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('badges')}
+            className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors relative ${
+              activeTab === 'badges'
+                ? 'text-purple-400'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            Badge Management
+            {activeTab === 'badges' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400" />
+            )}
+          </button>
+        </div>
       </div>
 
-      {loading ? (
+      {activeTab === 'badges' ? (
+        <BadgeManagement />
+      ) : loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
         </div>

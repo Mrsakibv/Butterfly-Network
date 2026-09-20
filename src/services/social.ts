@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import type { BadgeType } from '../types/badges';
 
 // Get posts (with user profile info)
 export const getPosts = async (limit = 20, offset = 0) => {
@@ -19,7 +20,7 @@ export const getPosts = async (limit = 20, offset = 0) => {
       const userIds = [...new Set(data.map(post => post.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username, minecraft_username, role')
+        .select('id, username, minecraft_username, role, badge')
         .in('id', userIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
@@ -99,7 +100,7 @@ export const checkUserLiked = async (postId: string, userId: string) => {
     .select('id')
     .eq('post_id', postId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   return { liked: !!data, error };
 };
@@ -121,7 +122,7 @@ export const addComment = async (postId: string, userId: string, content: string
     // Fetch author profile with role
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, username, minecraft_username, role')
+      .select('id, username, minecraft_username, role, badge')
       .eq('id', userId)
       .maybeSingle();
 
@@ -155,7 +156,7 @@ export const getComments = async (postId: string) => {
       const userIds = [...new Set(data.map(c => c.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username, minecraft_username, role')
+        .select('id, username, minecraft_username, role, badge')
         .in('id', userIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
@@ -195,32 +196,22 @@ export const deleteComment = async (commentId: string) => {
   }
 };
 
-// Update a comment (within 5 minutes only, fallback gracefully if updated_at is missing)
+// Update a comment
 export const updateComment = async (commentId: string, newContent: string) => {
   try {
-    let result = await supabase
+    const result = await supabase
       .from('comments')
-      .update({ content: newContent, updated_at: new Date().toISOString() })
+      .update({ content: newContent })
       .eq('id', commentId)
       .select('*')
       .maybeSingle();
-
-    if (result.error) {
-      // Fallback if updated_at column doesn't exist
-      result = await supabase
-        .from('comments')
-        .update({ content: newContent })
-        .eq('id', commentId)
-        .select('*')
-        .maybeSingle();
-    }
 
     if (result.error) {
       console.error('updateComment error:', result.error);
       return { data: null, error: result.error };
     }
 
-    return { data: result.data || { id: commentId, content: newContent, updated_at: new Date().toISOString() }, error: null };
+    return { data: result.data || { id: commentId, content: newContent }, error: null };
   } catch (err) {
     console.error('updateComment exception:', err);
     return { data: null, error: err as any };
@@ -281,4 +272,176 @@ export const getAllUsersWithPermissions = async () => {
     .order('username', { ascending: true });
 
   return { data, error };
+};
+
+// ==========================================
+// BADGE MANAGEMENT (Admin Only)
+// ==========================================
+
+// Assign badge to user
+export const assignBadge = async (userId: string, badgeType: BadgeType) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ badge: badgeType })
+    .eq('id', userId)
+    .select();
+
+  return { data, error };
+};
+
+// Remove badge from user
+export const removeBadge = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ badge: null })
+    .eq('id', userId)
+    .select();
+
+  return { data, error };
+};
+
+// Get all users with badges for admin management
+export const getAllUsersWithBadges = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, badge, minecraft_username')
+    .order('username', { ascending: true });
+
+  return { data, error };
+};
+
+// ==========================================
+// FOLLOW SYSTEM
+// ==========================================
+
+// Follow a user
+export const followUser = async (followerId: string, followingId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('follows')
+      .insert([{ follower_id: followerId, following_id: followingId }])
+      .select();
+
+    if (error) {
+      console.error('Follow error:', error);
+      // If table doesn't exist, simulate success in memory
+      if (error.code === '42P01') {
+        console.warn('follows table does not exist. Using localStorage fallback.');
+        const follows = JSON.parse(localStorage.getItem('follows') || '[]');
+        follows.push({ follower_id: followerId, following_id: followingId });
+        localStorage.setItem('follows', JSON.stringify(follows));
+        return { data: [{ id: 'local' }], error: null };
+      }
+    }
+
+    return { data, error };
+  } catch (err) {
+    console.error('Follow exception:', err);
+    return { data: null, error: err as any };
+  }
+};
+
+// Unfollow a user
+export const unfollowUser = async (followerId: string, followingId: string) => {
+  try {
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId);
+
+    if (error) {
+      console.error('Unfollow error:', error);
+      // Fallback
+      if (error.code === '42P01') {
+        const follows = JSON.parse(localStorage.getItem('follows') || '[]');
+        const filtered = follows.filter(
+          (f: any) => !(f.follower_id === followerId && f.following_id === followingId)
+        );
+        localStorage.setItem('follows', JSON.stringify(filtered));
+        return { error: null };
+      }
+    }
+
+    return { error };
+  } catch (err) {
+    console.error('Unfollow exception:', err);
+    return { error: err as any };
+  }
+};
+
+// Check if user is following another user
+export const checkIsFollowing = async (followerId: string, followingId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId)
+      .maybeSingle();
+
+    if (error) {
+      // Fallback
+      if (error.code === '42P01') {
+        const follows = JSON.parse(localStorage.getItem('follows') || '[]');
+        const isFollowing = follows.some(
+          (f: any) => f.follower_id === followerId && f.following_id === followingId
+        );
+        return { isFollowing, error: null };
+      }
+    }
+
+    return { isFollowing: !!data, error };
+  } catch (err) {
+    console.error('Check following exception:', err);
+    return { isFollowing: false, error: err as any };
+  }
+};
+
+// Get follower count
+export const getFollowerCount = async (userId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', userId);
+
+    if (error) {
+      // Fallback
+      if (error.code === '42P01') {
+        const follows = JSON.parse(localStorage.getItem('follows') || '[]');
+        const count = follows.filter((f: any) => f.following_id === userId).length;
+        return { count, error: null };
+      }
+    }
+
+    return { count: count || 0, error };
+  } catch (err) {
+    console.error('Get follower count exception:', err);
+    return { count: 0, error: err as any };
+  }
+};
+
+// Get following count
+export const getFollowingCount = async (userId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', userId);
+
+    if (error) {
+      // Fallback
+      if (error.code === '42P01') {
+        const follows = JSON.parse(localStorage.getItem('follows') || '[]');
+        const count = follows.filter((f: any) => f.follower_id === userId).length;
+        return { count, error: null };
+      }
+    }
+
+    return { count: count || 0, error };
+  } catch (err) {
+    console.error('Get following count exception:', err);
+    return { count: 0, error: err as any };
+  }
 };

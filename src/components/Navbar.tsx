@@ -55,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       .from('profiles')
       .select('username, minecraft_username')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     if (!error && data) {
       setUsername(data.username ?? '');
@@ -304,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     }
 
     if (href === '/') {
-      window.location.href = '/';
+      navigate('/');
       return;
     }
 

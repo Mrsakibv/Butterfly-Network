@@ -20,7 +20,7 @@ export const useSocialPermission = () => {
           .from('profiles')
           .select('can_post_social')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!error && data) {
           setCanPost(data.can_post_social || false);

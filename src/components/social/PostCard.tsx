@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { getLikeCount, checkUserLiked, likePost, unlikePost } from '../../services/social';
+import { Heart, MessageCircle, Share2, ChevronLeft, ChevronRight, Check, UserPlus, UserMinus } from 'lucide-react';
+import { getLikeCount, checkUserLiked, likePost, unlikePost, followUser, unfollowUser, checkIsFollowing } from '../../services/social';
 import { useAuth } from '../../hooks/useAuth';
 import { CommentSection } from './CommentSection';
 import { RoleBadge } from './RoleBadge';
+import { TikBadge } from './TikBadge';
 import { ImageModal } from './ImageModal';
 import { motion, AnimatePresence } from 'motion/react';
+import type { BadgeType } from '../../types/badges';
+
+import { useRouter } from '../../hooks/useRouter';
 
 interface Post {
   id: string;
@@ -18,6 +22,7 @@ interface Post {
     username?: string;
     minecraft_username?: string;
     role?: string | null;
+    badge?: BadgeType | null;
   } | null;
 }
 
@@ -28,12 +33,17 @@ interface PostCardProps {
 
 export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const { user } = useAuth();
+  const { navigate } = useRouter();
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
+
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // Multi-image state & Image Modal
   const [imageIndex, setImageIndex] = useState(0);
@@ -61,6 +71,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
   useEffect(() => {
     loadLikes();
+    loadFollowStatus();
   }, [post.id, user]);
 
   const loadLikes = async () => {
@@ -70,6 +81,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     if (user?.id) {
       const { liked } = await checkUserLiked(post.id, user.id);
       setIsLiked(liked);
+    }
+  };
+
+  const loadFollowStatus = async () => {
+    if (user?.id && post.profiles?.id && user.id !== post.profiles.id) {
+      const { isFollowing } = await checkIsFollowing(user.id, post.profiles.id);
+      setIsFollowing(isFollowing);
     }
   };
 
@@ -86,11 +104,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         setIsLiked(true);
         setLikeCount(prev => prev + 1);
         await likePost(post.id, user.id);
+        // Trigger heart animation
+        setShowHeartAnim(true);
+        setTimeout(() => setShowHeartAnim(false), 900);
       }
     } catch (err) {
       console.error('Error toggling like:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!user || !post.profiles?.id || followLoading || user.id === post.profiles.id) return;
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowUser(user.id, post.profiles.id);
+        setIsFollowing(false);
+      } else {
+        await followUser(user.id, post.profiles.id);
+        setIsFollowing(true);
+      }
+    } catch (err) {
+      console.error('Error toggling follow:', err);
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -103,11 +143,59 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     setTimeout(() => setShowHeartAnim(false), 900);
   };
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/social?post=${post.id}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/social?post=${post.id}`;
+
+    // ১. যদি Web Share API সাপোর্টেড থাকে (যেমন: Mobile Browsers / HTTPS)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Butterfly Network',
+          text: post.content || 'Check out this post on Butterfly Network!',
+          url: shareUrl,
+        });
+        return;
+      } catch (error) {
+        console.log('Share cancelled or failed, falling back to copy:', error);
+      }
+    }
+
+    // ২. যদি Clipboard API সাপোর্টেড থাকে (HTTPS / Localhost)
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+        return;
+      } catch (clipboardError) {
+        console.error('Error copying with Clipboard API:', clipboardError);
+      }
+    }
+
+    // ৩. Fallback Copy Method (HTTP / IP Address network-এ ১০০% কাজ করবে)
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        alert('Could not copy link automatically. URL: ' + shareUrl);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback copy error:', fallbackError);
+      alert('Could not copy link automatically. URL: ' + shareUrl);
+    }
   };
 
   const openImageModal = (index: number) => {
@@ -139,7 +227,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const username = post.profiles?.username || 'Anonymous';
   const minecraftUsername = post.profiles?.minecraft_username;
   const role = post.profiles?.role;
+  const badge = post.profiles?.badge;
   const avatarUrl = getMinecraftHead(minecraftUsername);
+  const isOwnPost = user?.id === post.profiles?.id;
 
   return (
     <>
@@ -150,7 +240,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
       >
         {/* Card Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-          <div className="flex items-center gap-3.5">
+          <div
+            onClick={() => {
+              if (user && post.profiles?.id) {
+                navigate(`/profile?id=${post.profiles.id}`);
+              }
+            }}
+            className={`flex items-center gap-3.5 ${user ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+          >
             <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.3)] flex-shrink-0">
               {avatarUrl ? (
                 <img
@@ -168,10 +265,40 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               <div className="flex items-center gap-2">
                 <span className="text-sm sm:text-base font-bold text-white tracking-tight">{username}</span>
                 <RoleBadge role={role} />
+                <TikBadge badgeType={badge} size="sm" />
               </div>
               <p className="text-[11px] text-purple-300/60 font-medium">{formatDate(post.created_at)}</p>
             </div>
           </div>
+
+          {/* Follow Button - Only show if logged in, not own post */}
+          {user && !isOwnPost && post.profiles?.id && (
+            <motion.button
+              onClick={handleFollow}
+              disabled={followLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                isFollowing
+                  ? 'bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-400'
+                  : 'bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-500 hover:to-violet-500'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {followLoading ? (
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : isFollowing ? (
+                <>
+                  <UserMinus className="w-3.5 h-3.5" />
+                  <span>Following</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Follow</span>
+                </>
+              )}
+            </motion.button>
+          )}
         </div>
 
         {/* Text Content */}
@@ -294,10 +421,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             >
               <motion.div
                 whileTap={{ scale: 0.8 }}
-                animate={isLiked ? { scale: [1, 1.25, 1] } : {}}
-                transition={{ duration: 0.2 }}
+                animate={isLiked ? { scale: [1, 1.3, 1] } : {}}
+                transition={{ duration: 0.3 }}
               >
-                <Heart className={`w-5 h-5 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
+                <Heart
+                  className={`w-5 h-5 transition-all duration-300 group-hover:scale-110 ${
+                    isLiked ? 'fill-current drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]' : ''
+                  }`}
+                />
               </motion.div>
               <span className="text-xs sm:text-sm font-semibold">{likeCount}</span>
             </button>

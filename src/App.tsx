@@ -33,6 +33,7 @@ import { VotePage } from './pages/VotePage';
 import { PlayersPage } from './pages/PlayersPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ProfileEditPage } from './pages/ProfileEditPage';
 import { BlogPage } from './pages/BlogPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { SocialPage } from './pages/SocialPage';
@@ -502,6 +503,10 @@ function AppContent() {
 
     if (path === '/profile') {
       return <ProfilePage />;
+    }
+
+    if (path === '/profile/edit') {
+      return <ProfileEditPage />;
     }
 
     if (path === '/admin') {
