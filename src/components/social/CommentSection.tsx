@@ -3,6 +3,8 @@ import { getComments, addComment, deleteComment, updateComment } from '../../ser
 import { useAuth } from '../../hooks/useAuth';
 import { Send, Loader2, Trash2, Edit2, X, Check } from 'lucide-react';
 import { RoleBadge } from './RoleBadge';
+import { TikBadge } from './TikBadge';
+import type { BadgeType } from '../../types/badges';
 
 interface Comment {
   id: string;
@@ -15,12 +17,26 @@ interface Comment {
     username?: string;
     minecraft_username?: string;
     role?: string | null;
+    badge?: string | null;
   } | null;
 }
 
 interface CommentSectionProps {
   postId: string;
 }
+
+const isBadgeType = (
+  badge: string | null | undefined
+): badge is BadgeType => {
+  return (
+    badge === 'blue' ||
+    badge === 'red' ||
+    badge === 'golden' ||
+    badge === 'diamond' ||
+    badge === 'cosmic' ||
+    badge === 'crown'
+  );
+};
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   const { user } = useAuth();
@@ -40,8 +56,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   const loadComments = async () => {
     setLoading(true);
     setError('');
+
     try {
       const { data, error: fetchError } = await getComments(postId);
+
       if (fetchError) {
         console.error('Comments load error:', fetchError);
       } else if (data) {
@@ -60,8 +78,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
     setSubmitting(true);
     setError('');
+
     try {
-      const { data, error: submitError } = await addComment(postId, user.id, commentText.trim());
+      const { data, error: submitError } = await addComment(
+        postId,
+        user.id,
+        commentText.trim()
+      );
+
       if (submitError) {
         console.error('Comment submit error:', submitError);
         setError('Failed to post comment. Please try again.');
@@ -81,8 +105,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     if (!confirm('Delete this comment?')) return;
 
     setDeletingCommentId(commentId);
+
     try {
       const { error: deleteError } = await deleteComment(commentId);
+
       if (deleteError) {
         console.error('Comment delete error:', deleteError);
         alert('Failed to delete comment');
@@ -111,13 +137,29 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     if (!editText.trim()) return;
 
     setSubmitting(true);
+
     try {
-      const { data, error: updateError } = await updateComment(commentId, editText.trim());
+      const { data, error: updateError } = await updateComment(
+        commentId,
+        editText.trim()
+      );
+
       if (updateError) {
         console.error('Comment update error:', updateError);
         alert('Failed to update comment');
       } else if (data) {
-        setComments(prev => prev.map(c => c.id === commentId ? { ...c, content: editText.trim(), updated_at: data.updated_at } : c));
+        setComments(prev =>
+          prev.map(c =>
+            c.id === commentId
+              ? {
+                  ...c,
+                  content: editText.trim(),
+                  updated_at: data.updated_at
+                }
+              : c
+          )
+        );
+
         setEditingCommentId(null);
         setEditText('');
       }
@@ -131,15 +173,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
   const canEditComment = (comment: Comment) => {
     if (!user || comment.user_id !== user.id) return false;
+
     const createdTime = new Date(comment.created_at).getTime();
     const now = new Date().getTime();
     const diffMinutes = (now - createdTime) / 1000 / 60;
-    return diffMinutes < 5; // Only allow edit within 5 minutes
+
+    return diffMinutes < 5;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
+
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
@@ -149,7 +194,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const getMinecraftHead = (username?: string) => {
@@ -181,8 +230,17 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
             const canEdit = canEditComment(comment);
             const avatarUrl = getMinecraftHead(minecraftUsername);
 
+            const badgeType = isBadgeType(
+              comment.profiles?.badge
+            )
+              ? comment.profiles?.badge
+              : null;
+
             return (
-              <div key={comment.id} className="flex gap-2.5 bg-black/20 rounded-xl p-3 border border-white/5">
+              <div
+                key={comment.id}
+                className="flex gap-2.5 bg-black/20 rounded-xl p-3 border border-white/5"
+              >
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-500/20 flex-shrink-0 shadow-sm">
                   {avatarUrl ? (
                     <img
@@ -196,16 +254,34 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                     </div>
                   )}
                 </div>
+
                 <div className="flex-1 min-w-0">
+                  {/* Username + Badge + Role + Date */}
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-sm font-semibold text-purple-200">{username}</span>
+                    <span className="text-sm font-semibold text-purple-200">
+                      {username}
+                    </span>
+
+                    <TikBadge
+                      badgeType={badgeType}
+                      size="sm"
+                    />
+
                     <RoleBadge role={role} />
-                    <span className="text-[11px] text-slate-500 font-medium">{formatDate(comment.created_at)}</span>
-                    {comment.updated_at && comment.updated_at !== comment.created_at && (
-                      <span className="text-[11px] text-slate-500 italic">(edited)</span>
-                    )}
+
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {formatDate(comment.created_at)}
+                    </span>
+
+                    {comment.updated_at &&
+                      comment.updated_at !== comment.created_at && (
+                        <span className="text-[11px] text-slate-500 italic">
+                          (edited)
+                        </span>
+                      )}
                   </div>
 
+                  {/* Comment text */}
                   {isEditing ? (
                     <div className="flex gap-2 items-start">
                       <input
@@ -216,6 +292,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                         maxLength={500}
                         autoFocus
                       />
+
                       <button
                         onClick={() => handleSaveEdit(comment.id)}
                         disabled={submitting || !editText.trim()}
@@ -224,6 +301,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                       >
                         <Check className="w-4 h-4" />
                       </button>
+
                       <button
                         onClick={handleCancelEdit}
                         disabled={submitting}
@@ -235,7 +313,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                     </div>
                   ) : (
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm text-slate-100 break-words flex-1 leading-relaxed">{comment.content}</p>
+                      <p className="text-sm text-slate-100 break-words flex-1 leading-relaxed">
+                        {comment.content}
+                      </p>
+
                       {isOwnComment && (
                         <div className="flex gap-1">
                           {canEdit && (
@@ -247,6 +328,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                               <Edit2 className="w-4 h-4" />
                             </button>
                           )}
+
                           <button
                             onClick={() => handleDelete(comment.id)}
                             disabled={isDeleting}
@@ -283,6 +365,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
               className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
               maxLength={500}
             />
+
             <button
               type="submit"
               disabled={submitting || !commentText.trim()}
@@ -295,7 +378,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
               )}
             </button>
           </form>
-          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+
+          {error && (
+            <p className="text-xs text-red-400 mt-1">
+              {error}
+            </p>
+          )}
         </div>
       ) : (
         <div className="bg-purple-600/10 border border-purple-500/20 rounded-xl p-4 text-center">

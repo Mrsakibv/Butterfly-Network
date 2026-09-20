@@ -264,8 +264,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm sm:text-base font-bold text-white tracking-tight">{username}</span>
+<TikBadge badgeType={badge} size="sm" />
                 <RoleBadge role={role} />
-                <TikBadge badgeType={badge} size="sm" />
+                
               </div>
               <p className="text-[11px] text-purple-300/60 font-medium">{formatDate(post.created_at)}</p>
             </div>

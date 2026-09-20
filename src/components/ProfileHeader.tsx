@@ -151,65 +151,77 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             )}
           </motion.div>
 
-          {/* Badge on Avatar */}
-          <div className="absolute -bottom-2 -right-2">
-            <TikBadge badgeType={badge} size="lg" />
-          </div>
+         
         </div>
 
-        {/* Name & Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {fullName || username}
-              </h1>
-              <RoleBadge role={role} />
-            </div>
-            <p className="text-purple-300 text-sm">@{username}</p>
-          </div>
+       {/* Name & Actions */}
+<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Name */}
+      <h1 className="text-2xl sm:text-3xl font-bold text-white">
+        {fullName || username}
+      </h1>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            {isOwnProfile ? (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onEditClick}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold hover:from-purple-500 hover:to-violet-500 transition-all"
-              >
-                <Settings className="w-4 h-4" />
-                Edit Profile
-              </motion.button>
-            ) : currentUserId ? (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleFollow}
-                disabled={followLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all ${
-                  isFollowing
-                    ? 'bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-400'
-                    : 'bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-500 hover:to-violet-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {followLoading ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : isFollowing ? (
-                  <>
-                    <UserMinus className="w-4 h-4" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    Follow
-                  </>
-                )}
-              </motion.button>
-            ) : null}
-          </div>
+      {/* Verified Badge - directly beside name */}
+      {badge && (
+        <div className="flex items-center">
+          <TikBadge badgeType={badge} size="sm" />
         </div>
+      )}
+
+      {/* Rank - after verified badge */}
+      {role && (
+        <div className="flex items-center">
+          <RoleBadge role={role} />
+        </div>
+      )}
+    </div>
+
+    <p className="text-purple-300 text-sm">@{username}</p>
+  </div>
+
+  {/* Action Buttons */}
+  <div className="flex gap-2">
+    {isOwnProfile ? (
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onEditClick}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold hover:from-purple-500 hover:to-violet-500 transition-all"
+      >
+        <Settings className="w-4 h-4" />
+        Edit Profile
+      </motion.button>
+    ) : currentUserId ? (
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleFollow}
+        disabled={followLoading}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all ${
+          isFollowing
+            ? 'bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-400'
+            : 'bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-500 hover:to-violet-500'
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        {followLoading ? (
+          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        ) : isFollowing ? (
+          <>
+            <UserMinus className="w-4 h-4" />
+            Following
+          </>
+        ) : (
+          <>
+            <UserPlus className="w-4 h-4" />
+            Follow
+          </>
+        )}
+      </motion.button>
+    ) : null}
+  </div>
+</div>
 
         {/* Bio */}
         {bio && (
