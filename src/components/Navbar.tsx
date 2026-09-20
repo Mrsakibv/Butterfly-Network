@@ -22,6 +22,8 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   const [scrolled, setScrolled] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mainNavLinks, setMainNavLinks] = useState<Array<{ label: string; href: string }>>([]);
@@ -67,12 +69,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   }, []);
 
   // =========================
-  // Scroll
+  // Scroll with Hide/Show
   // =========================
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      const currentScrollY = window.scrollY;
+
+      // Set scrolled state for background change
+      setScrolled(currentScrollY > 20);
+
+      // Show/hide navbar based on scroll direction
+      if (currentScrollY < 10) {
+        // Always show navbar at top
+        setShowNavbar(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down & past 100px - hide navbar
+        setShowNavbar(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - show navbar
+        setShowNavbar(true);
+      }
+
+      setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -80,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [lastScrollY]);
 
   // =========================
   // Auth State
@@ -401,8 +420,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
   return (
     <>
-      <header
+      <motion.header
         id="main-navbar"
+        initial={{ y: 0 }}
+        animate={{ y: showNavbar ? 0 : '-100%' }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
           scrolled
             ? 'bg-[#050505]/90 backdrop-blur-xl border-b border-purple-500/15 py-3 shadow-lg shadow-black/40'
@@ -443,18 +465,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   }
                 >
                   {active && (
-                    <motion.div
-                      layoutId="activeNavPill"
-                      className="absolute inset-0 bg-gradient-to-r from-purple-600/60 to-violet-600/60 rounded-full border border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.3)] -z-10"
-                      transition={{
-                        type: 'spring',
-                        stiffness: 380,
-                        damping: 30,
-                      }}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-purple-600/60 to-violet-600/60 rounded-full border border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.3)] pointer-events-none"
                     />
                   )}
 
-                  {link.label}
+                  <span className="relative z-10">{link.label}</span>
                 </a>
               );
             })}
@@ -602,7 +618,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             </button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Mobile Drawer */}
       <AnimatePresence>

@@ -105,14 +105,94 @@ export const checkUserLiked = async (postId: string, userId: string) => {
   return { liked: !!data, error };
 };
 
-// Add a comment
-export const addComment = async (postId: string, userId: string, content: string) => {
+// ==========================================
+// COMMENT LIKES & REPLIES
+// ==========================================
+
+// Like a comment
+export const likeComment = async (commentId: string, userId: string) => {
   try {
     const { data, error } = await supabase
+      .from('comment_likes')
+      .insert([{ comment_id: commentId, user_id: userId }])
+      .select();
+
+    return { data, error };
+  } catch (err) {
+    return { data: null, error: err as any };
+  }
+};
+
+// Unlike a comment
+export const unlikeComment = async (commentId: string, userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId);
+
+    return { error };
+  } catch (err) {
+    return { error: err as any };
+  }
+};
+
+// Get like count for a comment
+export const getCommentLikeCount = async (commentId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('comment_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('comment_id', commentId);
+
+    return { count: count || 0, error };
+  } catch (err) {
+    return { count: 0, error: err as any };
+  }
+};
+
+// Check if user liked a comment
+export const checkUserLikedComment = async (commentId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    return { liked: !!data, error };
+  } catch (err) {
+    return { liked: false, error: err as any };
+  }
+};
+
+// Add a comment (with optional replyTo)
+export const addComment = async (postId: string, userId: string, content: string, replyTo?: string | null) => {
+  try {
+    const payload: any = { post_id: postId, user_id: userId, content };
+    if (replyTo) {
+      payload.reply_to = replyTo;
+    }
+
+    let { data, error } = await supabase
       .from('comments')
-      .insert([{ post_id: postId, user_id: userId, content }])
+      .insert([payload])
       .select('*')
       .single();
+
+    // If failed because reply_to column is missing from DB, fallback to normal insert
+    if (error && replyTo) {
+      console.warn('reply_to insert failed, falling back to standard comment:', error);
+      const fallback = await supabase
+        .from('comments')
+        .insert([{ post_id: postId, user_id: userId, content }])
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('addComment error:', error);
@@ -138,7 +218,7 @@ export const addComment = async (postId: string, userId: string, content: string
   }
 };
 
-// Get comments for a post
+// Get all comments for a post (both top-level and replies)
 export const getComments = async (postId: string) => {
   try {
     const { data, error } = await supabase

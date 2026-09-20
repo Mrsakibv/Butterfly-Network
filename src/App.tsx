@@ -578,7 +578,7 @@ function AppContent() {
     }
 
     if (path === '/social') {
-      return <SocialPage />;
+      return <SocialPage onOpenPlayModal={handleOpenPlayModal} />;
     }
 
     if (path === '/leaderboard') {

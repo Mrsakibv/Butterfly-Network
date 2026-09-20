@@ -4,11 +4,17 @@ import { CreatePost } from '../components/social/CreatePost';
 import { SocialFeed } from '../components/social/SocialFeed';
 import { useAuth } from '../hooks/useAuth';
 import { useSocialPermission } from '../hooks/useSocialPermission';
+import { useRouter } from '../hooks/useRouter';
 import { Users } from 'lucide-react';
 
-export const SocialPage: React.FC = () => {
+interface SocialPageProps {
+  onOpenPlayModal: () => void;
+}
+
+export const SocialPage: React.FC<SocialPageProps> = ({ onOpenPlayModal }) => {
   const { user } = useAuth();
   const { canPost } = useSocialPermission();
+  const { navigate } = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handlePostCreated = () => {
@@ -17,7 +23,7 @@ export const SocialPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#050505] to-[#0a0a0a]">
-      <Navbar />
+      <Navbar onOpenPlayModal={onOpenPlayModal} />
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header */}
@@ -39,7 +45,13 @@ export const SocialPage: React.FC = () => {
           {!user && (
             <div className="bg-purple-600/10 border border-purple-500/20 rounded-xl p-4 mt-4">
               <p className="text-purple-300 text-sm">
-                <span className="font-semibold">Log in</span> to view all posts and interact with the community
+                <button
+                  onClick={() => navigate('/login')}
+                  className="font-semibold hover:text-purple-200 transition-colors underline cursor-pointer"
+                >
+                  Log in
+                </button>
+                {' '}to view all posts and interact with the community
               </p>
             </div>
           )}

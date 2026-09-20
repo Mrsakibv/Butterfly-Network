@@ -1,7 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { getComments, addComment, deleteComment, updateComment } from '../../services/social';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  getComments,
+  addComment,
+  deleteComment,
+  updateComment,
+  likeComment,
+  unlikeComment,
+  getCommentLikeCount,
+  checkUserLikedComment,
+} from '../../services/social';
 import { useAuth } from '../../hooks/useAuth';
-import { Send, Loader2, Trash2, Edit2, X, Check } from 'lucide-react';
+import { useRouter } from '../../hooks/useRouter';
+import {
+  Send,
+  Loader2,
+  Trash2,
+  Edit2,
+  X,
+  Check,
+  Heart,
+  CornerDownRight,
+  MessageCircle,
+} from 'lucide-react';
 import { RoleBadge } from './RoleBadge';
 import { TikBadge } from './TikBadge';
 import type { BadgeType } from '../../types/badges';
@@ -12,6 +32,7 @@ interface Comment {
   created_at: string;
   user_id: string;
   updated_at?: string;
+  reply_to?: string | null;
   profiles?: {
     id?: string;
     username?: string;
@@ -40,6 +61,9 @@ const isBadgeType = (
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   const { user } = useAuth();
+  const { navigate } = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
@@ -48,6 +72,15 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+
+  // Reply State
+  const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
+  const [repliesMap, setRepliesMap] = useState<Record<string, Comment[]>>({});
+  const [showRepliesMap, setShowRepliesMap] = useState<Record<string, boolean>>({});
+
+  // Likes State
+  const [likesCountMap, setLikesCountMap] = useState<Record<string, number>>({});
+  const [userLikedMap, setUserLikedMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadComments();
@@ -62,14 +95,85 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
       if (fetchError) {
         console.error('Comments load error:', fetchError);
+        setError('Could not load comments');
       } else if (data) {
-        setComments(data);
+        // Group top-level comments and replies in memory
+        const topLevel: Comment[] = [];
+        const replies: Record<string, Comment[]> = {};
+
+        data.forEach((c) => {
+          if (c.reply_to) {
+            if (!replies[c.reply_to]) {
+              replies[c.reply_to] = [];
+            }
+            replies[c.reply_to].push(c);
+          } else {
+            topLevel.push(c);
+          }
+        });
+
+        setComments(topLevel);
+        setRepliesMap(replies);
+
+        // Load likes for all comments & replies
+        data.forEach((c) => {
+          loadCommentLikes(c.id);
+        });
       }
     } catch (err) {
       console.error('Comments load error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCommentLikes = async (commentId: string) => {
+    try {
+      const { count } = await getCommentLikeCount(commentId);
+      setLikesCountMap((prev) => ({ ...prev, [commentId]: count || 0 }));
+
+      if (user?.id) {
+        const { liked } = await checkUserLikedComment(commentId, user.id);
+        setUserLikedMap((prev) => ({ ...prev, [commentId]: liked }));
+      }
+    } catch (err) {
+      console.error('Error loading comment likes:', err);
+    }
+  };
+
+  const handleToggleLikeComment = async (commentId: string) => {
+    if (!user) return;
+
+    const isLiked = !!userLikedMap[commentId];
+    const currentCount = likesCountMap[commentId] || 0;
+
+    // Optimistic update
+    setUserLikedMap((prev) => ({ ...prev, [commentId]: !isLiked }));
+    setLikesCountMap((prev) => ({
+      ...prev,
+      [commentId]: isLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
+    }));
+
+    try {
+      if (isLiked) {
+        await unlikeComment(commentId, user.id);
+      } else {
+        await likeComment(commentId, user.id);
+      }
+    } catch (err) {
+      console.error('Error toggling comment like:', err);
+      // Revert optimistic update on failure
+      setUserLikedMap((prev) => ({ ...prev, [commentId]: isLiked }));
+      setLikesCountMap((prev) => ({ ...prev, [commentId]: currentCount }));
+    }
+  };
+
+  const handleStartReply = (comment: Comment) => {
+    setReplyingToComment(comment);
+    setShowRepliesMap((prev) => ({ ...prev, [comment.id]: true }));
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,18 +184,35 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     setError('');
 
     try {
+      const replyToId = replyingToComment ? replyingToComment.id : null;
       const { data, error: submitError } = await addComment(
         postId,
         user.id,
-        commentText.trim()
+        commentText.trim(),
+        replyToId
       );
 
       if (submitError) {
         console.error('Comment submit error:', submitError);
         setError('Failed to post comment. Please try again.');
       } else if (data && data[0]) {
-        setComments(prev => [...prev, data[0]]);
+        const newComment = data[0];
+
+        if (replyToId) {
+          // Add to replies map
+          setRepliesMap((prev) => ({
+            ...prev,
+            [replyToId]: [...(prev[replyToId] || []), newComment],
+          }));
+          // Auto expand replies
+          setShowRepliesMap((prev) => ({ ...prev, [replyToId]: true }));
+        } else {
+          // Add to top-level comments
+          setComments((prev) => [...prev, newComment]);
+        }
+
         setCommentText('');
+        setReplyingToComment(null);
       }
     } catch (err) {
       console.error('Comment submit error:', err);
@@ -101,7 +222,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     }
   };
 
-  const handleDelete = async (commentId: string) => {
+  const handleDelete = async (commentId: string, parentId?: string | null) => {
     if (!confirm('Delete this comment?')) return;
 
     setDeletingCommentId(commentId);
@@ -113,7 +234,21 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
         console.error('Comment delete error:', deleteError);
         alert('Failed to delete comment');
       } else {
-        setComments(prev => prev.filter(c => c.id !== commentId));
+        if (parentId) {
+          // Remove from replies
+          setRepliesMap((prev) => ({
+            ...prev,
+            [parentId]: (prev[parentId] || []).filter((c) => c.id !== commentId),
+          }));
+        } else {
+          // Remove from top-level comments and its replies
+          setComments((prev) => prev.filter((c) => c.id !== commentId));
+          setRepliesMap((prev) => {
+            const copy = { ...prev };
+            delete copy[commentId];
+            return copy;
+          });
+        }
       }
     } catch (err) {
       console.error('Comment delete error:', err);
@@ -133,7 +268,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     setEditText('');
   };
 
-  const handleSaveEdit = async (commentId: string) => {
+  const handleSaveEdit = async (commentId: string, parentId?: string | null) => {
     if (!editText.trim()) return;
 
     setSubmitting(true);
@@ -148,17 +283,27 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
         console.error('Comment update error:', updateError);
         alert('Failed to update comment');
       } else if (data) {
-        setComments(prev =>
-          prev.map(c =>
-            c.id === commentId
-              ? {
-                  ...c,
-                  content: editText.trim(),
-                  updated_at: data.updated_at
-                }
-              : c
-          )
-        );
+        const updatedContent = editText.trim();
+        const updatedTime = data.updated_at;
+
+        if (parentId) {
+          setRepliesMap((prev) => ({
+            ...prev,
+            [parentId]: (prev[parentId] || []).map((c) =>
+              c.id === commentId
+                ? { ...c, content: updatedContent, updated_at: updatedTime }
+                : c
+            ),
+          }));
+        } else {
+          setComments((prev) =>
+            prev.map((c) =>
+              c.id === commentId
+                ? { ...c, content: updatedContent, updated_at: updatedTime }
+                : c
+            )
+          );
+        }
 
         setEditingCommentId(null);
         setEditText('');
@@ -197,7 +342,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
     return date.toLocaleDateString(undefined, {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -205,6 +350,225 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     return username
       ? `https://mc-heads.net/avatar/${encodeURIComponent(username)}/32`
       : '';
+  };
+
+  const renderSingleComment = (comment: Comment, isReply = false, parentId?: string) => {
+    const username = comment.profiles?.username || 'Anonymous';
+    const minecraftUsername = comment.profiles?.minecraft_username;
+    const role = comment.profiles?.role;
+    const isOwnComment = user?.id === comment.user_id;
+    const isEditing = editingCommentId === comment.id;
+    const isDeleting = deletingCommentId === comment.id;
+    const canEdit = canEditComment(comment);
+    const avatarUrl = getMinecraftHead(minecraftUsername);
+    const likesCount = likesCountMap[comment.id] || 0;
+    const isLiked = !!userLikedMap[comment.id];
+    const replies = repliesMap[comment.id] || [];
+    const showReplies = !!showRepliesMap[comment.id];
+
+    const badgeType = isBadgeType(comment.profiles?.badge)
+      ? comment.profiles?.badge
+      : null;
+
+    return (
+      <div key={comment.id} className="space-y-2">
+        <div
+          className={`flex gap-2.5 bg-black/20 rounded-xl p-3 border border-white/5 ${
+            isReply ? 'ml-6 bg-black/30 border-purple-500/10' : ''
+          }`}
+        >
+          {/* Clickable Avatar */}
+          <div
+            onClick={() => {
+              if (user && comment.profiles?.id) {
+                navigate(`/profile?id=${comment.profiles.id}`);
+              }
+            }}
+            className={`w-8 h-8 rounded-full overflow-hidden border border-purple-500/20 flex-shrink-0 shadow-sm ${
+              user && comment.profiles?.id
+                ? 'cursor-pointer hover:opacity-80 transition-opacity'
+                : ''
+            }`}
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={username}
+                className="w-full h-full object-cover pixelated"
+              />
+            ) : (
+              <div className="w-full h-full bg-purple-600/40 flex items-center justify-center text-purple-200 text-xs font-bold">
+                {username[0]?.toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {/* Username + Badge + Role + Date */}
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span
+                onClick={() => {
+                  if (user && comment.profiles?.id) {
+                    navigate(`/profile?id=${comment.profiles.id}`);
+                  }
+                }}
+                className={`text-sm font-semibold text-purple-200 ${
+                  user && comment.profiles?.id
+                    ? 'cursor-pointer hover:underline hover:text-purple-100 transition-all'
+                    : ''
+                }`}
+              >
+                {username}
+              </span>
+
+              <TikBadge badgeType={badgeType} size="sm" />
+              <RoleBadge role={role} />
+
+              <span className="text-[11px] text-slate-500 font-medium">
+                {formatDate(comment.created_at)}
+              </span>
+
+              {comment.updated_at && comment.updated_at !== comment.created_at && (
+                <span className="text-[11px] text-slate-500 italic">
+                  (edited)
+                </span>
+              )}
+            </div>
+
+            {/* Comment text */}
+            {isEditing ? (
+              <div className="flex gap-2 items-start">
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  className="flex-1 bg-black/30 border border-purple-500/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                  maxLength={500}
+                  autoFocus
+                />
+
+                <button
+                  onClick={() => handleSaveEdit(comment.id, parentId)}
+                  disabled={submitting || !editText.trim()}
+                  className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50 p-1"
+                  title="Save"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={submitting}
+                  className="text-slate-400 hover:text-slate-300 p-1"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-slate-100 break-words leading-relaxed mb-2">
+                  {comment.content}
+                </p>
+
+                {/* Comment Actions: Like, Reply, Edit, Delete */}
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  {/* Like Button */}
+                  <button
+                    onClick={() => handleToggleLikeComment(comment.id)}
+                    disabled={!user}
+                    className={`flex items-center gap-1 transition-colors ${
+                      isLiked
+                        ? 'text-rose-400 font-semibold'
+                        : 'hover:text-rose-400'
+                    } ${!user ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <Heart
+                      className={`w-3.5 h-3.5 ${
+                        isLiked ? 'fill-current' : ''
+                      }`}
+                    />
+                    {likesCount > 0 && <span>{likesCount}</span>}
+                    <span>Like</span>
+                  </button>
+
+                  {/* Reply Button (top-level only) */}
+                  {!isReply && user && (
+                    <button
+                      onClick={() => handleStartReply(comment)}
+                      className="flex items-center gap-1 hover:text-purple-300 transition-colors cursor-pointer"
+                    >
+                      <CornerDownRight className="w-3.5 h-3.5" />
+                      <span>Reply</span>
+                    </button>
+                  )}
+
+                  {/* Edit/Delete if own comment */}
+                  {isOwnComment && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      {canEdit && (
+                        <button
+                          onClick={() => handleStartEdit(comment)}
+                          className="hover:text-purple-400 transition-colors"
+                          title="Edit (within 5 minutes)"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDelete(comment.id, parentId)}
+                        disabled={isDeleting}
+                        className="hover:text-rose-400 transition-colors disabled:opacity-50"
+                        title="Delete"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Replies toggle & nested replies */}
+        {!isReply && replies.length > 0 && (
+          <div className="pl-6 space-y-2">
+            <button
+              onClick={() =>
+                setShowRepliesMap((prev) => ({
+                  ...prev,
+                  [comment.id]: !prev[comment.id],
+                }))
+              }
+              className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors cursor-pointer"
+            >
+              <MessageCircle className="w-3 h-3" />
+              <span>
+                {showReplies
+                  ? 'Hide replies'
+                  : `View ${replies.length} repl${
+                      replies.length === 1 ? 'y' : 'ies'
+                    }`}
+              </span>
+            </button>
+
+            {showReplies && (
+              <div className="space-y-2 pt-1 border-l-2 border-purple-500/20 pl-2">
+                {replies.map((reply) =>
+                  renderSingleComment(reply, true, comment.id)
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -219,148 +583,48 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     <div className="space-y-3">
       {/* Comments List */}
       {comments.length > 0 && (
-        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-          {comments.map(comment => {
-            const username = comment.profiles?.username || 'Anonymous';
-            const minecraftUsername = comment.profiles?.minecraft_username;
-            const role = comment.profiles?.role;
-            const isOwnComment = user?.id === comment.user_id;
-            const isEditing = editingCommentId === comment.id;
-            const isDeleting = deletingCommentId === comment.id;
-            const canEdit = canEditComment(comment);
-            const avatarUrl = getMinecraftHead(minecraftUsername);
-
-            const badgeType = isBadgeType(
-              comment.profiles?.badge
-            )
-              ? comment.profiles?.badge
-              : null;
-
-            return (
-              <div
-                key={comment.id}
-                className="flex gap-2.5 bg-black/20 rounded-xl p-3 border border-white/5"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-500/20 flex-shrink-0 shadow-sm">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={username}
-                      className="w-full h-full object-cover pixelated"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-purple-600/40 flex items-center justify-center text-purple-200 text-xs font-bold">
-                      {username[0]?.toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  {/* Username + Badge + Role + Date */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-sm font-semibold text-purple-200">
-                      {username}
-                    </span>
-
-                    <TikBadge
-                      badgeType={badgeType}
-                      size="sm"
-                    />
-
-                    <RoleBadge role={role} />
-
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      {formatDate(comment.created_at)}
-                    </span>
-
-                    {comment.updated_at &&
-                      comment.updated_at !== comment.created_at && (
-                        <span className="text-[11px] text-slate-500 italic">
-                          (edited)
-                        </span>
-                      )}
-                  </div>
-
-                  {/* Comment text */}
-                  {isEditing ? (
-                    <div className="flex gap-2 items-start">
-                      <input
-                        type="text"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="flex-1 bg-black/30 border border-purple-500/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-purple-500/50"
-                        maxLength={500}
-                        autoFocus
-                      />
-
-                      <button
-                        onClick={() => handleSaveEdit(comment.id)}
-                        disabled={submitting || !editText.trim()}
-                        className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50 p-1"
-                        title="Save"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        onClick={handleCancelEdit}
-                        disabled={submitting}
-                        className="text-slate-400 hover:text-slate-300 p-1"
-                        title="Cancel"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm text-slate-100 break-words flex-1 leading-relaxed">
-                        {comment.content}
-                      </p>
-
-                      {isOwnComment && (
-                        <div className="flex gap-1">
-                          {canEdit && (
-                            <button
-                              onClick={() => handleStartEdit(comment)}
-                              className="text-slate-400 hover:text-purple-400 transition-colors p-1"
-                              title="Edit (within 5 minutes)"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleDelete(comment.id)}
-                            disabled={isDeleting}
-                            className="text-slate-400 hover:text-rose-400 transition-colors disabled:opacity-50 p-1"
-                            title="Delete"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+          {comments.map((comment) => renderSingleComment(comment))}
         </div>
       )}
 
-      {/* Add Comment Form */}
+      {/* Add Comment / Reply Form */}
       {user ? (
-        <div>
+        <div className="space-y-2">
+          {/* Replying Banner */}
+          {replyingToComment && (
+            <div className="flex items-center justify-between bg-purple-950/40 border border-purple-500/30 rounded-lg px-3 py-1.5 text-xs text-purple-300">
+              <div className="flex items-center gap-1.5">
+                <CornerDownRight className="w-3.5 h-3.5" />
+                <span>
+                  Replying to{' '}
+                  <span className="font-semibold">
+                    @{replyingToComment.profiles?.username || 'user'}
+                  </span>
+                </span>
+              </div>
+              <button
+                onClick={() => setReplyingToComment(null)}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
+              ref={inputRef}
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write a comment..."
+              placeholder={
+                replyingToComment
+                  ? `Reply to @${
+                      replyingToComment.profiles?.username || 'user'
+                    }...`
+                  : 'Write a comment...'
+              }
               disabled={submitting}
               className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
               maxLength={500}
@@ -379,16 +643,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
             </button>
           </form>
 
-          {error && (
-            <p className="text-xs text-red-400 mt-1">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
       ) : (
         <div className="bg-purple-600/10 border border-purple-500/20 rounded-xl p-4 text-center">
           <p className="text-purple-300 text-sm font-medium">
-            <span className="underline cursor-pointer">Log in</span> to comment
+            <button
+              onClick={() => navigate('/login')}
+              className="underline cursor-pointer hover:text-purple-200"
+            >
+              Log in
+            </button>{' '}
+            to comment
           </p>
         </div>
       )}

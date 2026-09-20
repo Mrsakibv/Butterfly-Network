@@ -139,8 +139,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('name', currentRole)
         .maybeSingle();
 
+      console.log('[Auth] Custom role query:', { currentRole, customRole, customRoleError });
+
       if (customRoleError) {
         console.error('Custom role loading error:', customRoleError);
+        setPermissions([]);
+        return;
+      }
+
+      if (!customRole) {
+        console.warn(`[Auth] Custom role "${currentRole}" not found in custom_roles table`);
         setPermissions([]);
         return;
       }
@@ -152,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
         : [];
 
+      console.log('[Auth] Custom permissions loaded:', customPermissions);
       setPermissions(customPermissions);
     } catch (error) {
       console.error('Session loading error:', error);
@@ -198,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Built-in admin permissions.
       if (role === 'admin') {
+        // Admin has access to everything except users
         return permission !== 'users';
       }
 
