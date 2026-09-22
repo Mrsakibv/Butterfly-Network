@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Logo } from './Logo';
 import { SERVER_CONFIG } from '../config/server';
 import { useRouter } from '../hooks/useRouter';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import {
   Menu,
@@ -13,14 +14,18 @@ import {
   LogIn,
   User,
   LogOut,
+  Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { NotificationDropdown } from './NotificationDropdown';
+import { getUnreadNotificationCount } from '../services/social';
 
 interface NavbarProps {
   onOpenPlayModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -32,6 +37,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [minecraftUsername, setMinecraftUsername] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const { path, navigate } = useRouter();
 
@@ -175,6 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
     setMobileMenuOpen(false);
     setMoreMenuOpen(false);
+    setShowNotifications(false);
   }, [path]);
 
   useEffect(() => {
@@ -194,6 +202,51 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [moreMenuOpen]);
+
+  // =========================
+  // Close notification dropdown on outside click
+  // =========================
+
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      if (!target.closest('[data-notification-dropdown]') && !target.closest('[data-notification-bell]')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showNotifications]);
+
+  // =========================
+  // Load unread notification count
+  // =========================
+
+  useEffect(() => {
+    if (!isLoggedIn || !user?.id) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const loadUnreadCount = async () => {
+      const { count } = await getUnreadNotificationCount(user.id);
+      setUnreadCount(count);
+    };
+
+    loadUnreadCount();
+
+    // Poll every 30 seconds
+    const interval = setInterval(loadUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, user?.id]);
 
   // =========================
   // Minecraft Head URL
@@ -524,6 +577,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
 
+            {/* Notification Bell (only when logged in) */}
+            {isLoggedIn && (
+              <div className="relative" data-notification-bell>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative inline-flex items-center justify-center p-2 text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-400/40 rounded-xl transition-all active:scale-95"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full border-2 border-[#050505]">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                <NotificationDropdown
+                  isOpen={showNotifications}
+                  onClose={() => setShowNotifications(false)}
+                  unreadCount={unreadCount}
+                  onUnreadCountChange={setUnreadCount}
+                />
+              </div>
+            )}
+
             {/* Auth Button */}
             {!isLoggedIn ? (
               <button
@@ -586,6 +665,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
           {/* Mobile Menu */}
           <div className="flex items-center gap-2 md:hidden">
+
+            {/* Mobile Notification Bell */}
+            {isLoggedIn && (
+              <div className="relative" data-notification-bell>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-bold text-white bg-rose-500 rounded-full border-2 border-[#050505]">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Mobile Notification Dropdown */}
+                <NotificationDropdown
+                  isOpen={showNotifications}
+                  onClose={() => setShowNotifications(false)}
+                  unreadCount={unreadCount}
+                  onUnreadCountChange={setUnreadCount}
+                />
+              </div>
+            )}
 
             {/* Mobile Minecraft Head */}
             {isLoggedIn && minecraftUsername && (

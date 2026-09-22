@@ -69,6 +69,20 @@ export const likePost = async (postId: string, userId: string) => {
     .insert([{ post_id: postId, user_id: userId }])
     .select();
 
+  // Create notification for post author
+  if (!error && data) {
+    // Get post author ID
+    const { data: post } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post?.user_id) {
+      await createNotification(post.user_id, userId, 'post_like', postId);
+    }
+  }
+
   return { data, error };
 };
 
@@ -116,6 +130,19 @@ export const likeComment = async (commentId: string, userId: string) => {
       .from('comment_likes')
       .insert([{ comment_id: commentId, user_id: userId }])
       .select();
+
+    // Create notification for comment author
+    if (!error && data) {
+      const { data: comment } = await supabase
+        .from('comments')
+        .select('user_id, post_id')
+        .eq('id', commentId)
+        .single();
+
+      if (comment?.user_id) {
+        await createNotification(comment.user_id, userId, 'comment_like', comment.post_id, commentId);
+      }
+    }
 
     return { data, error };
   } catch (err) {
@@ -210,6 +237,17 @@ export const addComment = async (postId: string, userId: string, content: string
       ...data,
       profiles: profile || null,
     };
+
+    // Create notification for post author
+    const { data: post } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post?.user_id) {
+      await createNotification(post.user_id, userId, 'post_comment', postId, data.id);
+    }
 
     return { data: [commentWithProfile], error: null };
   } catch (err) {
@@ -414,6 +452,11 @@ export const followUser = async (followerId: string, followingId: string) => {
       }
     }
 
+    // Create notification for followed user
+    if (!error && data) {
+      await createNotification(followingId, followerId, 'follow');
+    }
+
     return { data, error };
   } catch (err) {
     console.error('Follow exception:', err);
@@ -523,5 +566,179 @@ export const getFollowingCount = async (userId: string) => {
   } catch (err) {
     console.error('Get following count exception:', err);
     return { count: 0, error: err as any };
+  }
+};
+
+// ==========================================
+// NOTIFICATIONS SYSTEM
+// ==========================================
+
+interface Notification {
+  id: string;
+  recipient_id: string;
+  actor_id: string;
+  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow';
+  post_id?: string | null;
+  comment_id?: string | null;
+  is_read: boolean;
+  created_at: string;
+  actor?: {
+    id: string;
+    username: string;
+    minecraft_username?: string;
+    badge?: string | null;
+  };
+}
+
+// Create a notification (internal helper)
+const createNotification = async (
+  recipientId: string,
+  actorId: string,
+  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow',
+  postId?: string | null,
+  commentId?: string | null
+) => {
+  // Don't create notification for self-interactions
+  if (recipientId === actorId) return { data: null, error: null };
+
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([{
+        recipient_id: recipientId,
+        actor_id: actorId,
+        type,
+        post_id: postId || null,
+        comment_id: commentId || null,
+      }])
+      .select();
+
+    if (error) {
+      console.error('Create notification error:', error);
+    }
+
+    return { data, error };
+  } catch (err) {
+    console.error('Create notification exception:', err);
+    return { data: null, error: err as any };
+  }
+};
+
+// Get user notifications with actor profiles
+export const getNotifications = async (userId: string, limit = 20, offset = 0) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('recipient_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Get notifications error:', error);
+      return { data: null, error };
+    }
+
+    if (data && data.length > 0) {
+      // Fetch actor profiles
+      const actorIds = [...new Set(data.map(n => n.actor_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, minecraft_username, badge')
+        .in('id', actorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
+      const notificationsWithActors: Notification[] = data.map(notification => ({
+        ...notification,
+        actor: profileMap.get(notification.actor_id) || undefined,
+      }));
+
+      return { data: notificationsWithActors, error: null };
+    }
+
+    return { data: data || [], error: null };
+  } catch (err) {
+    console.error('Get notifications exception:', err);
+    return { data: null, error: err as any };
+  }
+};
+
+// Mark notification as read
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('Mark notification as read error:', error);
+    }
+
+    return { error };
+  } catch (err) {
+    console.error('Mark notification as read exception:', err);
+    return { error: err as any };
+  }
+};
+
+// Mark all notifications as read
+export const markAllNotificationsAsRead = async (userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('recipient_id', userId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Mark all notifications as read error:', error);
+    }
+
+    return { error };
+  } catch (err) {
+    console.error('Mark all notifications as read exception:', err);
+    return { error: err as any };
+  }
+};
+
+// Get unread notification count
+export const getUnreadNotificationCount = async (userId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', userId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Get unread notification count error:', error);
+      return { count: 0, error };
+    }
+
+    return { count: count || 0, error: null };
+  } catch (err) {
+    console.error('Get unread notification count exception:', err);
+    return { count: 0, error: err as any };
+  }
+};
+
+// Delete notification
+export const deleteNotification = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('Delete notification error:', error);
+    }
+
+    return { error };
+  } catch (err) {
+    console.error('Delete notification exception:', err);
+    return { error: err as any };
   }
 };
