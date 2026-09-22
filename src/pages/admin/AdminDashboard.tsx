@@ -16,6 +16,10 @@ import {
   Vote,
   Power,
   RefreshCw,
+  CircleHelp,
+  ShoppingBag,
+  MessageSquare,
+  LayoutDashboard,
 } from 'lucide-react';
 
 import { AdminLayout } from './AdminLayout';
@@ -112,6 +116,7 @@ export const AdminDashboard: React.FC = () => {
         itemsResult,
         rolesResult,
         settingsResult,
+        postsResult,
       ] = await Promise.all([
         supabase
           .from('admin_activity_log')
@@ -140,6 +145,10 @@ export const AdminDashboard: React.FC = () => {
           .select('site_name, bot_enabled')
           .eq('id', true)
           .maybeSingle(),
+
+        supabase
+          .from('social_posts')
+          .select('id'),
       ]);
 
       // Activity history
@@ -165,6 +174,7 @@ export const AdminDashboard: React.FC = () => {
       const pages = pagesResult.data ?? [];
       const items = itemsResult.data ?? [];
       const roles = rolesResult.data ?? [];
+      const posts = postsResult.data ?? [];
 
       setSections([
         {
@@ -298,6 +308,72 @@ export const AdminDashboard: React.FC = () => {
           detail: 'vote items',
           icon: Vote,
           accent: 'text-violet-300',
+        },
+
+        {
+          label: 'Home Content',
+          description:
+            'Homepage sections and features',
+          value: String(
+            items.filter(
+              (item) => item.page_key === 'home'
+            ).length
+          ),
+          detail: 'home items',
+          icon: LayoutDashboard,
+          accent: 'text-indigo-300',
+        },
+
+        {
+          label: 'FAQ Content',
+          description:
+            'Frequently asked questions',
+          value: String(
+            items.filter(
+              (item) => item.page_key === 'faq'
+            ).length
+          ),
+          detail: 'faq items',
+          icon: CircleHelp,
+          accent: 'text-blue-300',
+        },
+
+        {
+          label: 'Blog Content',
+          description:
+            'Blog posts and articles',
+          value: String(
+            items.filter(
+              (item) => item.page_key === 'blog'
+            ).length
+          ),
+          detail: 'blog items',
+          icon: FileText,
+          accent: 'text-teal-300',
+        },
+
+        {
+          label: 'Minecraft Store',
+          description:
+            'Store items and packages',
+          value: String(
+            items.filter(
+              (item) => item.page_key === 'store'
+            ).length
+          ),
+          detail: 'store items',
+          icon: ShoppingBag,
+          accent: 'text-green-300',
+        },
+
+        {
+          label: 'Social Management',
+          description:
+            'Community posts and interactions',
+          value: String(posts.length),
+          detail: 'total posts',
+          icon: MessageSquare,
+          accent: 'text-fuchsia-300',
         },
 
         {
