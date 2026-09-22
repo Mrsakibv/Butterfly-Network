@@ -43,8 +43,8 @@ export const DEFAULT_HERO_SETTINGS: HeroSettings = {
 export const SERVER_CONFIG: ServerConfig = {
   serverName: "Butterfly network",
   tagline: "Your next Minecraft adventure starts here :)",
-  javaIp: "mc.havencraft.pro",
-  bedrockIp: "mc.havencraft.pro",
+  javaIp: "butterfly.seedloaf.gg",
+  bedrockIp: "butterfly.seedloaf.gg",
   port: 25565,
   bedrockPort: 19132,
   version: "1.8.x - 1.21.x",
@@ -55,7 +55,7 @@ export const SERVER_CONFIG: ServerConfig = {
   storeUrl: "#",
   voteUrl: "#",
   // Leave empty or set to custom endpoint. If empty, will use public mcstatus.io API with demo fallback
-  serverStatusApi: "https://api.mcstatus.io/v2/status/java/mc.havencraft.pro",
+  serverStatusApi: "https://api.mcstatus.io/v2/status/java/butterfly.seedloaf.gg",
   copyrightYear: 2026,
 };
 
