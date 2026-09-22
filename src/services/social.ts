@@ -336,9 +336,27 @@ export const updateComment = async (commentId: string, newContent: string) => {
   }
 };
 
-// Delete a post (admin only)
-export const deletePost = async (postId: string) => {
+// Delete a post (user's own post or admin)
+export const deletePost = async (postId: string, userId?: string) => {
   try {
+    // If userId provided, verify ownership
+    if (userId) {
+      const { data: post, error: fetchError } = await supabase
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) {
+        console.error('deletePost fetch error:', fetchError);
+        return { error: fetchError };
+      }
+
+      if (!post || post.user_id !== userId) {
+        return { error: { message: 'Unauthorized: You can only delete your own posts' } };
+      }
+    }
+
     // Delete likes and comments first to ensure no constraint violations
     await supabase.from('likes').delete().eq('post_id', postId);
     await supabase.from('comments').delete().eq('post_id', postId);
@@ -357,6 +375,64 @@ export const deletePost = async (postId: string) => {
   } catch (err) {
     console.error('deletePost exception:', err);
     return { error: err as any };
+  }
+};
+
+// Update a post (user's own post only)
+export const updatePost = async (
+  postId: string,
+  userId: string,
+  content: string,
+  mediaUrls?: string[]
+) => {
+  try {
+    // Verify ownership first
+    const { data: post, error: fetchError } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (fetchError) {
+      console.error('updatePost fetch error:', fetchError);
+      return { data: null, error: fetchError };
+    }
+
+    if (!post || post.user_id !== userId) {
+      return { data: null, error: { message: 'Unauthorized: You can only edit your own posts' } };
+    }
+
+    // Prepare media payload
+    let mediaPayload: string | null = null;
+    if (Array.isArray(mediaUrls)) {
+      const valid = mediaUrls.filter(u => typeof u === 'string' && u.trim().length > 0);
+      if (valid.length === 1) {
+        mediaPayload = valid[0].trim();
+      } else if (valid.length > 1) {
+        mediaPayload = JSON.stringify(valid);
+      }
+    }
+
+    // Update post
+    const { data, error } = await supabase
+      .from('posts')
+      .update({
+        content,
+        media_url: mediaPayload,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', postId)
+      .select();
+
+    if (error) {
+      console.error('updatePost error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (err) {
+    console.error('updatePost exception:', err);
+    return { data: null, error: err as any };
   }
 };
 
@@ -740,5 +816,123 @@ export const deleteNotification = async (notificationId: string) => {
   } catch (err) {
     console.error('Delete notification exception:', err);
     return { error: err as any };
+  }
+};
+
+// ==========================================
+// BOOKMARK/SAVE POSTS
+// ==========================================
+
+// Save a post
+export const savePost = async (postId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .insert([{ post_id: postId, user_id: userId }])
+      .select();
+
+    if (error) {
+      console.error('Save post error:', error);
+    }
+
+    return { data, error };
+  } catch (err) {
+    console.error('Save post exception:', err);
+    return { data: null, error: err as any };
+  }
+};
+
+// Unsave a post
+export const unsavePost = async (postId: string, userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('saved_posts')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Unsave post error:', error);
+    }
+
+    return { error };
+  } catch (err) {
+    console.error('Unsave post exception:', err);
+    return { error: err as any };
+  }
+};
+
+// Check if user saved a post
+export const checkIsSaved = async (postId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Check is saved error:', error);
+      return { isSaved: false, error };
+    }
+
+    return { isSaved: !!data, error: null };
+  } catch (err) {
+    console.error('Check is saved exception:', err);
+    return { isSaved: false, error: err as any };
+  }
+};
+
+// Get user's saved posts
+export const getSavedPosts = async (userId: string, limit = 20, offset = 0) => {
+  try {
+    const { data: savedData, error: savedError } = await supabase
+      .from('saved_posts')
+      .select('post_id, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (savedError || !savedData || savedData.length === 0) {
+      console.error('Get saved posts error:', savedError);
+      return { data: [], error: savedError };
+    }
+
+    // Fetch full posts
+    const postIds = savedData.map(s => s.post_id);
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*')
+      .in('id', postIds)
+      .order('created_at', { ascending: false });
+
+    if (postsError) {
+      console.error('Get posts error:', postsError);
+      return { data: null, error: postsError };
+    }
+
+    // Fetch profiles for posts
+    if (posts && posts.length > 0) {
+      const userIds = [...new Set(posts.map(post => post.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, minecraft_username, role, badge')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
+      const postsWithProfiles = posts.map(post => ({
+        ...post,
+        profiles: profileMap.get(post.user_id) || null
+      }));
+
+      return { data: postsWithProfiles, error: null };
+    }
+
+    return { data: posts || [], error: null };
+  } catch (err) {
+    console.error('Get saved posts exception:', err);
+    return { data: null, error: err as any };
   }
 };

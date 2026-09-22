@@ -13,7 +13,6 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
 import { supabase } from './lib/supabase';
-
 // Pages
 import { HomePage } from './pages/HomePage';
 import { GamesPage } from './pages/GamesPage';

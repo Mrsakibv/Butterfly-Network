@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, ChevronLeft, ChevronRight, Check, UserPlus, UserMinus } from 'lucide-react';
-import { getLikeCount, checkUserLiked, likePost, unlikePost, followUser, unfollowUser, checkIsFollowing } from '../../services/social';
+import { Heart, MessageCircle, Share2, ChevronLeft, ChevronRight, Check, UserPlus, UserMinus, MoreVertical, Trash2, Edit2, Bookmark } from 'lucide-react';
+import { getLikeCount, checkUserLiked, likePost, unlikePost, followUser, unfollowUser, checkIsFollowing, deletePost, checkIsSaved, savePost, unsavePost } from '../../services/social';
 import { useAuth } from '../../hooks/useAuth';
 import { CommentSection } from './CommentSection';
 import { RoleBadge } from './RoleBadge';
 import { TikBadge } from './TikBadge';
 import { ImageModal } from './ImageModal';
+import { EditPostModal } from './EditPostModal';
 import { motion, AnimatePresence } from 'motion/react';
 import type { BadgeType } from '../../types/badges';
 
@@ -16,6 +17,7 @@ interface Post {
   content: string;
   media_url?: string | null;
   created_at: string;
+  updated_at?: string;
   user_id: string;
   profiles?: {
     id?: string;
@@ -29,9 +31,11 @@ interface Post {
 interface PostCardProps {
   post: Post;
   onComment?: () => void;
+  onPostDeleted?: (postId: string) => void;
+  onPostUpdated?: (updatedPost: Post) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted, onPostUpdated }) => {
   const { user } = useAuth();
   const { navigate } = useRouter();
   const [likeCount, setLikeCount] = useState(0);
@@ -49,6 +53,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [imageIndex, setImageIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitialIndex, setModalInitialIndex] = useState(0);
+
+  // Post actions state
+  const [showMenu, setShowMenu] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Bookmark state
+  const [isSaved, setIsSaved] = useState(false);
+  const [savingPost, setSavingPost] = useState(false);
 
   // Parse images from media_url (either JSON array string or plain URL string)
   const images: string[] = React.useMemo(() => {
@@ -72,6 +85,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   useEffect(() => {
     loadLikes();
     loadFollowStatus();
+    loadSavedStatus();
   }, [post.id, user]);
 
   const loadLikes = async () => {
@@ -88,6 +102,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     if (user?.id && post.profiles?.id && user.id !== post.profiles.id) {
       const { isFollowing } = await checkIsFollowing(user.id, post.profiles.id);
       setIsFollowing(isFollowing);
+    }
+  };
+
+  const loadSavedStatus = async () => {
+    if (user?.id) {
+      const { isSaved } = await checkIsSaved(post.id, user.id);
+      setIsSaved(isSaved);
     }
   };
 
@@ -141,6 +162,51 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     }
     setShowHeartAnim(true);
     setTimeout(() => setShowHeartAnim(false), 900);
+  };
+
+  const handleDeletePost = async () => {
+    if (!user || !confirm('Delete this post? This cannot be undone.')) return;
+
+    setDeletingPost(true);
+    setShowMenu(false);
+
+    const { error } = await deletePost(post.id, user.id);
+
+    if (error) {
+      alert('Failed to delete post');
+      setDeletingPost(false);
+    } else {
+      onPostDeleted?.(post.id);
+    }
+  };
+
+  const handleToggleSave = async () => {
+    if (!user || savingPost) return;
+
+    setSavingPost(true);
+
+    try {
+      if (isSaved) {
+        setIsSaved(false);
+        await unsavePost(post.id, user.id);
+      } else {
+        setIsSaved(true);
+        await savePost(post.id, user.id);
+      }
+    } catch (err) {
+      console.error('Error toggling save:', err);
+      setIsSaved(!isSaved); // Revert on error
+    } finally {
+      setSavingPost(false);
+    }
+  };
+
+  const canEditPost = () => {
+    if (!user || post.user_id !== user.id) return false;
+    const createdTime = new Date(post.created_at).getTime();
+    const now = new Date().getTime();
+    const diffMinutes = (now - createdTime) / 1000 / 60;
+    return diffMinutes < 15; // 15 minutes window
   };
 
   const handleShare = async () => {
@@ -264,42 +330,86 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm sm:text-base font-bold text-white tracking-tight">{username}</span>
-<TikBadge badgeType={badge} size="sm" />
+                <TikBadge badgeType={badge} size="sm" />
                 <RoleBadge role={role} />
-                
               </div>
-              <p className="text-[11px] text-purple-300/60 font-medium">{formatDate(post.created_at)}</p>
+              <p className="text-[11px] text-purple-300/60 font-medium">
+                {formatDate(post.created_at)}
+                {post.updated_at && post.updated_at !== post.created_at && (
+                  <span className="text-slate-500 italic ml-1">(edited)</span>
+                )}
+              </p>
             </div>
           </div>
 
-          {/* Follow Button - Only show if logged in, not own post */}
-          {user && !isOwnPost && post.profiles?.id && (
-            <motion.button
-              onClick={handleFollow}
-              disabled={followLoading}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                isFollowing
-                  ? 'bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-400'
-                  : 'bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-500 hover:to-violet-500'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {followLoading ? (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : isFollowing ? (
-                <>
-                  <UserMinus className="w-3.5 h-3.5" />
-                  <span>Following</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Follow</span>
-                </>
-              )}
-            </motion.button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Follow Button - Only show if logged in, not own post */}
+            {user && !isOwnPost && post.profiles?.id && (
+              <motion.button
+                onClick={handleFollow}
+                disabled={followLoading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isFollowing
+                    ? 'bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-400'
+                    : 'bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-500 hover:to-violet-500'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {followLoading ? (
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : isFollowing ? (
+                  <>
+                    <UserMinus className="w-3.5 h-3.5" />
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Follow</span>
+                  </>
+                )}
+              </motion.button>
+            )}
+
+            {/* Three-dot menu for own post */}
+            {user && isOwnPost && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  disabled={deletingPost}
+                  className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+
+                {showMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-black/95 backdrop-blur-md border border-purple-500/30 rounded-xl shadow-xl overflow-hidden z-50">
+                    {canEditPost() && (
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-200 hover:bg-purple-600/20 transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        <span>Edit Post</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeletePost}
+                      disabled={deletingPost}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>{deletingPost ? 'Deleting...' : 'Delete Post'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Text Content */}
