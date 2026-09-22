@@ -158,7 +158,7 @@ export const AdminSocial: React.FC = () => {
   const usersWithPermission = users.filter(u => u.can_post_social);
 
   return (
-    <AdminLayout active="social" permission="users">
+    <AdminLayout active="social">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Social Media Management</h1>
         <p className="text-slate-400 mt-1">Manage posting permissions, badges, and moderate content</p>
