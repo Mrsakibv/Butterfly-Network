@@ -32,25 +32,19 @@ export default async function handler(
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  console.log(
-    'Supabase URL configured:',
-    !!supabaseUrl
-  );
-
-  console.log(
-    'Supabase service key configured:',
-    !!supabaseServiceKey
-  );
-
-  console.log(
-    'Supabase service key prefix:',
-    supabaseServiceKey?.slice(0, 10)
-  );
+  const diagnostics = {
+    supabaseUrlConfigured: !!supabaseUrl,
+    serviceKeyConfigured: !!supabaseServiceKey,
+    serviceKeyIsSecret:
+      !!supabaseServiceKey &&
+      supabaseServiceKey.startsWith('sb_secret_'),
+  };
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({
       success: false,
       message: 'Supabase server configuration is missing.',
+      diagnostics,
     });
   }
 
@@ -79,14 +73,10 @@ export default async function handler(
     .maybeSingle();
 
   if (error) {
-    console.error(
-      'Supabase store_deliveries error:',
-      error
-    );
-
     return res.status(500).json({
       success: false,
       message: error.message,
+      diagnostics,
     });
   }
 
@@ -95,11 +85,13 @@ export default async function handler(
       success: true,
       delivery: null,
       message: 'No pending deliveries.',
+      diagnostics,
     });
   }
 
   return res.status(200).json({
     success: true,
     delivery: data,
+    diagnostics,
   });
 }
