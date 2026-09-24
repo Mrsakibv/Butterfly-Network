@@ -28,6 +28,18 @@ export default async function handler(
     });
   }
 
+  const playerUsername =
+    typeof req.query?.player_username === 'string'
+      ? req.query.player_username.trim()
+      : '';
+
+  if (!playerUsername) {
+    return res.status(400).json({
+      success: false,
+      message: 'player_username is required.',
+    });
+  }
+
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -60,6 +72,8 @@ export default async function handler(
       )
     `)
     .eq('status', 'processing')
+    .eq('player_username', playerUsername)
+    .eq('store_orders.payment_status', 'paid')
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -75,7 +89,7 @@ export default async function handler(
     return res.status(200).json({
       success: true,
       delivery: null,
-      message: 'No processing deliveries.',
+      message: 'No processing delivery found for this player.',
     });
   }
 
