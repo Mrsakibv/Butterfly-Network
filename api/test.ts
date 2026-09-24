@@ -1,17 +1,15 @@
 export default function handler(
-  req: Request
-): Response {
+  req: any,
+  res: any
+) {
   if (req.method !== 'GET') {
-    return Response.json(
-      {
-        success: false,
-        message: 'Method not allowed',
-      },
-      { status: 405 }
-    );
+    return res.status(405).json({
+      success: false,
+      message: 'Method not allowed',
+    });
   }
 
-  return Response.json({
+  return res.status(200).json({
     success: true,
     message: 'Butterfly Network API is connected!',
   });
