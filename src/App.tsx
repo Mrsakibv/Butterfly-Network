@@ -36,7 +36,9 @@ import { ProfileEditPage } from './pages/ProfileEditPage';
 import { BlogPage } from './pages/BlogPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { SocialPage } from './pages/SocialPage';
-
+import { AdminStore } from './pages/admin/AdminStore';
+import { ProductDetailsPage } from './pages/ProductDetailsPage';
+import { StoreCheckoutPage } from './pages/StoreCheckoutPage';
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminSettings } from './pages/admin/AdminSettings';
@@ -556,8 +558,8 @@ function AppContent() {
       return <AdminContentSection pageKey="vote" title="Vote Content" description="Manage vote rewards and vote links." />;
     }
 
-        if (path === '/admin/store') {
-      return <AdminContentSection pageKey="store" title="Minecraft Store" description="Add, edit, reorder, hide, or remove ranks, keys, coins, and wings." />;
+    if (path === '/admin/store') {
+       return <AdminStore />;
     }
 
         if (path === '/admin/home') {
@@ -646,6 +648,12 @@ function AppContent() {
 
     if (path === '/pricing') {
       return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
+    }
+    if (path.startsWith('/store/product/')) {
+      return <ProductDetailsPage />;
+    }
+    if (path === '/store/checkout') {
+      return <StoreCheckoutPage />;
     }
 
     if (path === '/admin/pages') {
@@ -738,7 +746,7 @@ function AppContent() {
             key={path}
             initial={shouldSkipAnimation ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={shouldSkipAnimation ? false : { opacity: 0 }}
+            exit={shouldSkipAnimation ? undefined  : { opacity: 0 }}
             transition={shouldSkipAnimation ? { duration: 0 } : { duration: 0.2 }}
           >
             {renderCurrentPage()}
