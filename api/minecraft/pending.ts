@@ -32,6 +32,21 @@ export default async function handler(
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  console.log(
+    'Supabase URL configured:',
+    !!supabaseUrl
+  );
+
+  console.log(
+    'Supabase service key configured:',
+    !!supabaseServiceKey
+  );
+
+  console.log(
+    'Supabase service key prefix:',
+    supabaseServiceKey?.slice(0, 10)
+  );
+
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({
       success: false,
@@ -64,6 +79,11 @@ export default async function handler(
     .maybeSingle();
 
   if (error) {
+    console.error(
+      'Supabase store_deliveries error:',
+      error
+    );
+
     return res.status(500).json({
       success: false,
       message: error.message,
