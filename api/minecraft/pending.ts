@@ -32,19 +32,10 @@ export default async function handler(
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const diagnostics = {
-    supabaseUrlConfigured: !!supabaseUrl,
-    serviceKeyConfigured: !!supabaseServiceKey,
-    serviceKeyIsSecret:
-      !!supabaseServiceKey &&
-      supabaseServiceKey.startsWith('sb_secret_'),
-  };
-
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({
       success: false,
       message: 'Supabase server configuration is missing.',
-      diagnostics,
     });
   }
 
@@ -63,12 +54,14 @@ export default async function handler(
       status,
       attempts,
       created_at,
-      store_orders (
+      store_orders!inner (
         order_number,
         payment_status
       )
     `)
     .eq('status', 'pending')
+    .eq('store_orders.payment_status', 'paid')
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -76,7 +69,6 @@ export default async function handler(
     return res.status(500).json({
       success: false,
       message: error.message,
-      diagnostics,
     });
   }
 
@@ -85,13 +77,11 @@ export default async function handler(
       success: true,
       delivery: null,
       message: 'No pending deliveries.',
-      diagnostics,
     });
   }
 
   return res.status(200).json({
     success: true,
     delivery: data,
-    diagnostics,
   });
 }
