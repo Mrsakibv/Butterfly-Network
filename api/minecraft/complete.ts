@@ -39,9 +39,37 @@ export default async function handler(
     });
   }
 
-  const { delivery_id } = req.body || {};
+  // Accept delivery_id from URL query first.
+  // Also keep body support as fallback.
+  let deliveryId =
+    typeof req.query?.delivery_id === 'string'
+      ? req.query.delivery_id.trim()
+      : '';
 
-  if (!delivery_id) {
+  if (!deliveryId) {
+    const body = req.body || {};
+
+    if (typeof body === 'string') {
+      try {
+        const parsedBody = JSON.parse(body);
+
+        if (
+          parsedBody &&
+          typeof parsedBody.delivery_id === 'string'
+        ) {
+          deliveryId = parsedBody.delivery_id.trim();
+        }
+      } catch {
+        // Ignore invalid JSON body.
+      }
+    } else if (
+      typeof body.delivery_id === 'string'
+    ) {
+      deliveryId = body.delivery_id.trim();
+    }
+  }
+
+  if (!deliveryId) {
     return res.status(400).json({
       success: false,
       message: 'delivery_id is required.',
@@ -53,15 +81,16 @@ export default async function handler(
     supabaseServiceKey
   );
 
-  const { data: delivery, error: findError } = await supabase
-    .from('store_deliveries')
-    .select(`
-      id,
-      order_id,
-      status
-    `)
-    .eq('id', delivery_id)
-    .maybeSingle();
+  const { data: delivery, error: findError } =
+    await supabase
+      .from('store_deliveries')
+      .select(`
+        id,
+        order_id,
+        status
+      `)
+      .eq('id', deliveryId)
+      .maybeSingle();
 
   if (findError) {
     return res.status(500).json({
@@ -80,21 +109,24 @@ export default async function handler(
   if (delivery.status !== 'processing') {
     return res.status(409).json({
       success: false,
-      message: `Delivery is not processing. Current status: ${delivery.status}`,
+      message:
+        `Delivery is not processing. Current status: ${delivery.status}`,
     });
   }
 
-  const deliveredAt = new Date().toISOString();
+  const deliveredAt =
+    new Date().toISOString();
 
-  const { error: deliveryError } = await supabase
-    .from('store_deliveries')
-    .update({
-      status: 'completed',
-      delivered_at: deliveredAt,
-      error_message: null,
-    })
-    .eq('id', delivery_id)
-    .eq('status', 'processing');
+  const { error: deliveryError } =
+    await supabase
+      .from('store_deliveries')
+      .update({
+        status: 'completed',
+        delivered_at: deliveredAt,
+        error_message: null,
+      })
+      .eq('id', deliveryId)
+      .eq('status', 'processing');
 
   if (deliveryError) {
     return res.status(500).json({
@@ -103,13 +135,14 @@ export default async function handler(
     });
   }
 
-  const { error: orderError } = await supabase
-    .from('store_orders')
-    .update({
-      delivery_status: 'completed',
-      completed_at: deliveredAt,
-    })
-    .eq('id', delivery.order_id);
+  const { error: orderError } =
+    await supabase
+      .from('store_orders')
+      .update({
+        delivery_status: 'completed',
+        completed_at: deliveredAt,
+      })
+      .eq('id', delivery.order_id);
 
   if (orderError) {
     return res.status(500).json({
@@ -121,7 +154,7 @@ export default async function handler(
   return res.status(200).json({
     success: true,
     message: 'Delivery completed successfully.',
-    delivery_id: delivery_id,
+    delivery_id: deliveryId,
     delivered_at: deliveredAt,
   });
 }
