@@ -36,11 +36,11 @@ export default async function handler(req: any, res: any) {
     if (typeof body === 'string') {
       try {
         const parsed = JSON.parse(body);
-        if (typeof parsed?.player_username === 'string') {
+        if (parsed && typeof parsed.player_username === 'string') {
           playerUsername = parsed.player_username.trim();
         }
       } catch {
-        // Ignore invalid JSON.
+        // ignore invalid JSON
       }
     } else if (typeof body.player_username === 'string') {
       playerUsername = body.player_username.trim();
@@ -55,7 +55,8 @@ export default async function handler(req: any, res: any) {
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({
@@ -105,7 +106,8 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({
       success: true,
       delivery: null,
-      message: `No paid pending delivery found for ${playerUsername}.`,
+      message:
+        `No paid pending delivery found for ${playerUsername}.`,
     });
   }
 
