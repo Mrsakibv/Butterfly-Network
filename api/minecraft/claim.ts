@@ -1,13 +1,6 @@
-// api/minecraft/claim.ts
-
 import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(
-  req: any,
-  res: any
-) {
-  // Allow BOTH GET and POST so the Minecraft Skript works
-  // even if an older version of the endpoint is still being called.
+export default async function handler(req: any, res: any) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -37,29 +30,20 @@ export default async function handler(
       ? req.query.player_username.trim()
       : '';
 
-  // Also support POST body.
   if (!playerUsername) {
     const body = req.body || {};
 
     if (typeof body === 'string') {
       try {
         const parsed = JSON.parse(body);
-
-        if (
-          parsed &&
-          typeof parsed.player_username === 'string'
-        ) {
-          playerUsername =
-            parsed.player_username.trim();
+        if (typeof parsed?.player_username === 'string') {
+          playerUsername = parsed.player_username.trim();
         }
       } catch {
         // Ignore invalid JSON.
       }
-    } else if (
-      typeof body.player_username === 'string'
-    ) {
-      playerUsername =
-        body.player_username.trim();
+    } else if (typeof body.player_username === 'string') {
+      playerUsername = body.player_username.trim();
     }
   }
 
@@ -71,8 +55,7 @@ export default async function handler(
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({
@@ -104,21 +87,10 @@ export default async function handler(
       )
     `)
     .eq('status', 'pending')
-    .eq(
-      'player_username',
-      playerUsername
-    )
-    .eq(
-      'store_orders.payment_status',
-      'paid'
-    )
-    .eq(
-      'store_orders.delivery_status',
-      'pending'
-    )
-    .order('created_at', {
-      ascending: true,
-    })
+    .eq('player_username', playerUsername)
+    .eq('store_orders.payment_status', 'paid')
+    .eq('store_orders.delivery_status', 'pending')
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -133,8 +105,7 @@ export default async function handler(
     return res.status(200).json({
       success: true,
       delivery: null,
-      message:
-        `No paid pending delivery found for ${playerUsername}.`,
+      message: `No paid pending delivery found for ${playerUsername}.`,
     });
   }
 

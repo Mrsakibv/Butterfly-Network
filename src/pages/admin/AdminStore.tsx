@@ -1171,7 +1171,6 @@ export const AdminStore: React.FC = () => {
     (order) => order.delivery_status === 'completed'
   ).length;
 
-  const activePromos = promos.filter((promo) => promo.is_active).length;
   const activeCategories = categories.filter((category) => category.is_active).length;
   const awaitingPayment = orders.filter(
     (order) =>
