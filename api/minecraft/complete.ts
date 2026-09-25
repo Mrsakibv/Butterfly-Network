@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(
-  req: any,
-  res: any
-) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -39,8 +36,6 @@ export default async function handler(
     });
   }
 
-  // Accept delivery_id from URL query first.
-  // Also keep body support as fallback.
   let deliveryId =
     typeof req.query?.delivery_id === 'string'
       ? req.query.delivery_id.trim()
@@ -51,20 +46,12 @@ export default async function handler(
 
     if (typeof body === 'string') {
       try {
-        const parsedBody = JSON.parse(body);
-
-        if (
-          parsedBody &&
-          typeof parsedBody.delivery_id === 'string'
-        ) {
-          deliveryId = parsedBody.delivery_id.trim();
+        const parsed = JSON.parse(body);
+        if (parsed && typeof parsed.delivery_id === 'string') {
+          deliveryId = parsed.delivery_id.trim();
         }
-      } catch {
-        // Ignore invalid JSON body.
-      }
-    } else if (
-      typeof body.delivery_id === 'string'
-    ) {
+      } catch {}
+    } else if (typeof body.delivery_id === 'string') {
       deliveryId = body.delivery_id.trim();
     }
   }
@@ -81,16 +68,19 @@ export default async function handler(
     supabaseServiceKey
   );
 
-  const { data: delivery, error: findError } =
-    await supabase
-      .from('store_deliveries')
-      .select(`
-        id,
-        order_id,
-        status
-      `)
-      .eq('id', deliveryId)
-      .maybeSingle();
+  const { data: delivery, error: findError } = await supabase
+    .from('store_deliveries')
+    .select(`
+      id,
+      order_id,
+      status,
+      store_orders!inner (
+        payment_status,
+        delivery_status
+      )
+    `)
+    .eq('id', deliveryId)
+    .maybeSingle();
 
   if (findError) {
     return res.status(500).json({
@@ -106,18 +96,47 @@ export default async function handler(
     });
   }
 
-  if (delivery.status !== 'processing') {
-    return res.status(409).json({
-      success: false,
-      message:
-        `Delivery is not processing. Current status: ${delivery.status}`,
+  const order = Array.isArray(delivery.store_orders)
+    ? delivery.store_orders[0]
+    : delivery.store_orders;
+
+  if (
+    delivery.status === 'completed' &&
+    order?.delivery_status === 'completed'
+  ) {
+    return res.status(200).json({
+      success: true,
+      message: 'Delivery is already completed.',
+      delivery_id: deliveryId,
     });
   }
 
-  const deliveredAt =
-    new Date().toISOString();
+  if (delivery.status !== 'pending') {
+    return res.status(409).json({
+      success: false,
+      message:
+        `Delivery is not pending. Current status: ${delivery.status}`,
+    });
+  }
 
-  const { error: deliveryError } =
+  if (order?.payment_status !== 'paid') {
+    return res.status(409).json({
+      success: false,
+      message: 'Order payment is not verified.',
+    });
+  }
+
+  if (order?.delivery_status !== 'pending') {
+    return res.status(409).json({
+      success: false,
+      message:
+        `Order delivery is not pending. Current status: ${order?.delivery_status}`,
+    });
+  }
+
+  const deliveredAt = new Date().toISOString();
+
+  const { data: completedDelivery, error: deliveryError } =
     await supabase
       .from('store_deliveries')
       .update({
@@ -126,7 +145,9 @@ export default async function handler(
         error_message: null,
       })
       .eq('id', deliveryId)
-      .eq('status', 'processing');
+      .eq('status', 'pending')
+      .select('id, order_id, status, delivered_at')
+      .maybeSingle();
 
   if (deliveryError) {
     return res.status(500).json({
@@ -135,14 +156,36 @@ export default async function handler(
     });
   }
 
-  const { error: orderError } =
-    await supabase
-      .from('store_orders')
-      .update({
-        delivery_status: 'completed',
-        completed_at: deliveredAt,
-      })
-      .eq('id', delivery.order_id);
+  if (!completedDelivery) {
+    const { data: current } = await supabase
+      .from('store_deliveries')
+      .select('status')
+      .eq('id', deliveryId)
+      .maybeSingle();
+
+    if (current?.status === 'completed') {
+      return res.status(200).json({
+        success: true,
+        message: 'Delivery was already completed.',
+        delivery_id: deliveryId,
+      });
+    }
+
+    return res.status(409).json({
+      success: false,
+      message: 'Delivery could not be completed.',
+    });
+  }
+
+  const { error: orderError } = await supabase
+    .from('store_orders')
+    .update({
+      delivery_status: 'completed',
+      completed_at: deliveredAt,
+    })
+    .eq('id', delivery.order_id)
+    .eq('payment_status', 'paid')
+    .eq('delivery_status', 'pending');
 
   if (orderError) {
     return res.status(500).json({
@@ -153,8 +196,9 @@ export default async function handler(
 
   return res.status(200).json({
     success: true,
-    message: 'Delivery completed successfully.',
+    message: 'Delivery and order completed successfully.',
     delivery_id: deliveryId,
+    order_id: delivery.order_id,
     delivered_at: deliveredAt,
   });
 }

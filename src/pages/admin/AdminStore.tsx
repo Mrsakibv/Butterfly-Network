@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -314,6 +314,14 @@ export const AdminStore: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [realtimeState, setRealtimeState] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
+
+  const [paymentEditorOpen, setPaymentEditorOpen] = useState(false);
+  const [paymentMethodDraft, setPaymentMethodDraft] = useState('');
+  const [transactionIdDraft, setTransactionIdDraft] = useState('');
+  const [savingPaymentDetails, setSavingPaymentDetails] = useState(false);
+  const realtimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [productEditor, setProductEditor] = useState(false);
   const [categoryEditor, setCategoryEditor] = useState(false);
@@ -332,6 +340,7 @@ export const AdminStore: React.FC = () => {
   const [savingPromo, setSavingPromo] = useState(false);
 
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderDeliveryFilter, setOrderDeliveryFilter] = useState('all');
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('all');
 
   const [selectedOrder, setSelectedOrder] = useState<StoreOrder | null>(null);
@@ -399,48 +408,71 @@ export const AdminStore: React.FC = () => {
     if (!silent) setLoading(false);
   };
 
+  const scheduleRealtimeReload = () => {
+    if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
+    realtimeTimerRef.current = setTimeout(() => loadAll(true), 180);
+  };
+
   useEffect(() => {
     loadAll();
 
     const channel = supabase
       .channel('admin-store-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'store_categories' },
-        () => loadAll(true)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'store_products' },
-        () => loadAll(true)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'store_promo_codes' },
-        () => loadAll(true)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'store_orders' },
-        () => loadAll(true)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'store_deliveries' },
-        () => loadAll(true)
-      )
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_categories' }, scheduleRealtimeReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_products' }, scheduleRealtimeReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_promo_codes' }, scheduleRealtimeReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_orders' }, scheduleRealtimeReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_deliveries' }, scheduleRealtimeReload)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setRealtimeState('connected');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeState('disconnected');
+        else setRealtimeState('connecting');
+      });
 
     return () => {
+      if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const latest = orders.find((item) => item.id === selectedOrder.id);
+    if (!latest) {
+      setSelectedOrder(null);
+      return;
+    }
+    setSelectedOrder(latest);
+  }, [orders]);
+
+  useEffect(() => {
+    if (!selectedDelivery) return;
+    const latest = deliveries.find((item) => item.id === selectedDelivery.id);
+    if (!latest) {
+      setSelectedDelivery(null);
+      return;
+    }
+    setSelectedDelivery(latest);
+  }, [deliveries]);
 
   const refresh = async () => {
     setRefreshing(true);
     await loadAll();
     setRefreshing(false);
   };
+
+  const openOrderDetails = (order: StoreOrder) => {
+    setSelectedOrder(order);
+    setPaymentEditorOpen(false);
+    setPaymentMethodDraft(order.payment_method || '');
+    setTransactionIdDraft(order.transaction_id || '');
+  };
+
+  const getOrderForDelivery = (delivery: StoreDelivery) =>
+    orders.find((order) => order.id === delivery.order_id) || null;
+
+  const getCategoryBySlug = (slug: string) =>
+    categories.find((category) => category.slug === slug) || null;
 
   /* ==========================================
      PRODUCTS
@@ -905,12 +937,13 @@ export const AdminStore: React.FC = () => {
   };
 
   const verifyAndPayOrder = async (order: StoreOrder) => {
-    if (Number(order.final_amount) > 0 && !order.transaction_id) {
-      showToast(
-        'Payment Verification',
-        'This order has no transaction ID.',
-        'error'
-      );
+    if (Number(order.final_amount) > 0 && !order.transaction_id?.trim()) {
+      showToast('Payment Verification', 'Add the transaction ID before marking this order as paid.', 'error');
+      return;
+    }
+
+    if (Number(order.final_amount) > 0 && !order.payment_method?.trim()) {
+      showToast('Payment Verification', 'Add the payment method before marking this order as paid.', 'error');
       return;
     }
 
@@ -930,6 +963,42 @@ export const AdminStore: React.FC = () => {
     if (success) setSelectedOrder(null);
   };
 
+  const savePaymentDetails = async () => {
+    if (!selectedOrder) return;
+
+    const paymentMethod = paymentMethodDraft.trim() || null;
+    const transactionId = transactionIdDraft.trim() || null;
+
+    if (Number(selectedOrder.final_amount) > 0) {
+      if (!paymentMethod) {
+        showToast('Payment Details', 'Payment method is required for a paid order.', 'error');
+        return;
+      }
+      if (!transactionId || transactionId.length < 3) {
+        showToast('Payment Details', 'Transaction ID must contain at least 3 characters.', 'error');
+        return;
+      }
+    }
+
+    setSavingPaymentDetails(true);
+
+    const { error } = await supabase
+      .from('store_orders')
+      .update({ payment_method: paymentMethod, transaction_id: transactionId })
+      .eq('id', selectedOrder.id);
+
+    if (error) {
+      showToast('Payment Details Error', error.message, 'error');
+      setSavingPaymentDetails(false);
+      return;
+    }
+
+    showToast('Payment Details Updated', 'Payment method and transaction ID saved.', 'success');
+    setSavingPaymentDetails(false);
+    setPaymentEditorOpen(false);
+    await loadAll(true);
+  };
+
   /* ==========================================
      DELIVERIES
   ========================================== */
@@ -938,6 +1007,20 @@ export const AdminStore: React.FC = () => {
     delivery: StoreDelivery,
     status: 'pending' | 'completed' | 'failed'
   ) => {
+    const order = getOrderForDelivery(delivery);
+
+    if (status === 'completed') {
+      if (!order) {
+        showToast('Delivery Update Failed', 'Related order was not found.', 'error');
+        return;
+      }
+
+      if (order.payment_status !== 'paid') {
+        showToast('Delivery Blocked', 'Payment must be paid before delivery can be completed.', 'error');
+        return;
+      }
+    }
+
     const now = new Date().toISOString();
 
     const { error } = await supabase
@@ -945,14 +1028,9 @@ export const AdminStore: React.FC = () => {
       .update({
         status,
         ...(status === 'completed'
-          ? {
-              delivered_at: now,
-              error_message: null,
-            }
+          ? { delivered_at: now, error_message: null }
           : status === 'pending'
-          ? {
-              delivered_at: null,
-            }
+          ? { delivered_at: null }
           : {}),
       })
       .eq('id', delivery.id);
@@ -966,21 +1044,20 @@ export const AdminStore: React.FC = () => {
       .from('store_orders')
       .update({
         delivery_status: status,
-        ...(status === 'completed'
-          ? { completed_at: now }
-          : status === 'pending'
-          ? { completed_at: null }
-          : {}),
+        ...(status === 'completed' ? { completed_at: now } : {}),
+        ...(status === 'pending' ? { completed_at: null } : {}),
       })
       .eq('id', delivery.order_id);
 
     if (orderError) {
       showToast('Order Sync Warning', orderError.message, 'error');
+      await loadAll(true);
+      return;
     }
 
     showToast(
       'Delivery Updated',
-      `Delivery status changed to ${status}.`,
+      'Delivery and order status changed to ' + status + '.',
       'success'
     );
 
@@ -993,20 +1070,24 @@ export const AdminStore: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     const value = search.trim().toLowerCase();
-    if (!value) return products;
 
     return products.filter((product) => {
       const categoryName =
         categories.find((category) => category.slug === product.category)?.name ||
         product.category;
 
-      return (
+      const matchesCategory =
+        !selectedCategorySlug || product.category === selectedCategorySlug;
+
+      const matchesSearch =
+        !value ||
         product.name.toLowerCase().includes(value) ||
         product.slug.toLowerCase().includes(value) ||
-        categoryName.toLowerCase().includes(value)
-      );
+        categoryName.toLowerCase().includes(value);
+
+      return matchesCategory && matchesSearch;
     });
-  }, [products, categories, search]);
+  }, [products, categories, search, selectedCategorySlug]);
 
   const filteredCategories = useMemo(() => {
     const value = search.trim().toLowerCase();
@@ -1038,10 +1119,13 @@ export const AdminStore: React.FC = () => {
     const value = search.trim().toLowerCase();
 
     return orders.filter((order) => {
-      const matchesStatus =
+      const matchesPayment =
         orderStatusFilter === 'all' ||
-        order.payment_status === orderStatusFilter ||
-        order.delivery_status === orderStatusFilter;
+        order.payment_status === orderStatusFilter;
+
+      const matchesDelivery =
+        orderDeliveryFilter === 'all' ||
+        order.delivery_status === orderDeliveryFilter;
 
       const matchesSearch =
         !value ||
@@ -1050,9 +1134,9 @@ export const AdminStore: React.FC = () => {
         (order.product?.name || '').toLowerCase().includes(value) ||
         (order.transaction_id || '').toLowerCase().includes(value);
 
-      return matchesStatus && matchesSearch;
+      return matchesPayment && matchesDelivery && matchesSearch;
     });
-  }, [orders, search, orderStatusFilter]);
+  }, [orders, search, orderStatusFilter, orderDeliveryFilter]);
 
   const filteredDeliveries = useMemo(() => {
     const value = search.trim().toLowerCase();
@@ -1095,6 +1179,18 @@ export const AdminStore: React.FC = () => {
       Number(order.final_amount) > 0
   ).length;
 
+  const readyForDelivery = orders.filter(
+    (order) =>
+      order.payment_status === 'paid' &&
+      order.delivery_status === 'pending'
+  ).length;
+
+  const freeOrders = orders.filter(
+    (order) =>
+      Number(order.final_amount) === 0 &&
+      order.payment_status === 'paid'
+  ).length;
+
   const tabs: {
     id: StoreTab;
     label: string;
@@ -1133,9 +1229,15 @@ export const AdminStore: React.FC = () => {
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-purple-400">
                 Minecraft Store
               </p>
-              <span className="inline-flex items-center gap-2 rounded-full border border-green-500/15 bg-green-500/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-green-400">
-                <span className="butterfly-store-dot h-1.5 w-1.5 rounded-full bg-green-400" />
-                Live realtime
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                realtimeState === 'connected'
+                  ? 'border-green-500/15 bg-green-500/5 text-green-400'
+                  : realtimeState === 'disconnected'
+                  ? 'border-red-500/15 bg-red-500/5 text-red-400'
+                  : 'border-yellow-500/15 bg-yellow-500/5 text-yellow-400'
+              }`}>
+                <span className="butterfly-store-dot h-1.5 w-1.5 rounded-full bg-current" />
+                {realtimeState === 'connected' ? 'Live realtime' : realtimeState === 'disconnected' ? 'Realtime disconnected' : 'Connecting realtime'}
               </span>
             </div>
 
@@ -1200,7 +1302,7 @@ export const AdminStore: React.FC = () => {
                 : tab.id === 'orders'
                 ? awaitingPayment
                 : tab.id === 'deliveries'
-                ? deliveries.filter((item) => item.status !== 'completed').length
+                ? readyForDelivery
                 : 0;
 
             return (
@@ -1230,7 +1332,8 @@ export const AdminStore: React.FC = () => {
 
         {/* SEARCH */}
         {activeTab !== 'overview' && activeTab !== 'payment_methods' && (
-          <div className="relative max-w-2xl">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="relative max-w-2xl flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
             <input
               value={search}
@@ -1248,6 +1351,36 @@ export const AdminStore: React.FC = () => {
               }
               className={`${inputClass} py-3 pl-10`}
             />
+          </div>
+
+          {activeTab === 'products' && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedCategorySlug(null)}
+                className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-bold ${
+                  selectedCategorySlug === null
+                    ? 'border-purple-400/30 bg-purple-500/10 text-white'
+                    : 'border-white/10 text-slate-500 hover:text-white'
+                }`}
+              >
+                All Categories
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategorySlug(category.slug)}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                    selectedCategorySlug === category.slug
+                      ? 'border-purple-400/30 bg-purple-500/10 text-white'
+                      : 'border-white/10 text-slate-500 hover:text-white'
+                  }`}
+                >
+                  <CategoryIcon category={category} className="h-4 w-4" />
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          )}
           </div>
         )}
 
@@ -1287,7 +1420,7 @@ export const AdminStore: React.FC = () => {
                       {orders.slice(0, 5).map((order) => (
                         <button
                           key={order.id}
-                          onClick={() => setSelectedOrder(order)}
+                          onClick={() => openOrderDetails(order)}
                           className={`flex w-full items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-3 text-left hover:bg-white/[0.045] ${buttonClass}`}
                         >
                           <div className="min-w-0">
@@ -1311,7 +1444,28 @@ export const AdminStore: React.FC = () => {
 
             {/* PRODUCTS */}
             {activeTab === 'products' && (
-              <div className="grid gap-5 xl:grid-cols-2">
+              <div className="space-y-5">
+                {selectedCategorySlug && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-purple-500/10 bg-purple-500/5 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-300">
+                        <CategoryIcon category={getCategoryBySlug(selectedCategorySlug) || undefined} className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Category</p>
+                        <p className="font-black text-white">{getCategoryBySlug(selectedCategorySlug)?.name || selectedCategorySlug}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCategorySlug(null)}
+                      className={`rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white ${buttonClass}`}
+                    >
+                      Show All
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid gap-5 xl:grid-cols-2">
                 {filteredProducts.map((product) => {
                   const category = categories.find((item) => item.slug === product.category);
 
@@ -1403,6 +1557,7 @@ export const AdminStore: React.FC = () => {
                   );
                 })}
                 {filteredProducts.length === 0 && <div className="xl:col-span-2"><EmptyState text="No products found." /></div>}
+                </div>
               </div>
             )}
 
@@ -1460,6 +1615,17 @@ export const AdminStore: React.FC = () => {
                         )}
 
                         <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+                          <button
+                            onClick={() => {
+                              setSelectedCategorySlug(category.slug);
+                              setActiveTab('products');
+                              setSearch('');
+                            }}
+                            className={`inline-flex items-center gap-2 rounded-lg bg-purple-600/15 px-3 py-2 text-xs font-bold text-purple-300 hover:bg-purple-600/25 hover:text-white ${buttonClass}`}
+                          >
+                            <Package className="h-3.5 w-3.5" />
+                            View Products
+                          </button>
                           <button
                             onClick={() => openEditCategory(category)}
                             className={`inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-300 hover:-translate-y-0.5 hover:bg-white/[0.06] hover:text-white ${buttonClass}`}
@@ -1581,6 +1747,23 @@ export const AdminStore: React.FC = () => {
                   ))}
                 </div>
 
+                <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                  <span className="mr-1 self-center text-[10px] font-bold uppercase tracking-wider text-slate-600">Delivery</span>
+                  {['all', 'pending', 'completed', 'failed'].map((status) => (
+                    <button
+                      key={`delivery-${status}`}
+                      onClick={() => setOrderDeliveryFilter(status)}
+                      className={`rounded-lg border px-3 py-2 text-xs font-bold capitalize ${buttonClass} ${
+                        orderDeliveryFilter === status
+                          ? 'border-blue-400/30 bg-blue-500/10 text-white'
+                          : 'border-white/10 text-slate-500 hover:text-white'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[1120px] text-left">
@@ -1592,6 +1775,7 @@ export const AdminStore: React.FC = () => {
                           <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">Amount</th>
                           <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">Payment</th>
                           <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">Delivery</th>
+                          <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">Payment Info</th>
                           <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">Date</th>
                           <th className="px-5 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-600">Action</th>
                         </tr>
@@ -1605,7 +1789,7 @@ export const AdminStore: React.FC = () => {
                           >
                             <td className="px-5 py-4">
                               <button
-                                onClick={() => setSelectedOrder(order)}
+                                onClick={() => openOrderDetails(order)}
                                 className="font-mono text-xs font-bold text-purple-300 hover:text-purple-200"
                               >
                                 {order.order_number}
@@ -1630,6 +1814,10 @@ export const AdminStore: React.FC = () => {
                             </td>
                             <td className="px-5 py-4"><StatusBadge status={order.payment_status} /></td>
                             <td className="px-5 py-4"><StatusBadge status={order.delivery_status} /></td>
+                            <td className="px-5 py-4">
+                              <p className="text-xs font-semibold text-slate-300">{order.payment_method || 'Free Order'}</p>
+                              <p className="mt-1 max-w-[180px] truncate font-mono text-[10px] text-slate-600">{order.transaction_id || '—'}</p>
+                            </td>
                             <td className="px-5 py-4 text-xs text-slate-500">{formatDate(order.created_at)}</td>
                             <td className="px-5 py-4 text-right">
                               {order.payment_status === 'pending' && (
@@ -1642,7 +1830,7 @@ export const AdminStore: React.FC = () => {
                                 </button>
                               )}
                               <button
-                                onClick={() => setSelectedOrder(order)}
+                                onClick={() => openOrderDetails(order)}
                                 className={`inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-300 hover:bg-white/[0.07] hover:text-white ${buttonClass}`}
                               >
                                 <Eye className="h-3.5 w-3.5" />
@@ -2257,6 +2445,61 @@ export const AdminStore: React.FC = () => {
                     <span className="text-xl font-black text-white">{formatMoney(Number(selectedOrder.final_amount))}</span>
                   </div>
                 </div>
+
+                {Number(selectedOrder.final_amount) > 0 && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        setPaymentEditorOpen((current) => !current);
+                        setPaymentMethodDraft(selectedOrder.payment_method || '');
+                        setTransactionIdDraft(selectedOrder.transaction_id || '');
+                      }}
+                      className={`inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-white/5 hover:text-white ${buttonClass}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      {paymentEditorOpen ? 'Close Payment Editor' : 'Edit Payment Details'}
+                    </button>
+                  </div>
+                )}
+
+                {paymentEditorOpen && Number(selectedOrder.final_amount) > 0 && (
+                  <div className="mt-4 rounded-2xl border border-purple-500/15 bg-purple-500/5 p-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Payment Method" required>
+                        <input
+                          value={paymentMethodDraft}
+                          onChange={(event) => setPaymentMethodDraft(event.target.value)}
+                          placeholder="bKash / Nagad / Bank"
+                          className={inputClass}
+                        />
+                      </Field>
+                      <Field label="Transaction ID" required>
+                        <input
+                          value={transactionIdDraft}
+                          onChange={(event) => setTransactionIdDraft(event.target.value)}
+                          placeholder="Transaction reference"
+                          className={`${inputClass} font-mono`}
+                        />
+                      </Field>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={savePaymentDetails}
+                        disabled={savingPaymentDetails}
+                        className={`inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-sm font-bold text-white hover:bg-purple-500 disabled:opacity-50 ${buttonClass}`}
+                      >
+                        {savingPaymentDetails && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Save Payment Details
+                      </button>
+                      <button
+                        onClick={() => setPaymentEditorOpen(false)}
+                        className={`rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-400 hover:bg-white/5 hover:text-white ${buttonClass}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
