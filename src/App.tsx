@@ -12,6 +12,7 @@ import { ParticleBackground } from './components/ParticleBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
+import { FloatingNotificationButton } from './components/FloatingNotificationButton';
 import { supabase } from './lib/supabase';
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -46,8 +47,10 @@ import { AdminGameModes } from './pages/admin/AdminGameModes';
 import { AdminPages } from './pages/admin/AdminPages';
 import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminContentSection } from './pages/admin/AdminContentSection';
+import { AdminHomeContent } from './pages/admin/AdminHomeContent';
 import { AdminSocial } from './pages/admin/AdminSocial';
 import { DynamicPage } from './pages/DynamicPage';
+import { LoginRequiredPage } from './pages/LoginRequiredPage';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -498,6 +501,10 @@ function AppContent() {
       return <LoginPage />;
     }
 
+    if (path === '/login-required') {
+      return <LoginRequiredPage />;
+    }
+
     if (path === '/update-password') {
       return <UpdatePasswordPage />;
     }
@@ -562,8 +569,8 @@ function AppContent() {
        return <AdminStore />;
     }
 
-        if (path === '/admin/home') {
-      return <AdminContentSection pageKey="home" title="Home Content" description="Manage the slider/team section on the home page." />;
+    if (path === '/admin/home') {
+      return <AdminHomeContent />;
     }
 
     if (path === '/admin/blog') {
@@ -758,6 +765,9 @@ function AppContent() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Floating Notification Button */}
+      <FloatingNotificationButton />
 
       {/* Play Now Modal */}
       <JoinModal

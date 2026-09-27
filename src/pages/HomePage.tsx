@@ -4,6 +4,7 @@ import { HomeSlider } from '../components/HomeSlider';
 import { FeaturesSection } from '../components/FeaturesSection';
 import { HowToJoinSection } from '../components/HowToJoinSection';
 import { ServerInfoSection } from '../components/ServerInfoSection';
+import { OffersSection } from '../components/OffersSection';
 import { CommunityCTA } from '../components/CommunityCTA';
 import { FinalCTA } from '../components/FinalCTA';
 import { SERVER_CONFIG } from '../config/server';
@@ -34,10 +35,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 5. Server Information Table & Specs */}
       <ServerInfoSection />
 
-      {/* 6. Community CTA */}
+      {/* 6. Special Offers & Announcements */}
+      <OffersSection />
+
+      {/* 7. Community CTA */}
       <CommunityCTA onOpenPlayModal={onOpenPlayModal} />
 
-      {/* 7. Final CTA */}
+      {/* 8. Final CTA */}
       <FinalCTA onOpenPlayModal={onOpenPlayModal} />
     </div>
   );

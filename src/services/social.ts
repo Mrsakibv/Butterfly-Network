@@ -653,9 +653,10 @@ interface Notification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow';
+  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow' | 'admin_message';
   post_id?: string | null;
   comment_id?: string | null;
+  message?: string | null;
   is_read: boolean;
   created_at: string;
   actor?: {
@@ -670,12 +671,13 @@ interface Notification {
 const createNotification = async (
   recipientId: string,
   actorId: string,
-  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow',
+  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow' | 'admin_message',
   postId?: string | null,
-  commentId?: string | null
+  commentId?: string | null,
+  message?: string | null
 ) => {
-  // Don't create notification for self-interactions
-  if (recipientId === actorId) return { data: null, error: null };
+  // Don't create notification for self-interactions (except admin messages)
+  if (recipientId === actorId && type !== 'admin_message') return { data: null, error: null };
 
   try {
     const { data, error } = await supabase
@@ -686,6 +688,7 @@ const createNotification = async (
         type,
         post_id: postId || null,
         comment_id: commentId || null,
+        message: message || null,
       }])
       .select();
 
@@ -933,6 +936,38 @@ export const getSavedPosts = async (userId: string, limit = 20, offset = 0) => {
     return { data: posts || [], error: null };
   } catch (err) {
     console.error('Get saved posts exception:', err);
+    return { data: null, error: err as any };
+  }
+};
+
+// ==========================================
+// ADMIN MESSAGE SYSTEM
+// ==========================================
+
+// Send admin message to user (admin only)
+export const sendAdminMessage = async (
+  recipientId: string,
+  adminId: string,
+  message: string
+) => {
+  try {
+    const { data, error } = await createNotification(
+      recipientId,
+      adminId,
+      'admin_message',
+      null,
+      null,
+      message
+    );
+
+    if (error) {
+      console.error('Send admin message error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (err) {
+    console.error('Send admin message exception:', err);
     return { data: null, error: err as any };
   }
 };

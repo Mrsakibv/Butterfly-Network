@@ -236,7 +236,13 @@ export const LoginPage: React.FC = () => {
         setMessage('Your account has been created successfully.');
 
         setTimeout(() => {
-          navigate('/');
+          const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+          if (redirectPath) {
+            sessionStorage.removeItem('redirectAfterLogin');
+            window.location.href = redirectPath;
+          } else {
+            navigate('/');
+          }
         }, 1200);
       } else {
         setSuccess(true);
@@ -280,7 +286,13 @@ export const LoginPage: React.FC = () => {
       setMessage('Login successful!');
 
       setTimeout(() => {
-        navigate('/');
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          window.location.href = redirectPath;
+        } else {
+          navigate('/');
+        }
       }, 700);
     }
 

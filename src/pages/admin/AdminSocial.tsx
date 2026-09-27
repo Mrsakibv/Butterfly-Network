@@ -7,8 +7,9 @@ import {
   deletePost
 } from '../../services/social';
 import { useToast } from '../../hooks/useToast';
-import { Users, FileText, Trash2, ChevronDown, ChevronRight, Loader2, Award } from 'lucide-react';
+import { Users, FileText, Trash2, ChevronDown, ChevronRight, Loader2, Award, MessageSquare } from 'lucide-react';
 import { BadgeManagement } from './BadgeManagement';
+import { AdminMessages } from './AdminMessages';
 
 interface User {
   id: string;
@@ -24,7 +25,7 @@ interface Post {
 
 export const AdminSocial: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'moderation' | 'badges'>('moderation');
+  const [activeTab, setActiveTab] = useState<'moderation' | 'badges' | 'messages'>('moderation');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -194,11 +195,28 @@ export const AdminSocial: React.FC = () => {
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400" />
             )}
           </button>
+
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`flex items-center gap-2 pb-3 text-sm font-semibold transition-colors relative ${
+              activeTab === 'messages'
+                ? 'text-purple-400'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Send Messages
+            {activeTab === 'messages' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400" />
+            )}
+          </button>
         </div>
       </div>
 
       {activeTab === 'badges' ? (
         <BadgeManagement />
+      ) : activeTab === 'messages' ? (
+        <AdminMessages />
       ) : loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />

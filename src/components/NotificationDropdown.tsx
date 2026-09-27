@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, Check } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, Check, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   getNotifications,
@@ -14,9 +14,10 @@ interface Notification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow';
+  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow' | 'admin_message';
   post_id?: string | null;
   comment_id?: string | null;
+  message?: string | null;
   is_read: boolean;
   created_at: string;
   actor?: {
@@ -95,9 +96,15 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
     // Navigate based on notification type
     if (notification.type === 'follow') {
+      // Go to the follower's profile
       navigate(`/profile?id=${notification.actor_id}`);
+    } else if (notification.type === 'admin_message') {
+      // Admin message - don't navigate, just mark as read
+      // User can read the message in the notification itself
+      return;
     } else if (notification.post_id) {
-      navigate(`/social`);
+      // Go to social page with post highlighted (we'll scroll to it)
+      navigate(`/social?post=${notification.post_id}`);
     }
 
     onClose();
@@ -132,6 +139,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return <MessageCircle className="w-4 h-4 text-purple-400" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-emerald-400" />;
+      case 'admin_message':
+        return <ShieldAlert className="w-4 h-4 text-amber-400" />;
       default:
         return <Bell className="w-4 h-4 text-slate-400" />;
     }
@@ -148,6 +157,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return `liked your comment`;
       case 'follow':
         return `started following you`;
+      case 'admin_message':
+        return notification.message || 'sent you a message';
       default:
         return 'interacted with you';
     }
@@ -164,38 +175,52 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+        initial={{ opacity: 0, y: 10, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+        exit={{ opacity: 0, y: 10, scale: 0.95 }}
         transition={{ duration: 0.15 }}
-        className="absolute top-full right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-[#0e101d]/98 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-950/60 overflow-hidden z-50"
+        className="w-96 max-w-[calc(100vw-2rem)] bg-gradient-to-b from-[#0e101d] to-[#0a0c16] backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_20px_80px_rgba(139,92,246,0.4)] overflow-hidden"
         data-notification-dropdown
       >
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-          <h3 className="text-base font-bold text-white">Notifications</h3>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllAsRead}
-              className="text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors flex items-center gap-1"
-            >
-              <Check className="w-3.5 h-3.5" />
-              Mark all read
-            </button>
-          )}
+        {/* Header with gradient */}
+        <div className="relative px-5 py-4 border-b border-white/10 bg-gradient-to-r from-purple-500/10 via-violet-500/10 to-purple-500/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20 border border-purple-400/30">
+                <Bell className="h-4 w-4 text-purple-300" />
+              </div>
+              <h3 className="text-base font-bold text-white">Notifications</h3>
+              {unreadCount > 0 && (
+                <span className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-violet-500 px-2 text-[10px] font-black text-white">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-purple-500/10"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Mark all read
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Notifications List */}
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[450px] overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <Bell className="w-12 h-12 text-slate-600 mb-3" />
-              <p className="text-slate-400 text-sm font-medium">No notifications yet</p>
-              <p className="text-slate-500 text-xs mt-1">
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/30">
+                <Bell className="w-8 h-8 text-slate-600" />
+              </div>
+              <p className="text-slate-300 text-sm font-semibold">No notifications yet</p>
+              <p className="text-slate-500 text-xs mt-1.5">
                 We'll notify you when something happens
               </p>
             </div>
@@ -206,17 +231,27 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   notification.actor?.minecraft_username
                 );
 
+                const isAdminMessage = notification.type === 'admin_message';
+
                 return (
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left ${
-                      !notification.is_read ? 'bg-purple-950/20' : ''
+                    className={`w-full flex items-start gap-3 px-4 py-4 hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-violet-500/10 transition-all text-left group ${
+                      !notification.is_read
+                        ? 'bg-gradient-to-r from-purple-950/30 to-violet-950/30 border-l-2 border-purple-500'
+                        : ''
                     }`}
                   >
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-purple-500/20">
+                      <div className={`w-11 h-11 rounded-xl overflow-hidden border-2 ${
+                        isAdminMessage
+                          ? 'border-amber-500/30 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+                          : !notification.is_read
+                            ? 'border-purple-500/40'
+                            : 'border-white/10'
+                      }`}>
                         {avatarUrl ? (
                           <img
                             src={avatarUrl}
@@ -224,39 +259,71 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                             className="w-full h-full object-cover pixelated"
                           />
                         ) : (
-                          <div className="w-full h-full bg-purple-600/40 flex items-center justify-center text-purple-200 text-sm font-bold">
-                            {notification.actor?.username?.[0]?.toUpperCase() || '?'}
+                          <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${
+                            isAdminMessage
+                              ? 'bg-gradient-to-br from-amber-500/30 to-orange-500/30 text-amber-200'
+                              : 'bg-gradient-to-br from-purple-600/40 to-violet-600/40 text-purple-200'
+                          }`}>
+                            {isAdminMessage ? '⚡' : (notification.actor?.username?.[0]?.toUpperCase() || '?')}
                           </div>
                         )}
                       </div>
-                      {/* Icon Badge */}
-                      <div className="absolute -bottom-1 -right-1 bg-[#0e101d] rounded-full p-1">
+                      {/* Icon Badge with glow */}
+                      <div className={`absolute -bottom-1 -right-1 rounded-full p-1.5 border-2 border-[#0e101d] ${
+                        isAdminMessage
+                          ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                          : 'bg-gradient-to-br from-purple-600 to-violet-600'
+                      }`}>
                         {getNotificationIcon(notification.type)}
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm ${
-                          !notification.is_read
-                            ? 'text-white font-semibold'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        <span className="font-bold">
-                          {notification.actor?.username || 'Someone'}
-                        </span>{' '}
-                        {getNotificationText(notification)}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      {notification.type === 'admin_message' ? (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-black text-transparent bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text">
+                              Admin Message
+                            </p>
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
+                              Official
+                            </span>
+                          </div>
+                          {notification.message && (
+                            <p className="text-sm leading-6 text-slate-200 font-medium mt-1.5 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border-l-2 border-amber-500/30 pl-2 py-1 rounded-r">
+                              {notification.message}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p
+                          className={`text-sm leading-6 ${
+                            !notification.is_read
+                              ? 'text-white font-semibold'
+                              : 'text-slate-300 font-medium'
+                          }`}
+                        >
+                          <span className="font-bold text-purple-300">
+                            {notification.actor?.username || 'Someone'}
+                          </span>
+                          <span className="text-slate-400 mx-1">•</span>
+                          <span className={!notification.is_read ? 'text-white' : 'text-slate-400'}>
+                            {getNotificationText(notification)}
+                          </span>
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                        <span className="inline-block w-1 h-1 rounded-full bg-slate-600"></span>
                         {formatDate(notification.created_at)}
                       </p>
                     </div>
 
                     {/* Unread indicator */}
                     {!notification.is_read && (
-                      <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0 mt-2" />
+                      <div className="flex-shrink-0 mt-2">
+                        <div className="w-2.5 h-2.5 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+                      </div>
                     )}
                   </button>
                 );

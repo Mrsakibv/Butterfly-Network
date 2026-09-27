@@ -137,9 +137,10 @@ interface AdminContentSectionProps {
   pageKey: Exclude<AdminSectionKey, 'dashboard' | 'settings' | 'gamemodes' | 'pages' | 'users'>;
   title: string;
   description: string;
+  hideLayout?: boolean;
 }
 
-export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKey, title, description }) => {
+export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKey, title, description, hideLayout = false }) => {
   const [items, setItems] = useState<PageItem[]>([]);
   const [voteSettings, setVoteSettings] = useState<PageItem>(() => ({ ...emptyItem('vote'), item_type: 'vote_settings', title: 'Vote Settings', extra: { rewardsTitle: 'Rewards', rewardsIcon: 'gift', rewardsIconUrl: '', features: '' } }));
   const [voteInstructions, setVoteInstructions] = useState<PageItem>(() => ({ ...emptyItem('vote'), item_type: 'vote_instructions', title: 'Rewards', extra: { rewardsIcon: 'gift', rewardsIconUrl: '', features: '' } }));
@@ -609,8 +610,8 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
     setSaving(false);
   };
 
-  return (
-    <AdminLayout active={pageKey}>
+  const contentNode = (
+    <>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">{title}</h2>
@@ -913,6 +914,16 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({ pageKe
           </div>
         ))}
       </div>
+    </>
+  );
+
+  if (hideLayout) {
+    return contentNode;
+  }
+
+  return (
+    <AdminLayout active={pageKey}>
+      {contentNode}
     </AdminLayout>
   );
 };

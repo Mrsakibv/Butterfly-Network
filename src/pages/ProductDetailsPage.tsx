@@ -14,6 +14,7 @@ import {
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from '../hooks/useRouter';
+import { useAuth } from '../hooks/useAuth';
 
 interface StoreProduct {
   id: string;
@@ -69,6 +70,7 @@ const formatPrice = (price: number, currency: string) => {
 
 export const ProductDetailsPage: React.FC = () => {
   const { navigate } = useRouter();
+  const { user } = useAuth();
 
   const [product, setProduct] = useState<StoreProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,6 +145,15 @@ export const ProductDetailsPage: React.FC = () => {
   const handleBuyNow = () => {
     if (!product) return;
 
+    // Check if user is logged in
+    if (!user) {
+      // Redirect to login required page with return path
+      const currentPath = window.location.pathname + window.location.search;
+      navigate(`/login-required?return=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
+    // User is logged in, proceed to checkout
     navigate(
       `/store/checkout?product=${encodeURIComponent(product.id)}`
     );
