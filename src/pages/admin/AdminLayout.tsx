@@ -47,7 +47,8 @@ export type AdminSectionKey =
   | 'home'
   | 'blog'
   | 'users'
-  | 'social';
+  | 'social'
+  | 'applications';
 
 const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
@@ -160,6 +161,13 @@ const ADMIN_NAV_ITEMS: {
     label: 'Blog Content',
     icon: FileText,
     path: '/admin/blog',
+  },
+    {
+    key: 'applications',
+    permission: 'applications',
+    label: 'Applications',
+    icon: FileSignature,
+    path: '/admin/applications',
   },
   {
     key: 'social',

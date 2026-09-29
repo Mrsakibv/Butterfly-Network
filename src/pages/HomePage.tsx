@@ -23,6 +23,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 1. Hero Section */}
       <Hero onOpenPlayModal={onOpenPlayModal} />
 
+       {/* 6. Special Offers & Announcements */}
+      <OffersSection />
+
       {/* 2. Custom Home Content Slider */}
       <HomeSlider />
 
@@ -35,8 +38,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 5. Server Information Table & Specs */}
       <ServerInfoSection />
 
-      {/* 6. Special Offers & Announcements */}
-      <OffersSection />
+ 
 
       {/* 7. Community CTA */}
       <CommunityCTA onOpenPlayModal={onOpenPlayModal} />

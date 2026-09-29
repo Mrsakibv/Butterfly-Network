@@ -25,6 +25,8 @@ import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { PricingPage } from './pages/PricingPage';
+import { ApplyPage } from './pages/ApplyPage';
+import { ApplicationFormPage } from './pages/ApplicationFormPage';
 import { ContactPage } from './pages/ContactPage';
 import { EventsPage } from './pages/EventsPage';
 import { GalleryPage } from './pages/GalleryPage';
@@ -49,6 +51,7 @@ import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminContentSection } from './pages/admin/AdminContentSection';
 import { AdminHomeContent } from './pages/admin/AdminHomeContent';
 import { AdminSocial } from './pages/admin/AdminSocial';
+import { AdminApplications } from './pages/admin/AdminApplications';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
 
@@ -584,6 +587,9 @@ function AppContent() {
     if (path === '/admin/social') {
       return <AdminSocial />;
     }
+    if (path === '/admin/applications') {
+  return <AdminApplications />;
+}
 
     if (path === '/social') {
       return <SocialPage onOpenPlayModal={handleOpenPlayModal} />;
@@ -654,11 +660,16 @@ function AppContent() {
     }
 
     if (path === '/pricing') {
-      return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
-    }
-    if (path.startsWith('/store/product/')) {
-      return <ProductDetailsPage />;
-    }
+  return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
+}
+
+if (path === '/apply') {
+  return <ApplyPage />;
+}
+
+if (path === '/apply/form') {
+  return <ApplicationFormPage />;
+}
     if (path === '/store/checkout') {
       return <StoreCheckoutPage />;
     }

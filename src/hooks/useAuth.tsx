@@ -18,7 +18,8 @@ export type AdminPermission =
   | 'home'
   | 'blog'
   | 'users'
-  | 'social';
+  | 'social'
+  | 'applications';
 
 const VALID_PERMISSIONS: AdminPermission[] = [
   'dashboard',
@@ -38,6 +39,7 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'blog',
   'users',
   'social',
+  'applications',
 ];
 
 interface AuthContextValue {
