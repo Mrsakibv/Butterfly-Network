@@ -600,6 +600,48 @@ export const StoreCheckoutPage: React.FC = () => {
       setCreatedOrder(
         order as CreatedOrder
       );
+
+      // ============================================================
+      // STORE ORDER NOTIFICATION
+      // Only adds a notification after the order is successfully created.
+      // Existing order/payment/promo logic remains unchanged.
+      // ============================================================
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUser = authData?.user;
+
+        if (currentUser?.id && order?.order_number) {
+          const finalOrderAmount = Number(order.final_amount || 0);
+          const isCreatedFreeOrder = finalOrderAmount === 0;
+
+          const notificationMessage = isCreatedFreeOrder
+            ? `🎁 Free Order Created — ${order.product_name} for Minecraft username ${order.player_username}. Order ${order.order_number} was completed with a 100% discount.`
+            : `🛒 Order Created — ${order.product_name} for Minecraft username ${order.player_username}. Order ${order.order_number} has been submitted and payment verification is pending.`;
+
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert({
+              recipient_id: currentUser.id,
+              actor_id: currentUser.id,
+              type: 'system',
+              post_id: null,
+              message: notificationMessage,
+            });
+
+          if (notificationError) {
+            console.error(
+              'Order notification error:',
+              notificationError
+            );
+          }
+        }
+      } catch (notificationErr) {
+        // Notification failure must never block a successfully created order.
+        console.error(
+          'Order notification exception:',
+          notificationErr
+        );
+      }
     } catch (err) {
       console.error(
         'Order creation error:',
