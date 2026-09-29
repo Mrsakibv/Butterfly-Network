@@ -14,6 +14,7 @@ import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
 import { FloatingNotificationButton } from './components/FloatingNotificationButton';
 import { supabase } from './lib/supabase';
+
 // Pages
 import { HomePage } from './pages/HomePage';
 import { GamesPage } from './pages/GamesPage';
@@ -42,6 +43,7 @@ import { SocialPage } from './pages/SocialPage';
 import { AdminStore } from './pages/admin/AdminStore';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { StoreCheckoutPage } from './pages/StoreCheckoutPage';
+
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminSettings } from './pages/admin/AdminSettings';
@@ -56,7 +58,6 @@ import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
 
 import { motion, AnimatePresence } from 'motion/react';
-
 
 /* =========================================================
    PREMIUM LOADING SCREEN
@@ -432,7 +433,6 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-
 /* =========================================================
    MAIN APP CONTENT
 ========================================================= */
@@ -537,39 +537,87 @@ function AppContent() {
     }
 
     if (path === '/admin/rules') {
-      return <AdminContentSection pageKey="rules" title="Rules Content" description="Add, edit, reorder, hide, or remove server rules." />;
+      return (
+        <AdminContentSection
+          pageKey="rules"
+          title="Rules Content"
+          description="Add, edit, reorder, hide, or remove server rules."
+        />
+      );
     }
 
     if (path === '/admin/terms') {
-      return <AdminContentSection pageKey="terms" title="Terms Content" description="Manage the sections displayed on the Terms page." />;
+      return (
+        <AdminContentSection
+          pageKey="terms"
+          title="Terms Content"
+          description="Manage the sections displayed on the Terms page."
+        />
+      );
     }
 
     if (path === '/admin/contact') {
-      return <AdminContentSection pageKey="contact" title="Contact Content" description="Manage contact cards, descriptions, and links." />;
+      return (
+        <AdminContentSection
+          pageKey="contact"
+          title="Contact Content"
+          description="Manage contact cards, descriptions, and links."
+        />
+      );
     }
 
     if (path === '/admin/faq') {
-      return <AdminContentSection pageKey="faq" title="FAQ Content" description="Manage question and answer entries shown on the FAQ page." />;
+      return (
+        <AdminContentSection
+          pageKey="faq"
+          title="FAQ Content"
+          description="Manage question and answer entries shown on the FAQ page."
+        />
+      );
     }
 
     if (path === '/admin/events') {
-      return <AdminContentSection pageKey="events" title="Events Content" description="Manage events, schedules, descriptions, and images." />;
+      return (
+        <AdminContentSection
+          pageKey="events"
+          title="Events Content"
+          description="Manage events, schedules, descriptions, and images."
+        />
+      );
     }
 
     if (path === '/admin/gallery') {
-      return <AdminContentSection pageKey="gallery" title="Gallery Content" description="Add or remove gallery images and captions." />;
+      return (
+        <AdminContentSection
+          pageKey="gallery"
+          title="Gallery Content"
+          description="Add or remove gallery images and captions."
+        />
+      );
     }
 
     if (path === '/admin/commands') {
-      return <AdminContentSection pageKey="commands" title="Commands Content" description="Manage the in-game command list and descriptions." />;
+      return (
+        <AdminContentSection
+          pageKey="commands"
+          title="Commands Content"
+          description="Manage the in-game command list and descriptions."
+        />
+      );
     }
 
     if (path === '/admin/vote') {
-      return <AdminContentSection pageKey="vote" title="Vote Content" description="Manage vote rewards and vote links." />;
+      return (
+        <AdminContentSection
+          pageKey="vote"
+          title="Vote Content"
+          description="Manage vote rewards and vote links."
+        />
+      );
     }
 
     if (path === '/admin/store') {
-       return <AdminStore />;
+      return <AdminStore />;
     }
 
     if (path === '/admin/home') {
@@ -577,7 +625,13 @@ function AppContent() {
     }
 
     if (path === '/admin/blog') {
-      return <AdminContentSection pageKey="blog" title="Blog Content" description="Create and manage blog posts, news, and updates." />;
+      return (
+        <AdminContentSection
+          pageKey="blog"
+          title="Blog Content"
+          description="Create and manage blog posts, news, and updates."
+        />
+      );
     }
 
     if (path === '/admin/users') {
@@ -587,9 +641,10 @@ function AppContent() {
     if (path === '/admin/social') {
       return <AdminSocial />;
     }
+
     if (path === '/admin/applications') {
-  return <AdminApplications />;
-}
+      return <AdminApplications />;
+    }
 
     if (path === '/social') {
       return <SocialPage onOpenPlayModal={handleOpenPlayModal} />;
@@ -660,16 +715,26 @@ function AppContent() {
     }
 
     if (path === '/pricing') {
-  return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
-}
+      return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
+    }
 
-if (path === '/apply') {
-  return <ApplyPage />;
-}
+    if (path === '/apply') {
+      return <ApplyPage />;
+    }
 
-if (path === '/apply/form') {
-  return <ApplicationFormPage />;
-}
+    if (path === '/apply/form') {
+      return <ApplicationFormPage />;
+    }
+
+    /* =========================================================
+       STORE PRODUCT DETAILS ROUTE
+       FIX: View Details was going to 404 because this route
+       was missing from App.tsx.
+    ========================================================= */
+    if (path.startsWith('/store/product/')) {
+      return <ProductDetailsPage />;
+    }
+
     if (path === '/store/checkout') {
       return <StoreCheckoutPage />;
     }
@@ -716,8 +781,15 @@ if (path === '/apply/form') {
         <div className="mx-auto max-w-xl space-y-6 px-4 pb-24 pt-36 text-center">
           <h1 className="font-heading text-6xl font-extrabold text-purple-400">404</h1>
           <h2 className="text-2xl font-bold text-white">Page Not Found</h2>
-          <p className="text-sm text-slate-400">The quadrant of the server network you requested does not exist or has been warped.</p>
-          <button onClick={() => navigate('/')} className="rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500">Return to Hub (Home)</button>
+          <p className="text-sm text-slate-400">
+            The quadrant of the server network you requested does not exist or has been warped.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500"
+          >
+            Return to Hub (Home)
+          </button>
         </div>
       );
     }
@@ -764,7 +836,7 @@ if (path === '/apply/form') {
             key={path}
             initial={shouldSkipAnimation ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={shouldSkipAnimation ? undefined  : { opacity: 0 }}
+            exit={shouldSkipAnimation ? undefined : { opacity: 0 }}
             transition={shouldSkipAnimation ? { duration: 0 } : { duration: 0.2 }}
           >
             {renderCurrentPage()}
@@ -792,7 +864,6 @@ if (path === '/apply/form') {
     </div>
   );
 }
-
 
 /* =========================================================
    APP

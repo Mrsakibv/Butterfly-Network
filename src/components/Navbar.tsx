@@ -7,7 +7,6 @@ import { supabase } from '../lib/supabase';
 import {
   Menu,
   X,
-  Play,
   ChevronRight,
   ChevronDown,
   ExternalLink,
@@ -36,6 +35,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   const [minecraftUsername, setMinecraftUsername] = useState('');
 
   const { path, navigate } = useRouter();
+
+  // Keep existing prop compatibility.
+  void onOpenPlayModal;
+  void user;
 
   // =========================
   // Load Profile
@@ -270,6 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
           { label: 'Leaderboard', href: '/leaderboard' },
           { label: 'Store', href: '/pricing' },
         ]);
+
         setMoreNavLinks([
           { label: 'Games', href: '/games' },
           { label: 'Blog', href: '/blog' },
@@ -542,7 +546,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                   onClick={handleProfile}
                   className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 hover:border-purple-400/60 rounded-xl transition-all active:scale-95 cursor-pointer"
                 >
-
                   {/* Minecraft Head */}
                   <MinecraftHead size="sm" />
 
@@ -576,13 +579,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               <span>Discord</span>
             </a>
 
-            {/* Play Now */}
+            {/* Apply Now */}
             <button
-              onClick={onOpenPlayModal}
+              onClick={() => navigate('/apply')}
               className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border border-purple-400/40 rounded-xl transition-all shadow-lg shadow-purple-950/50 active:scale-95 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-white" />
-              <span>Play Now</span>
+              <ChevronRight className="w-4 h-4" />
+              <span>Apply Now</span>
             </button>
           </div>
 
@@ -721,16 +724,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
                 <ExternalLink className="w-3.5 h-3.5 opacity-60" />
               </a>
 
-              {/* Play Now */}
+              {/* Apply Now */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onOpenPlayModal();
+                  navigate('/apply');
                 }}
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/50 sm:col-span-2"
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Play Now</span>
+                <ChevronRight className="w-4 h-4" />
+                <span>Apply Now</span>
               </button>
 
             </div>

@@ -36,6 +36,7 @@ const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'blog', label: 'Blog Content' },
   { key: 'social', label: 'Social Management' },
   { key: 'users', label: 'Manage Users' },
+  { key: 'applications', label: 'Applications' },
 ];
 
 export const AdminUsers: React.FC = () => {

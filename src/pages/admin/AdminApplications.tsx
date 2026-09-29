@@ -10,7 +10,6 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  Check,
   X,
   Eye,
   ChevronDown,
@@ -111,6 +110,7 @@ export const AdminApplications: React.FC = () => {
 
   const [posts, setPosts] = useState<ApplicationPost[]>([]);
   const [fields, setFields] = useState<FormField[]>([]);
+  const [allFields, setAllFields] = useState<FormField[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
 
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -218,11 +218,49 @@ export const AdminApplications: React.FC = () => {
       }));
 
       setFields(normalized);
+
+      setAllFields(prev => {
+        const currentPostFieldIds = new Set(
+          normalized.map((field: FormField) => field.id)
+        );
+
+        const otherPostFields = prev.filter(
+          field =>
+            field.post_id !== postId &&
+            !currentPostFieldIds.has(field.id)
+        );
+
+        return [...otherPostFields, ...normalized];
+      });
     } catch (error) {
       console.error(error);
       showToast('Failed to load form fields', 'error');
     } finally {
       setLoadingFields(false);
+    }
+  };
+
+  const loadAllFields = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('application_form_fields')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('All application fields loading error:', error);
+        return;
+      }
+
+      const normalized = (data || []).map((field: any) => ({
+        ...field,
+        options: Array.isArray(field.options) ? field.options : [],
+      }));
+
+      setAllFields(normalized);
+    } catch (error) {
+      console.error('All application fields loading error:', error);
     }
   };
 
@@ -242,6 +280,8 @@ export const AdminApplications: React.FC = () => {
       }
 
       setApplications((data || []) as Application[]);
+
+      await loadAllFields();
     } catch (error) {
       console.error(error);
       showToast('Failed to load applications', 'error');
@@ -389,6 +429,7 @@ export const AdminApplications: React.FC = () => {
       }
 
       setPosts(prev => prev.filter(post => post.id !== postId));
+      setAllFields(prev => prev.filter(field => field.post_id !== postId));
 
       if (selectedPostId === postId) {
         const remaining = posts.filter(post => post.id !== postId);
@@ -534,14 +575,30 @@ export const AdminApplications: React.FC = () => {
           throw error;
         }
 
+        const updatedField = {
+          ...(data as FormField),
+          options: Array.isArray((data as any).options)
+            ? (data as any).options
+            : [],
+        };
+
         setFields(prev =>
           prev
-            .map(field => ({
-              ...(data as FormField),
-              options: Array.isArray((data as any).options)
-                ? (data as any).options
-                : [],
-            }))
+            .map(field =>
+              field.id === editingField.id
+                ? updatedField
+                : field
+            )
+            .sort((a, b) => a.sort_order - b.sort_order)
+        );
+
+        setAllFields(prev =>
+          prev
+            .map(field =>
+              field.id === editingField.id
+                ? updatedField
+                : field
+            )
             .sort((a, b) => a.sort_order - b.sort_order)
         );
 
@@ -565,6 +622,12 @@ export const AdminApplications: React.FC = () => {
         };
 
         setFields(prev =>
+          [...prev, newField].sort(
+            (a, b) => a.sort_order - b.sort_order
+          )
+        );
+
+        setAllFields(prev =>
           [...prev, newField].sort(
             (a, b) => a.sort_order - b.sort_order
           )
@@ -603,6 +666,7 @@ export const AdminApplications: React.FC = () => {
       }
 
       setFields(prev => prev.filter(field => field.id !== fieldId));
+      setAllFields(prev => prev.filter(field => field.id !== fieldId));
 
       showToast('Form field deleted successfully', 'success');
     } catch (error: any) {
@@ -631,6 +695,14 @@ export const AdminApplications: React.FC = () => {
       }
 
       setFields(prev =>
+        prev.map(item =>
+          item.id === field.id
+            ? { ...item, is_active: !item.is_active }
+            : item
+        )
+      );
+
+      setAllFields(prev =>
         prev.map(item =>
           item.id === field.id
             ? { ...item, is_active: !item.is_active }
@@ -838,7 +910,7 @@ export const AdminApplications: React.FC = () => {
   };
 
   const getField = (fieldId: string) => {
-    return fields.find(field => field.id === fieldId);
+    return allFields.find(field => field.id === fieldId);
   };
 
   const selectedPost = posts.find(post => post.id === selectedPostId);

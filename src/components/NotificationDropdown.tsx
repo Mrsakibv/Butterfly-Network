@@ -14,7 +14,13 @@ interface Notification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'post_like' | 'post_comment' | 'comment_like' | 'follow' | 'admin_message';
+  type:
+    | 'post_like'
+    | 'post_comment'
+    | 'comment_like'
+    | 'follow'
+    | 'admin_message'
+    | 'system';
   post_id?: string | null;
   comment_id?: string | null;
   message?: string | null;
@@ -141,13 +147,14 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return <UserPlus className="w-4 h-4 text-emerald-400" />;
       case 'admin_message':
         return <ShieldAlert className="w-4 h-4 text-amber-400" />;
+      case 'system':
+        return <ShieldAlert className="w-4 h-4 text-cyan-400" />;
       default:
         return <Bell className="w-4 h-4 text-slate-400" />;
     }
   };
 
   const getNotificationText = (notification: Notification) => {
-    const username = notification.actor?.username || 'Someone';
     switch (notification.type) {
       case 'post_like':
         return `liked your post`;
@@ -159,8 +166,10 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return `started following you`;
       case 'admin_message':
         return notification.message || 'sent you a message';
+      case 'system':
+        return notification.message || 'You have a new notification';
       default:
-        return 'interacted with you';
+        return notification.message || 'You have a new notification';
     }
   };
 
