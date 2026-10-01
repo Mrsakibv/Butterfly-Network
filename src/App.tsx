@@ -181,7 +181,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       <div className="relative z-10 flex w-[90%] max-w-[520px] flex-col items-center text-center">
 
         {/* Logo */}
-        <div className="relative mb-7 flex h-[190px] w-[190px] items-center justify-center">
+        <div className="relative mb-7 flex h-[180px] w-[180px] items-center justify-center">
 
           {/* Outer rotating ring */}
           <div
@@ -212,9 +212,9 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
 
           {/* Logo */}
           <img
-            src="/logo.png"
+            src="/logo1.png"
             alt="Butterfly network"
-            className="relative z-10 h-[125px] w-[125px] object-contain"
+            className="relative z-10 h-[190px] w-[190px] object-contain"
             style={{
               filter:
                 'drop-shadow(0 0 15px rgba(139,92,246,0.9)) drop-shadow(0 0 40px rgba(56,189,248,0.35))',

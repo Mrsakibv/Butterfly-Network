@@ -446,7 +446,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
             className={`${mobileMenuOpen ? 'hidden' : 'block'} md:block focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl`}
             aria-label="Butterfly Network Home"
           >
-            <Logo size="md" showText={false} />
+             <div className="scale-250 origin-left"></div>
+            <Logo
+  size="md"
+  showText={false}
+  className="[&>div:first-child>img]:scale-[1.6]"
+/>
           </a>
 
           {/* Desktop Navigation */}

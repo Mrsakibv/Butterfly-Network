@@ -262,7 +262,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </button>
 
         <div className="mb-6">
-          <Logo size="sm" showText={false} />
+          <Logo size="md" showText={false} />
           <p className="mt-2 text-sm font-bold tracking-wide text-purple-400">
             Admin Panel
           </p>
