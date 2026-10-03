@@ -19,6 +19,7 @@ import {
   CircleHelp,
   ShoppingBag,
   MessageSquare,
+  Bot,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
@@ -48,7 +49,8 @@ export type AdminSectionKey =
   | 'blog'
   | 'users'
   | 'social'
-  | 'applications';
+  | 'applications'
+  | 'bot';
 
 const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
@@ -175,6 +177,13 @@ const ADMIN_NAV_ITEMS: {
     label: 'Social Management',
     icon: MessageSquare,
     path: '/admin/social',
+  },
+  {
+    key: 'bot',
+    permission: 'bot',
+    label: 'AFK Bot',
+    icon: Bot,
+    path: '/admin/bot',
   },
   {
     key: 'users',

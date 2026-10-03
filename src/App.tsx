@@ -54,6 +54,7 @@ import { AdminContentSection } from './pages/admin/AdminContentSection';
 import { AdminHomeContent } from './pages/admin/AdminHomeContent';
 import { AdminSocial } from './pages/admin/AdminSocial';
 import { AdminApplications } from './pages/admin/AdminApplications';
+import { AdminBot } from './pages/admin/AdminBot';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
 
@@ -644,6 +645,9 @@ function AppContent() {
 
     if (path === '/admin/applications') {
       return <AdminApplications />;
+    }
+    if (path === '/admin/bot') {
+      return <AdminBot />;
     }
 
     if (path === '/social') {
