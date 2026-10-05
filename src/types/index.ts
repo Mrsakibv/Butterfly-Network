@@ -44,7 +44,14 @@ export interface LeaderboardEntry {
   guild?: string;
 }
 
-export type LeaderboardCategory = 'playtime' | 'money' | 'kills' | 'wins';
+export type LeaderboardCategory =
+  | 'hearts'
+  | 'playtime'
+  | 'money'
+  | 'kills'
+  | 'deaths'
+  | 'wins'
+  | 'kill_streak';
 
 export interface FaqItem {
   id: string;

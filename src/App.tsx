@@ -57,8 +57,9 @@ import { AdminApplications } from './pages/admin/AdminApplications';
 import { AdminBot } from './pages/admin/AdminBot';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
-
+import { AdminLeaderboard } from './pages/admin/AdminLeaderboard';
 import { motion, AnimatePresence } from 'motion/react';
+import { AdminSeasons } from './pages/admin/AdminSeasons';
 
 /* =========================================================
    PREMIUM LOADING SCREEN
@@ -649,6 +650,12 @@ function AppContent() {
     if (path === '/admin/bot') {
       return <AdminBot />;
     }
+    if (path === '/admin/leaderboard') {
+      return <AdminLeaderboard />;
+    }
+    if (path === '/admin/seasons') {
+      return <AdminSeasons />;
+   }
 
     if (path === '/social') {
       return <SocialPage onOpenPlayModal={handleOpenPlayModal} />;

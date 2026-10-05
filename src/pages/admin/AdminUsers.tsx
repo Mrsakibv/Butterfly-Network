@@ -37,6 +37,11 @@ const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'social', label: 'Social Management' },
   { key: 'users', label: 'Manage Users' },
   { key: 'applications', label: 'Applications' },
+  { key: 'leaderboard', label: 'Leaderboard' },
+  { key: 'seasons', label: 'Seasons' },
+  { key: 'memories', label: 'Memories' },
+  { key: 'achievements', label: 'Achievements' },
+  { key: 'minecraft', label: 'Minecraft Integration' },
 ];
 
 export const AdminUsers: React.FC = () => {

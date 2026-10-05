@@ -20,7 +20,12 @@ export type AdminPermission =
   | 'users'
   | 'social'
   | 'applications'
-  | 'bot';
+  | 'bot'
+  | 'leaderboard'
+  | 'seasons'
+  | 'memories'
+  | 'achievements'
+  | 'minecraft';
 
 const VALID_PERMISSIONS: AdminPermission[] = [
   'dashboard',
@@ -42,6 +47,11 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'social',
   'applications',
   'bot',
+  'leaderboard',
+  'seasons',
+  'memories',
+  'achievements',
+  'minecraft'
 ];
 
 interface AuthContextValue {

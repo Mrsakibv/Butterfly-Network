@@ -20,6 +20,11 @@ import {
   ShoppingBag,
   MessageSquare,
   Bot,
+  Trophy,
+  CalendarRange,
+  BrainCircuit,
+  BadgeCheck,
+  Cable,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
@@ -50,7 +55,12 @@ export type AdminSectionKey =
   | 'users'
   | 'social'
   | 'applications'
-  | 'bot';
+  | 'bot'
+  | 'leaderboard'
+  | 'seasons'
+  | 'memories'
+  | 'achievements'
+  | 'minecraft';
 
 const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
@@ -164,7 +174,7 @@ const ADMIN_NAV_ITEMS: {
     icon: FileText,
     path: '/admin/blog',
   },
-    {
+  {
     key: 'applications',
     permission: 'applications',
     label: 'Applications',
@@ -184,6 +194,41 @@ const ADMIN_NAV_ITEMS: {
     label: 'AFK Bot',
     icon: Bot,
     path: '/admin/bot',
+  },
+    {
+    key: 'leaderboard',
+    permission: 'leaderboard',
+    label: 'Leaderboard',
+    icon: Trophy,
+    path: '/admin/leaderboard',
+  },
+  {
+    key: 'seasons',
+    permission: 'seasons',
+    label: 'Seasons',
+    icon: CalendarRange,
+    path: '/admin/seasons',
+  },
+  {
+    key: 'memories',
+    permission: 'memories',
+    label: 'Memories',
+    icon: BrainCircuit,
+    path: '/admin/memories',
+  },
+  {
+    key: 'achievements',
+    permission: 'achievements',
+    label: 'Achievements',
+    icon: BadgeCheck,
+    path: '/admin/achievements',
+  },
+  {
+    key: 'minecraft',
+    permission: 'minecraft',
+    label: 'Minecraft Integration',
+    icon: Cable,
+    path: '/admin/minecraft',
   },
   {
     key: 'users',
