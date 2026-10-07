@@ -11,7 +11,7 @@ interface MinecraftAdvancementPayload {
 
 interface MinecraftPlayerPayload {
   uuid: string;
-  username: string;
+  username;
 
   rankName?: string;
   teamName?: string;
@@ -174,10 +174,13 @@ export default async function handler(
 
   const expectedApiKey =
     process.env.MINECRAFT_API_KEY;
+
   const supabaseUrl =
     process.env.SUPABASE_URL;
+
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   const configuredServerId =
     process.env.MINECRAFT_SERVER_ID ||
     'main';
@@ -270,10 +273,11 @@ export default async function handler(
     );
   }
 
-  const serverId = cleanText(
-    body.serverId,
-    64
-  );
+  const serverId =
+    cleanText(
+      body.serverId,
+      64
+    );
 
   const syncType =
     body.syncType === 'join' ||
@@ -287,13 +291,15 @@ export default async function handler(
       400,
       {
         success: false,
-        message: 'serverId is required.',
+        message:
+          'serverId is required.',
       }
     );
   }
 
   if (
-    serverId !== configuredServerId
+    serverId !==
+    configuredServerId
   ) {
     return sendJson(
       res,
@@ -306,7 +312,11 @@ export default async function handler(
     );
   }
 
-  if (!Array.isArray(body.players)) {
+  if (
+    !Array.isArray(
+      body.players
+    )
+  ) {
     return sendJson(
       res,
       400,
@@ -318,7 +328,10 @@ export default async function handler(
     );
   }
 
-  if (body.players.length > 500) {
+  if (
+    body.players.length >
+    500
+  ) {
     return sendJson(
       res,
       413,
@@ -335,100 +348,151 @@ export default async function handler(
       .filter(
         (player) =>
           player &&
-          typeof player === 'object'
+          typeof player ===
+            'object'
       )
       .map((player) => ({
         uuid: cleanText(
           player.uuid,
           64
         ),
+
         username: cleanText(
           player.username,
           32
         ),
+
         rankName: cleanText(
           player.rankName,
           120
         ),
+
         teamName: cleanText(
           player.teamName,
           120
         ),
-        hearts: safeNumber(
-          player.hearts
-        ),
+
+        hearts:
+          safeNumber(
+            player.hearts
+          ),
+
         kills: Math.floor(
-          safeNumber(player.kills)
+          safeNumber(
+            player.kills
+          )
         ),
+
         deaths: Math.floor(
-          safeNumber(player.deaths)
-        ),
-        money: safeNumber(
-          player.money
-        ),
-        playtimeSeconds: Math.floor(
           safeNumber(
-            player.playtimeSeconds
+            player.deaths
           )
         ),
+
+        money:
+          safeNumber(
+            player.money
+          ),
+
+        playtimeSeconds:
+          Math.floor(
+            safeNumber(
+              player.playtimeSeconds
+            )
+          ),
+
         wins: Math.floor(
-          safeNumber(player.wins)
-        ),
-        killStreak: Math.floor(
           safeNumber(
-            player.killStreak
+            player.wins
           )
         ),
-        blocksBroken: Math.floor(
+
+        killStreak:
+          Math.floor(
+            safeNumber(
+              player.killStreak
+            )
+          ),
+
+        blocksBroken:
+          Math.floor(
+            safeNumber(
+              player.blocksBroken
+            )
+          ),
+
+        blocksPlaced:
+          Math.floor(
+            safeNumber(
+              player.blocksPlaced
+            )
+          ),
+
+        itemsCrafted:
+          Math.floor(
+            safeNumber(
+              player.itemsCrafted
+            )
+          ),
+
+        itemsUsed:
+          Math.floor(
+            safeNumber(
+              player.itemsUsed
+            )
+          ),
+
+        mobsKilled:
+          Math.floor(
+            safeNumber(
+              player.mobsKilled
+            )
+          ),
+
+        playersKilled:
+          Math.floor(
+            safeNumber(
+              player.playersKilled
+            )
+          ),
+
+        distanceWalked:
+          Math.floor(
+            safeNumber(
+              player.distanceWalked
+            )
+          ),
+
+        distanceRun:
+          Math.floor(
+            safeNumber(
+              player.distanceRun
+            )
+          ),
+
+        distanceFlown:
+          Math.floor(
+            safeNumber(
+              player.distanceFlown
+            )
+          ),
+
+        damageDealt:
           safeNumber(
-            player.blocksBroken
-          )
-        ),
-        blocksPlaced: Math.floor(
+            player.damageDealt
+          ),
+
+        damageTaken:
           safeNumber(
-            player.blocksPlaced
-          )
-        ),
-        itemsCrafted: Math.floor(
-          safeNumber(
-            player.itemsCrafted
-          )
-        ),
-        itemsUsed: Math.floor(
-          safeNumber(player.itemsUsed)
-        ),
-        mobsKilled: Math.floor(
-          safeNumber(player.mobsKilled)
-        ),
-        playersKilled: Math.floor(
-          safeNumber(
-            player.playersKilled
-          )
-        ),
-        distanceWalked: Math.floor(
-          safeNumber(
-            player.distanceWalked
-          )
-        ),
-        distanceRun: Math.floor(
-          safeNumber(
-            player.distanceRun
-          )
-        ),
-        distanceFlown: Math.floor(
-          safeNumber(
-            player.distanceFlown
-          )
-        ),
-        damageDealt: safeNumber(
-          player.damageDealt
-        ),
-        damageTaken: safeNumber(
-          player.damageTaken
-        ),
+            player.damageTaken
+          ),
+
         jumps: Math.floor(
-          safeNumber(player.jumps)
+          safeNumber(
+            player.jumps
+          )
         ),
+
         statistics:
           player.statistics &&
           typeof player.statistics ===
@@ -441,15 +505,24 @@ export default async function handler(
                     ([key, value]) =>
                       typeof key ===
                         'string' &&
-                      key.length <= 120 &&
+                      key.length <=
+                        120 &&
                       typeof value ===
                         'number' &&
-                      Number.isFinite(value)
+                      Number.isFinite(
+                        value
+                      )
                   )
                   .slice(0, 200)
                   .map(
-                    ([key, value]) => [
-                      cleanText(key, 120),
+                    ([
+                      key,
+                      value,
+                    ]) => [
+                      cleanText(
+                        key,
+                        120
+                      ),
                       Math.max(
                         0,
                         value as number
@@ -458,6 +531,7 @@ export default async function handler(
                   )
               )
             : {},
+
         advancements:
           normalizeAdvancements(
             player.advancements
@@ -465,172 +539,65 @@ export default async function handler(
       }))
       .filter(
         (player) =>
-          player.uuid.length > 0 &&
-          player.username.length > 0
+          player.uuid.length >
+            0 &&
+          player.username.length >
+            0
       );
 
-  const supabase = createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
-
-  const now = new Date().toISOString();
-
-  /* =========================================================
-   * PLAYER MINECRAFT STATS
-   * ========================================================= */
-
-  if (players.length > 0) {
-    const statsRows = players.map(
-      (player) => ({
-        minecraft_uuid: player.uuid,
-        minecraft_username:
-          player.username,
-        server_id: serverId,
-        hearts: player.hearts,
-        kills: player.kills,
-        deaths: player.deaths,
-        money: player.money,
-        playtime_seconds:
-          player.playtimeSeconds,
-        wins: player.wins,
-        kill_streak:
-          player.killStreak,
-        blocks_broken:
-          player.blocksBroken,
-        blocks_placed:
-          player.blocksPlaced,
-        items_crafted:
-          player.itemsCrafted,
-        items_used:
-          player.itemsUsed,
-        mobs_killed:
-          player.mobsKilled,
-        players_killed:
-          player.playersKilled,
-        distance_walked:
-          player.distanceWalked,
-        distance_run:
-          player.distanceRun,
-        distance_flown:
-          player.distanceFlown,
-        damage_dealt:
-          player.damageDealt,
-        damage_taken:
-          player.damageTaken,
-        jumps: player.jumps,
-        /* Keep the existing first_seen_at on upserts. */
-        last_seen_at: now,
-        updated_at: now,
-      })
+  const supabase =
+    createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          persistSession:
+            false,
+          autoRefreshToken:
+            false,
+        },
+      }
     );
 
-    const { error: statsError } =
-      await supabase
-        .from('player_minecraft_stats')
-        .upsert(statsRows, {
-          onConflict:
-            'minecraft_uuid',
-        });
-
-    if (statsError) {
-      console.error(
-        '[Minecraft Sync] Stats error:',
-        statsError
-      );
-
-      return sendJson(
-        res,
-        500,
-        {
-          success: false,
-          message:
-            'Failed to update player stats.',
-        }
-      );
-    }
-
-    const statisticRows =
-      players.flatMap((player) =>
-        Object.entries(
-          player.statistics
-        ).map(
-          ([
-            statisticKey,
-            statisticValue,
-          ]) => ({
-            minecraft_uuid:
-              player.uuid,
-            statistic_key:
-              statisticKey,
-            statistic_value:
-              statisticValue,
-            category: 'minecraft',
-            updated_at: now,
-          })
-        )
-      );
-
-    if (statisticRows.length > 0) {
-      const {
-        error: statisticError,
-      } = await supabase
-        .from('player_statistics')
-        .upsert(
-          statisticRows,
-          {
-            onConflict:
-              'minecraft_uuid,statistic_key',
-          }
-        );
-
-      if (statisticError) {
-        console.error(
-          '[Minecraft Sync] Statistic error:',
-          statisticError
-        );
-
-        return sendJson(
-          res,
-          500,
-          {
-            success: false,
-            message:
-              'Failed to update statistics.',
-          }
-        );
-      }
-    }
-  }
+  const now =
+    new Date().toISOString();
 
   /* =========================================================
    * ACTIVE SEASON BEFORE FINALIZATION
    * ========================================================= */
 
-  const getActiveSeason = async () =>
-    supabase
-      .from('seasons')
-      .select(
-        'id, season_number, name, slug, status'
-      )
-      .eq('server_id', serverId)
-      .eq('status', 'active')
-      .order('season_number', {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+  const getActiveSeason =
+    async () =>
+      supabase
+        .from('seasons')
+        .select(
+          'id, season_number, name, slug, status'
+        )
+        .eq(
+          'server_id',
+          serverId
+        )
+        .eq(
+          'status',
+          'active'
+        )
+        .order(
+          'season_number',
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(1)
+        .maybeSingle();
 
   const {
-    data: activeSeasonBeforeFinalization,
-    error: seasonError,
-  } = await getActiveSeason();
+    data:
+      activeSeasonBeforeFinalization,
+    error:
+      seasonError,
+  } =
+    await getActiveSeason();
 
   if (seasonError) {
     console.error(
@@ -650,154 +617,454 @@ export default async function handler(
   }
 
   /* =========================================================
+   * INITIALIZE ACTIVE-SEASON BASELINES BEFORE STAT UPDATE
+   * ========================================================= */
+
+  if (
+    activeSeasonBeforeFinalization
+  ) {
+    const {
+      error:
+        baselineError,
+    } =
+      await supabase.rpc(
+        'initialize_active_season_baselines',
+        {
+          p_server_id:
+            serverId,
+        }
+      );
+
+    if (
+      baselineError
+    ) {
+      console.warn(
+        '[Minecraft Sync] Baseline initialization warning:',
+        baselineError.message
+      );
+    }
+  }
+
+  /* =========================================================
+   * PLAYER MINECRAFT STATS
+   * ========================================================= */
+
+  if (
+    players.length >
+    0
+  ) {
+    const statsRows =
+      players.map(
+        (player) => ({
+          minecraft_uuid:
+            player.uuid,
+
+          minecraft_username:
+            player.username,
+
+          server_id:
+            serverId,
+
+          hearts:
+            player.hearts,
+
+          kills:
+            player.kills,
+
+          deaths:
+            player.deaths,
+
+          money:
+            player.money,
+
+          playtime_seconds:
+            player.playtimeSeconds,
+
+          wins:
+            player.wins,
+
+          kill_streak:
+            player.killStreak,
+
+          blocks_broken:
+            player.blocksBroken,
+
+          blocks_placed:
+            player.blocksPlaced,
+
+          items_crafted:
+            player.itemsCrafted,
+
+          items_used:
+            player.itemsUsed,
+
+          mobs_killed:
+            player.mobsKilled,
+
+          players_killed:
+            player.playersKilled,
+
+          distance_walked:
+            player.distanceWalked,
+
+          distance_run:
+            player.distanceRun,
+
+          distance_flown:
+            player.distanceFlown,
+
+          damage_dealt:
+            player.damageDealt,
+
+          damage_taken:
+            player.damageTaken,
+
+          jumps:
+            player.jumps,
+
+          last_seen_at:
+            now,
+
+          updated_at:
+            now,
+        })
+      );
+
+    const {
+      error:
+        statsError,
+    } =
+      await supabase
+        .from(
+          'player_minecraft_stats'
+        )
+        .upsert(
+          statsRows,
+          {
+            onConflict:
+              'minecraft_uuid',
+          }
+        );
+
+    if (
+      statsError
+    ) {
+      console.error(
+        '[Minecraft Sync] Stats error:',
+        statsError
+      );
+
+      return sendJson(
+        res,
+        500,
+        {
+          success: false,
+          message:
+            'Failed to update player stats.',
+        }
+      );
+    }
+
+    const statisticRows =
+      players.flatMap(
+        (player) =>
+          Object.entries(
+            player.statistics
+          ).map(
+            ([
+              statisticKey,
+              statisticValue,
+            ]) => ({
+              minecraft_uuid:
+                player.uuid,
+
+              statistic_key:
+                statisticKey,
+
+              statistic_value:
+                statisticValue,
+
+              category:
+                'minecraft',
+
+              updated_at:
+                now,
+            })
+          )
+      );
+
+    if (
+      statisticRows.length >
+      0
+    ) {
+      const {
+        error:
+          statisticError,
+      } =
+        await supabase
+          .from(
+            'player_statistics'
+          )
+          .upsert(
+            statisticRows,
+            {
+              onConflict:
+                'minecraft_uuid,statistic_key',
+            }
+          );
+
+      if (
+        statisticError
+      ) {
+        console.error(
+          '[Minecraft Sync] Statistic error:',
+          statisticError
+        );
+
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            message:
+              'Failed to update statistics.',
+          }
+        );
+      }
+    }
+  }
+
+  /* =========================================================
    * SEASON PARTICIPATION + IDENTITY + ADVANCEMENTS
    * ========================================================= */
 
-  let participationSyncedCount = 0;
-  let advancementSyncedCount = 0;
-  const syncWarnings: string[] = [];
+  let participationSyncedCount =
+    0;
+
+  let advancementSyncedCount =
+    0;
+
+  const syncWarnings:
+    string[] = [];
 
   if (
     activeSeasonBeforeFinalization &&
     players.length > 0
   ) {
-    /*
-     * Do not make one player's seasonal sync failure abort the
-     * entire server sync. Stats have already been written above.
-     * This is especially important when an older Supabase RPC is
-     * temporarily unavailable or its EXECUTE privilege is missing.
-     */
     const seasonResults =
       await Promise.all(
-        players.map(async (player) => {
-          let participationOk = false;
-          let advancementCount = 0;
+        players.map(
+          async (
+            player
+          ) => {
+            let participationOk =
+              false;
 
-          try {
-            const {
-              data,
-              error,
-            } = await supabase.rpc(
-              'record_season_player_participation',
-              {
-                p_season_id:
-                  activeSeasonBeforeFinalization.id,
-                p_minecraft_uuid:
-                  player.uuid,
-                p_minecraft_username:
-                  player.username,
-                p_server_id: serverId,
+            let advancementCount =
+              0;
+
+            try {
+              const {
+                data,
+                error,
+              } =
+                await supabase.rpc(
+                  'record_season_player_participation',
+                  {
+                    p_season_id:
+                      activeSeasonBeforeFinalization.id,
+
+                    p_minecraft_uuid:
+                      player.uuid,
+
+                    p_minecraft_username:
+                      player.username,
+
+                    p_server_id:
+                      serverId,
+                  }
+                );
+
+              if (
+                !error &&
+                data === true
+              ) {
+                participationOk =
+                  true;
+              } else {
+                if (
+                  error
+                ) {
+                  console.warn(
+                    '[Minecraft Sync] Seasonal identity RPC warning:',
+                    error.message
+                  );
+                }
+
+                const {
+                  error:
+                    fallbackError,
+                } =
+                  await supabase
+                    .from(
+                      'season_player_participation'
+                    )
+                    .upsert(
+                      {
+                        season_id:
+                          activeSeasonBeforeFinalization.id,
+
+                        minecraft_uuid:
+                          player.uuid,
+
+                        minecraft_username:
+                          player.username,
+
+                        server_id:
+                          serverId,
+
+                        last_seen_at:
+                          now,
+                      },
+                      {
+                        onConflict:
+                          'season_id,minecraft_uuid',
+                      }
+                    );
+
+                if (
+                  !fallbackError
+                ) {
+                  participationOk =
+                    true;
+                } else {
+                  return {
+                    participationOk:
+                      false,
+
+                    advancementCount:
+                      0,
+
+                    warning:
+                      `Season identity sync failed for ${player.username}: ${fallbackError.message}`,
+                  };
+                }
               }
-            );
-
-            if (error) {
+            } catch (error) {
               console.warn(
-                '[Minecraft Sync] Seasonal identity RPC warning:',
-                error.message
+                '[Minecraft Sync] Seasonal identity exception:',
+                error
               );
+
               return {
-                participationOk: false,
-                advancementCount: 0,
+                participationOk:
+                  false,
+
+                advancementCount:
+                  0,
+
                 warning:
                   `Season identity sync skipped for ${player.username}.`,
               };
             }
 
-            participationOk =
-              data === true;
+            try {
+              const {
+                data,
+                error,
+              } =
+                await supabase.rpc(
+                  'sync_player_season_advancements',
+                  {
+                    p_season_id:
+                      activeSeasonBeforeFinalization.id,
 
-            if (!participationOk) {
-              return {
-                participationOk: false,
-                advancementCount: 0,
-                warning:
-                  `Season identity sync returned false for ${player.username}.`,
-              };
-            }
-          } catch (error) {
-            console.warn(
-              '[Minecraft Sync] Seasonal identity exception:',
-              error
-            );
+                    p_minecraft_uuid:
+                      player.uuid,
 
-            return {
-              participationOk: false,
-              advancementCount: 0,
-              warning:
-                `Season identity sync skipped for ${player.username}.`,
-            };
-          }
+                    p_minecraft_username:
+                      player.username,
 
-          try {
-            const {
-              data,
-              error,
-            } = await supabase.rpc(
-              'sync_player_season_advancements',
-              {
-                p_season_id:
-                  activeSeasonBeforeFinalization.id,
-                p_minecraft_uuid:
-                  player.uuid,
-                p_minecraft_username:
-                  player.username,
-                p_server_id: serverId,
-                p_advancements:
-                  player.advancements || [],
+                    p_server_id:
+                      serverId,
+
+                    p_advancements:
+                      player.advancements ||
+                      [],
+                  }
+                );
+
+              if (
+                error
+              ) {
+                console.warn(
+                  '[Minecraft Sync] Advancement RPC warning:',
+                  error.message
+                );
+
+                return {
+                  participationOk,
+
+                  advancementCount:
+                    0,
+
+                  warning:
+                    `Advancement sync skipped for ${player.username}.`,
+                };
               }
-            );
 
-            if (error) {
+              if (
+                typeof data ===
+                'number'
+              ) {
+                advancementCount =
+                  data;
+              }
+            } catch (error) {
               console.warn(
-                '[Minecraft Sync] Advancement RPC warning:',
-                error.message
+                '[Minecraft Sync] Advancement exception:',
+                error
               );
 
               return {
                 participationOk,
-                advancementCount: 0,
+
+                advancementCount:
+                  0,
+
                 warning:
                   `Advancement sync skipped for ${player.username}.`,
               };
             }
 
-            if (
-              typeof data === 'number'
-            ) {
-              advancementCount =
-                data;
-            }
-          } catch (error) {
-            console.warn(
-              '[Minecraft Sync] Advancement exception:',
-              error
-            );
-
             return {
               participationOk,
-              advancementCount: 0,
+              advancementCount,
               warning:
-                `Advancement sync skipped for ${player.username}.`,
+                null,
             };
           }
-
-          return {
-            participationOk,
-            advancementCount,
-            warning: null,
-          };
-        })
+        )
       );
 
-    for (const result of seasonResults) {
-      if (result.participationOk) {
-        participationSyncedCount += 1;
+    for (
+      const result of
+        seasonResults
+    ) {
+      if (
+        result.participationOk
+      ) {
+        participationSyncedCount +=
+          1;
       }
 
       advancementSyncedCount +=
-        result.advancementCount || 0;
+        result.advancementCount ||
+        0;
 
-      if (result.warning) {
+      if (
+        result.warning
+      ) {
         syncWarnings.push(
           result.warning
         );
@@ -806,58 +1073,70 @@ export default async function handler(
   }
 
   /* =========================================================
-   * FINALIZE EXPIRED SEASONS AFTER THE LAST SYNC
-   * =========================================================
-   *
-   * IMPORTANT:
-   * Build the leaderboard while the season is still active.
-   * The completion trigger then freezes the final snapshot.
-   * This prevents the last Minecraft sync from being lost when
-   * finalize_expired_seasons() changes active -> completed.
+   * ACTIVE-SEASON LEADERBOARD SYNC BEFORE FINALIZATION
    * ========================================================= */
 
-  let leaderboardSyncedCount = 0;
+  let leaderboardSyncedCount =
+    0;
 
-  if (activeSeasonBeforeFinalization) {
+  if (
+    activeSeasonBeforeFinalization
+  ) {
     const {
-      data: preFinalizeSyncResult,
-      error: preFinalizeSyncError,
-    } = await supabase.rpc(
-      'sync_active_season_leaderboard',
-      {
-        p_server_id: serverId,
-      }
-    );
+      data:
+        syncResult,
+      error:
+        syncError,
+    } =
+      await supabase.rpc(
+        'sync_active_season_leaderboard',
+        {
+          p_server_id:
+            serverId,
+        }
+      );
 
-    if (preFinalizeSyncError) {
+    if (
+      syncError
+    ) {
       console.warn(
         '[Minecraft Sync] Pre-finalization leaderboard sync warning:',
-        preFinalizeSyncError.message
+        syncError.message
       );
 
       syncWarnings.push(
-        'Leaderboard sync could not be refreshed before season finalization.'
+        `Leaderboard sync warning: ${syncError.message}`
       );
     } else if (
-      typeof preFinalizeSyncResult === 'number'
+      typeof syncResult ===
+      'number'
     ) {
       leaderboardSyncedCount =
-        preFinalizeSyncResult;
+        syncResult;
     }
   }
 
+  /* =========================================================
+   * FINALIZE EXPIRED SEASONS
+   * ========================================================= */
 
   const {
-    data: finalizedSeasonCount,
-    error: finalizeError,
-  } = await supabase.rpc(
-    'finalize_expired_seasons',
-    {
-      p_server_id: serverId,
-    }
-  );
+    data:
+      finalizedSeasonCount,
+    error:
+      finalizeError,
+  } =
+    await supabase.rpc(
+      'finalize_expired_seasons',
+      {
+        p_server_id:
+          serverId,
+      }
+    );
 
-  if (finalizeError) {
+  if (
+    finalizeError
+  ) {
     console.error(
       '[Minecraft Sync] Season finalization error:',
       finalizeError
@@ -868,6 +1147,7 @@ export default async function handler(
       500,
       {
         success: false,
+
         message:
           'Player data synced, but season finalization failed.',
       }
@@ -879,11 +1159,16 @@ export default async function handler(
    * ========================================================= */
 
   const {
-    data: activeSeason,
-    error: activeSeasonAfterError,
-  } = await getActiveSeason();
+    data:
+      activeSeason,
+    error:
+      activeSeasonAfterError,
+  } =
+    await getActiveSeason();
 
-  if (activeSeasonAfterError) {
+  if (
+    activeSeasonAfterError
+  ) {
     console.error(
       '[Minecraft Sync] Active season re-check error:',
       activeSeasonAfterError
@@ -894,6 +1179,7 @@ export default async function handler(
       500,
       {
         success: false,
+
         message:
           'Failed to re-check active season.',
       }
@@ -901,65 +1187,309 @@ export default async function handler(
   }
 
   /* =========================================================
-   * DYNAMIC LEADERBOARD SYNC FOR THE CURRENT ACTIVE SEASON
-   * =========================================================
-   *
-   * The pre-finalization sync above protects an expiring season.
-   * This second sync keeps the currently active season immediately
-   * refreshed when the request belongs to a still-active season.
-   */
+   * NEW ACTIVE SEASON AFTER FINALIZATION
+   * ========================================================= */
 
-  if (activeSeason) {
-    const {
-      data: syncResult,
-      error: syncError,
-    } = await supabase.rpc(
-      'sync_active_season_leaderboard',
-      {
-        p_server_id: serverId,
+  const previousActiveSeasonId =
+    activeSeasonBeforeFinalization?.id ??
+    null;
+
+  const seasonChanged =
+    activeSeason?.id != null &&
+    activeSeason.id !==
+      previousActiveSeasonId;
+
+  if (
+    activeSeason?.id != null &&
+    seasonChanged &&
+    players.length > 0
+  ) {
+    const newSeasonResults =
+      await Promise.all(
+        players.map(
+          async (
+            player
+          ) => {
+            let participationOk =
+              false;
+
+            let advancementCount =
+              0;
+
+            let warning:
+              | string
+              | null =
+              null;
+
+            try {
+              const {
+                data,
+                error,
+              } =
+                await supabase.rpc(
+                  'record_season_player_participation',
+                  {
+                    p_season_id:
+                      activeSeason.id,
+
+                    p_minecraft_uuid:
+                      player.uuid,
+
+                    p_minecraft_username:
+                      player.username,
+
+                    p_server_id:
+                      serverId,
+                  }
+                );
+
+              if (
+                !error &&
+                data === true
+              ) {
+                participationOk =
+                  true;
+              } else {
+                const {
+                  error:
+                    fallbackError,
+                } =
+                  await supabase
+                    .from(
+                      'season_player_participation'
+                    )
+                    .upsert(
+                      {
+                        season_id:
+                          activeSeason.id,
+
+                        minecraft_uuid:
+                          player.uuid,
+
+                        minecraft_username:
+                          player.username,
+
+                        server_id:
+                          serverId,
+
+                        last_seen_at:
+                          now,
+                      },
+                      {
+                        onConflict:
+                          'season_id,minecraft_uuid',
+                      }
+                    );
+
+                if (
+                  !fallbackError
+                ) {
+                  participationOk =
+                    true;
+                } else {
+                  warning =
+                    `New-season participation failed for ${player.username}: ${fallbackError.message}`;
+                }
+              }
+            } catch (error) {
+              console.warn(
+                '[Minecraft Sync] New-season participation exception:',
+                error
+              );
+
+              try {
+                const {
+                  error:
+                    fallbackError,
+                } =
+                  await supabase
+                    .from(
+                      'season_player_participation'
+                    )
+                    .upsert(
+                      {
+                        season_id:
+                          activeSeason.id,
+
+                        minecraft_uuid:
+                          player.uuid,
+
+                        minecraft_username:
+                          player.username,
+
+                        server_id:
+                          serverId,
+
+                        last_seen_at:
+                          now,
+                      },
+                      {
+                        onConflict:
+                          'season_id,minecraft_uuid',
+                      }
+                    );
+
+                if (
+                  !fallbackError
+                ) {
+                  participationOk =
+                    true;
+                } else {
+                  warning =
+                    `New-season participation failed for ${player.username}: ${fallbackError.message}`;
+                }
+              } catch {
+                warning =
+                  `New-season participation failed for ${player.username}.`;
+              }
+            }
+
+            try {
+              const {
+                data,
+                error,
+              } =
+                await supabase.rpc(
+                  'sync_player_season_advancements',
+                  {
+                    p_season_id:
+                      activeSeason.id,
+
+                    p_minecraft_uuid:
+                      player.uuid,
+
+                    p_minecraft_username:
+                      player.username,
+
+                    p_server_id:
+                      serverId,
+
+                    p_advancements:
+                      player.advancements ||
+                      [],
+                  }
+                );
+
+              if (
+                error
+              ) {
+                warning ||=
+                  `New-season advancement sync skipped for ${player.username}.`;
+              } else if (
+                typeof data ===
+                'number'
+              ) {
+                advancementCount =
+                  data;
+              }
+            } catch {
+              warning ||=
+                `New-season advancement sync skipped for ${player.username}.`;
+            }
+
+            return {
+              participationOk,
+              advancementCount,
+              warning,
+            };
+          }
+        )
+      );
+
+    for (
+      const result of
+        newSeasonResults
+    ) {
+      if (
+        result.participationOk
+      ) {
+        participationSyncedCount +=
+          1;
       }
-    );
 
-    if (syncError) {
+      advancementSyncedCount +=
+        result.advancementCount;
+
+      if (
+        result.warning
+      ) {
+        syncWarnings.push(
+          result.warning
+        );
+      }
+    }
+
+    /* =======================================================
+     * NEW-SEASON LEADERBOARD
+     * ======================================================= */
+
+    const {
+      data:
+        newSeasonSyncResult,
+      error:
+        newSeasonSyncError,
+    } =
+      await supabase.rpc(
+        'sync_active_season_leaderboard',
+        {
+          p_server_id:
+            serverId,
+        }
+      );
+
+    if (
+      newSeasonSyncError
+    ) {
       console.warn(
-        '[Minecraft Sync] Leaderboard sync warning:',
-        syncError.message
+        '[Minecraft Sync] New-season leaderboard sync warning:',
+        newSeasonSyncError.message
       );
 
       syncWarnings.push(
-        'Leaderboard sync could not be refreshed; player data was still saved.'
+        `New-season leaderboard sync warning: ${newSeasonSyncError.message}`
       );
-    }
-
-    if (
-      typeof syncResult === 'number'
+    } else if (
+      typeof newSeasonSyncResult ===
+      'number'
     ) {
-      leaderboardSyncedCount =
-        syncResult;
+      leaderboardSyncedCount +=
+        newSeasonSyncResult;
     }
   }
 
   /* =========================================================
-   * SYNC HEARTBEAT
+   * HEARTBEAT
    * ========================================================= */
 
   await supabase
-    .from('leaderboard_sync_state')
+    .from(
+      'leaderboard_sync_state'
+    )
     .upsert(
       {
-        server_id: serverId,
+        server_id:
+          serverId,
+
         bridge_version:
           cleanText(
             body.bridgeVersion,
             32
-          ) || 'unknown',
+          ) ||
+          'unknown',
+
         active_season_id:
-          activeSeason?.id || null,
-        last_success_at: now,
-        updated_at: now,
+          activeSeason?.id ||
+          null,
+
+        last_success_at:
+          now,
+
+        updated_at:
+          now,
       },
       {
-        onConflict: 'server_id',
+        onConflict:
+          'server_id',
       }
     );
 
@@ -972,36 +1502,61 @@ export default async function handler(
     200,
     {
       success: true,
+
       syncType,
-      syncedPlayers: players.length,
+
+      syncedPlayers:
+        players.length,
+
       participationSyncedCount,
+
       advancementSyncedCount,
+
       leaderboardSyncedCount,
+
       finalizedSeasonCount:
         typeof finalizedSeasonCount ===
         'number'
           ? finalizedSeasonCount
           : 0,
-      activeSeason: activeSeason
-        ? {
-            id: activeSeason.id,
-            seasonNumber:
-              activeSeason.season_number,
-            name: activeSeason.name,
-            slug: activeSeason.slug,
-            status: activeSeason.status,
-          }
-        : null,
-      previousActiveSeasonId:
-        activeSeasonBeforeFinalization?.id ||
-        null,
+
+      activeSeason:
+        activeSeason
+          ? {
+              id:
+                activeSeason.id,
+
+              seasonNumber:
+                activeSeason.season_number,
+
+              name:
+                activeSeason.name,
+
+              slug:
+                activeSeason.slug,
+
+              status:
+                activeSeason.status,
+            }
+          : null,
+
+      previousActiveSeasonId,
+
       bridgeVersion:
         cleanText(
           body.bridgeVersion,
           32
-        ) || 'unknown',
-      syncedAt: now,
-      warnings: syncWarnings.slice(0, 25),
+        ) ||
+        'unknown',
+
+      syncedAt:
+        now,
+
+      warnings:
+        syncWarnings.slice(
+          0,
+          25
+        ),
     }
   );
 }

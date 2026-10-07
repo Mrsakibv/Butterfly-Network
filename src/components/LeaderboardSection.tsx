@@ -557,6 +557,63 @@ export const LeaderboardSection: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!selectedSeasonId || !selectedCategory) {
+      return;
+    }
+
+    let disposed = false;
+
+    const refreshSelectedLeaderboard = async () => {
+      if (disposed) {
+        return;
+      }
+
+      try {
+        const result = await getTopLeaderboard(
+          selectedSeasonId,
+          selectedCategory.id as LeaderboardCategory,
+          30
+        );
+
+        if (!disposed) {
+          setEntries(result);
+        }
+
+        if (minecraftUuid) {
+          const rank = await getPlayerRank(
+            selectedSeasonId,
+            selectedCategory.id as LeaderboardCategory,
+            minecraftUuid
+          );
+
+          if (!disposed) {
+            setMyRank(rank);
+          }
+        }
+      } catch (refreshError) {
+        console.warn(
+          'Live leaderboard refresh failed:',
+          refreshError
+        );
+      }
+    };
+
+    const interval = window.setInterval(
+      refreshSelectedLeaderboard,
+      15000
+    );
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [
+    selectedSeasonId,
+    selectedCategory,
+    minecraftUuid,
+  ]);
+
+  useEffect(() => {
     if (
       !selectedSeasonId ||
       !activeTab
