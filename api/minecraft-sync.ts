@@ -687,10 +687,6 @@ export default async function handler(
                 p_minecraft_username:
                   player.username,
                 p_server_id: serverId,
-                p_rank_name:
-                  player.rankName || '',
-                p_team_name:
-                  player.teamName || '',
               }
             );
 
@@ -709,6 +705,15 @@ export default async function handler(
 
             participationOk =
               data === true;
+
+            if (!participationOk) {
+              return {
+                participationOk: false,
+                advancementCount: 0,
+                warning:
+                  `Season identity sync returned false for ${player.username}.`,
+              };
+            }
           } catch (error) {
             console.warn(
               '[Minecraft Sync] Seasonal identity exception:',
@@ -728,7 +733,7 @@ export default async function handler(
               data,
               error,
             } = await supabase.rpc(
-              'sync_player_season_advancement_states',
+              'sync_player_season_advancements',
               {
                 p_season_id:
                   activeSeasonBeforeFinalization.id,
@@ -802,7 +807,45 @@ export default async function handler(
 
   /* =========================================================
    * FINALIZE EXPIRED SEASONS AFTER THE LAST SYNC
+   * =========================================================
+   *
+   * IMPORTANT:
+   * Build the leaderboard while the season is still active.
+   * The completion trigger then freezes the final snapshot.
+   * This prevents the last Minecraft sync from being lost when
+   * finalize_expired_seasons() changes active -> completed.
    * ========================================================= */
+
+  let leaderboardSyncedCount = 0;
+
+  if (activeSeasonBeforeFinalization) {
+    const {
+      data: preFinalizeSyncResult,
+      error: preFinalizeSyncError,
+    } = await supabase.rpc(
+      'sync_active_season_leaderboard',
+      {
+        p_server_id: serverId,
+      }
+    );
+
+    if (preFinalizeSyncError) {
+      console.warn(
+        '[Minecraft Sync] Pre-finalization leaderboard sync warning:',
+        preFinalizeSyncError.message
+      );
+
+      syncWarnings.push(
+        'Leaderboard sync could not be refreshed before season finalization.'
+      );
+    } else if (
+      typeof preFinalizeSyncResult === 'number'
+    ) {
+      leaderboardSyncedCount =
+        preFinalizeSyncResult;
+    }
+  }
+
 
   const {
     data: finalizedSeasonCount,
@@ -858,12 +901,13 @@ export default async function handler(
   }
 
   /* =========================================================
-   * DYNAMIC LEADERBOARD SYNC
+   * DYNAMIC LEADERBOARD SYNC FOR THE CURRENT ACTIVE SEASON
    * =========================================================
-   * Existing leaderboard function and behavior remain unchanged.
+   *
+   * The pre-finalization sync above protects an expiring season.
+   * This second sync keeps the currently active season immediately
+   * refreshed when the request belongs to a still-active season.
    */
-
-  let leaderboardSyncedCount = 0;
 
   if (activeSeason) {
     const {

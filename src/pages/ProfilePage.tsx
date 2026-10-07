@@ -2282,7 +2282,7 @@ export const ProfilePage: React.FC = () => {
             supabase
               .from('season_player_participation')
               .select(
-                'season_id, minecraft_uuid, minecraft_username, server_id, rank_name, team_name, first_seen_at, last_seen_at, sync_count'
+                'season_id, minecraft_uuid, minecraft_username, server_id, first_seen_at, last_seen_at, sync_count'
               )
               .eq('minecraft_uuid', identity.uuid)
               .eq('server_id', 'main')
