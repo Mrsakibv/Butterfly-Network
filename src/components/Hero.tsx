@@ -367,7 +367,7 @@ export const Hero: React.FC<HeroProps> = ({
                 </span>
 
                 <span>
-                  6 Unique Game Modes
+                  3 Unique Game Modes
                 </span>
               </div>
 

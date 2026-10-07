@@ -19,6 +19,7 @@ interface ProfileHeaderProps {
   isOwnProfile: boolean;
   currentUserId?: string;
   onEditClick?: () => void;
+  isMinecraftOnly?: boolean;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -34,6 +35,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   isOwnProfile,
   currentUserId,
   onEditClick,
+  isMinecraftOnly = false,
 }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -41,9 +43,16 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [followingCount, setFollowingCount] = useState(0);
 
   useEffect(() => {
+    if (isMinecraftOnly) {
+      setIsFollowing(false);
+      setFollowerCount(0);
+      setFollowingCount(0);
+      return;
+    }
+
     loadFollowData();
     loadCounts();
-  }, [userId, currentUserId]);
+  }, [userId, currentUserId, isMinecraftOnly]);
 
   const loadFollowData = async () => {
     if (currentUserId && userId && currentUserId !== userId) {
@@ -60,7 +69,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
 
   const handleFollow = async () => {
-    if (!currentUserId || followLoading) return;
+    if (isMinecraftOnly || !currentUserId || followLoading) return;
 
     setFollowLoading(true);
     try {
@@ -179,6 +188,11 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     </div>
 
     <p className="text-purple-300 text-sm">@{username}</p>
+    {isMinecraftOnly && (
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300/80">
+        Minecraft Player · No Website Account
+      </p>
+    )}
   </div>
 
   {/* Action Buttons */}
@@ -193,7 +207,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <Settings className="w-4 h-4" />
         Edit Profile
       </motion.button>
-    ) : currentUserId ? (
+    ) : currentUserId && !isMinecraftOnly ? (
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -230,19 +244,25 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
         {/* Stats */}
         <div className="flex flex-wrap gap-6 text-sm mb-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-semibold">{followerCount}</span>
-            <span className="text-slate-400">Followers</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-semibold">{followingCount}</span>
-            <span className="text-slate-400">Following</span>
-          </div>
+          {!isMinecraftOnly && (
+            <>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span className="text-white font-semibold">{followerCount}</span>
+                <span className="text-slate-400">Followers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span className="text-white font-semibold">{followingCount}</span>
+                <span className="text-slate-400">Following</span>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-purple-400" />
-            <span className="text-slate-400">Joined {formatDate(createdAt)}</span>
+            <span className="text-slate-400">
+              {isMinecraftOnly ? 'Minecraft Player' : `Joined ${formatDate(createdAt)}`}
+            </span>
           </div>
         </div>
       </div>

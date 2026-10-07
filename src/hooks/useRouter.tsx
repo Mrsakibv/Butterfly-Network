@@ -1,43 +1,91 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 interface RouterContextValue {
   path: string;
+  search: string;
   navigate: (newPath: string) => void;
   gameSlug?: string;
 }
 
 const RouterContext = createContext<RouterContextValue | null>(null);
 
-export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [path, setPath] = useState<string>(() => {
-    return window.location.pathname || '/';
-  });
+const readLocation = () => ({
+  pathname: window.location.pathname || '/',
+  search: window.location.search || '',
+});
+
+export const RouterProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const initial = readLocation();
+
+  const [path, setPath] = useState(initial.pathname);
+  const [search, setSearch] = useState(initial.search);
 
   useEffect(() => {
     const handlePopState = () => {
-      setPath(window.location.pathname || '/');
+      const next = readLocation();
+      setPath(next.pathname);
+      setSearch(next.search);
     };
 
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener(
+        'popstate',
+        handlePopState
+      );
+    };
   }, []);
 
   const navigate = useCallback((newPath: string) => {
-    const currentFullPath = window.location.pathname + window.location.search;
-    if (newPath === currentFullPath) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    const current =
+      window.location.pathname +
+      window.location.search;
+
+    if (newPath === current) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
       return;
     }
+
     window.history.pushState({}, '', newPath);
-    setPath(newPath.split('?')[0]); // Extract pathname without query
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const next = readLocation();
+    setPath(next.pathname);
+    setSearch(next.search);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
   }, []);
 
-  // Derive game slug if path starts with /games/
-  const gameSlug = path.startsWith('/games/') ? path.replace('/games/', '').split('/')[0] : undefined;
+  const gameSlug =
+    path.startsWith('/games/')
+      ? path
+          .replace('/games/', '')
+          .split('/')[0]
+      : undefined;
 
   return (
-    <RouterContext.Provider value={{ path, navigate, gameSlug }}>
+    <RouterContext.Provider
+      value={{
+        path,
+        search,
+        navigate,
+        gameSlug,
+      }}
+    >
       {children}
     </RouterContext.Provider>
   );
@@ -45,8 +93,12 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export function useRouter(): RouterContextValue {
   const context = useContext(RouterContext);
+
   if (!context) {
-    throw new Error('useRouter must be used within a RouterProvider');
+    throw new Error(
+      'useRouter must be used within a RouterProvider'
+    );
   }
+
   return context;
 }

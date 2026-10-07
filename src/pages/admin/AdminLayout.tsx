@@ -19,7 +19,6 @@ import {
   CircleHelp,
   ShoppingBag,
   MessageSquare,
-  Bot,
   Trophy,
   CalendarRange,
   BrainCircuit,
@@ -55,7 +54,6 @@ export type AdminSectionKey =
   | 'users'
   | 'social'
   | 'applications'
-  | 'bot'
   | 'leaderboard'
   | 'seasons'
   | 'memories'
@@ -188,13 +186,6 @@ const ADMIN_NAV_ITEMS: {
     icon: MessageSquare,
     path: '/admin/social',
   },
-  {
-    key: 'bot',
-    permission: 'bot',
-    label: 'AFK Bot',
-    icon: Bot,
-    path: '/admin/bot',
-  },
     {
     key: 'leaderboard',
     permission: 'leaderboard',
@@ -219,7 +210,7 @@ const ADMIN_NAV_ITEMS: {
   {
     key: 'achievements',
     permission: 'achievements',
-    label: 'Achievements',
+    label: 'Activities & Achievements',
     icon: BadgeCheck,
     path: '/admin/achievements',
   },

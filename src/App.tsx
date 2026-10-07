@@ -54,12 +54,13 @@ import { AdminContentSection } from './pages/admin/AdminContentSection';
 import { AdminHomeContent } from './pages/admin/AdminHomeContent';
 import { AdminSocial } from './pages/admin/AdminSocial';
 import { AdminApplications } from './pages/admin/AdminApplications';
-import { AdminBot } from './pages/admin/AdminBot';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
 import { AdminLeaderboard } from './pages/admin/AdminLeaderboard';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminSeasons } from './pages/admin/AdminSeasons';
+import { AdminMinecraft } from './pages/admin/AdminMinecraft';
+import { AdminAchievements } from './pages/admin/AdminAchievements';
 
 /* =========================================================
    PREMIUM LOADING SCREEN
@@ -647,17 +648,23 @@ function AppContent() {
     if (path === '/admin/applications') {
       return <AdminApplications />;
     }
-    if (path === '/admin/bot') {
-      return <AdminBot />;
-    }
+    
     if (path === '/admin/leaderboard') {
       return <AdminLeaderboard />;
     }
     if (path === '/admin/seasons') {
       return <AdminSeasons />;
-   }
+    }
 
-    if (path === '/social') {
+    if (path === '/admin/achievements') {
+      return <AdminAchievements />;
+    }
+
+    if (path === '/admin/minecraft') {
+      return <AdminMinecraft />;
+    }
+
+   if (path === '/social') {
       return <SocialPage onOpenPlayModal={handleOpenPlayModal} />;
     }
 

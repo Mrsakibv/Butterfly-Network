@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import type { LeaderboardCategory } from '../types';
 
 export interface LeaderboardPlayer {
   rank: number;
@@ -30,40 +29,30 @@ export interface Season {
   ends_at: string | null;
 }
 
-const formatScore = (
-  category: LeaderboardCategory,
-  value: number
-): string => {
+const SEASON_SELECT =
+  'id, season_number, name, slug, status, description, cover_image_url, starts_at, ends_at';
+
+const fallbackFormatScore = (category: string, value: number) => {
   switch (category) {
     case 'money':
       return `$${value.toLocaleString()}`;
-
-    case 'playtime': {
+    case 'playtime':
+    case 'playtime_seconds': {
       const hours = value / 3600;
-
-      if (hours >= 1) {
-        return `${hours.toFixed(1)} hrs`;
-      }
-
+      if (hours >= 1) return `${hours.toFixed(1)} hrs`;
       const minutes = value / 60;
       return `${Math.max(1, Math.round(minutes))} min`;
     }
-
     case 'hearts':
       return `❤ ${value}`;
-
     case 'kills':
       return `${value.toLocaleString()} Kills`;
-
     case 'deaths':
       return `${value.toLocaleString()} Deaths`;
-
     case 'wins':
       return `${value.toLocaleString()} Wins`;
-
     case 'kill_streak':
       return `${value.toLocaleString()} Streak`;
-
     default:
       return value.toLocaleString();
   }
@@ -72,17 +61,13 @@ const formatScore = (
 export const getActiveSeason = async (): Promise<Season | null> => {
   const { data, error } = await supabase
     .from('seasons')
-    .select(
-      'id, season_number, name, slug, status, description, cover_image_url, starts_at, ends_at'
-    )
+    .select(SEASON_SELECT)
     .eq('status', 'active')
     .order('season_number', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (data as Season | null) ?? null;
 };
@@ -90,24 +75,31 @@ export const getActiveSeason = async (): Promise<Season | null> => {
 export const getSeasons = async (): Promise<Season[]> => {
   const { data, error } = await supabase
     .from('seasons')
-    .select(
-      'id, season_number, name, slug, status, description, cover_image_url, starts_at, ends_at'
-    )
+    .select(SEASON_SELECT)
+    .in('status', ['upcoming', 'active', 'completed', 'archived'])
     .order('season_number', { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (data as Season[]) ?? [];
 };
 
 export const getTopLeaderboard = async (
   seasonId: string,
-  category: LeaderboardCategory,
+  category: string,
   limit = 30
 ): Promise<LeaderboardPlayer[]> => {
   const safeLimit = Math.min(Math.max(limit, 1), 30);
+
+  const { data: categoryConfig, error: categoryError } = await supabase
+    .from('leaderboard_categories')
+    .select('sort_direction')
+    .eq('category_id', category)
+    .maybeSingle();
+
+  if (categoryError) throw new Error(categoryError.message);
+
+  const ascending = categoryConfig?.sort_direction === 'asc';
 
   const { data, error } = await supabase
     .from('season_leaderboard_entries')
@@ -116,42 +108,32 @@ export const getTopLeaderboard = async (
     )
     .eq('season_id', seasonId)
     .eq('category', category)
-    .order('score', { ascending: false })
+    .order('score', { ascending })
     .limit(safeLimit);
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
-  return ((data ?? []) as Array<{
-    minecraft_uuid: string;
-    username: string;
-    score: number;
-    display_score: string;
-    badge: string;
-    guild: string;
-    avatar_url: string;
-  }>).map((entry, index) => ({
+  return (data ?? []).map((entry, index) => ({
     rank: index + 1,
-    minecraftUuid: entry.minecraft_uuid,
-    username: entry.username,
+    minecraftUuid: String(entry.minecraft_uuid),
+    username: String(entry.username),
     score:
       entry.display_score ||
-      formatScore(category, Number(entry.score) || 0),
+      fallbackFormatScore(category, Number(entry.score) || 0),
     rawValue: Number(entry.score) || 0,
     badge: entry.badge || undefined,
     guild: entry.guild || undefined,
     avatarUrl:
       entry.avatar_url ||
       `https://mc-heads.net/avatar/${encodeURIComponent(
-        entry.username
+        String(entry.username)
       )}/64`,
   }));
 };
 
 export const getPlayerRank = async (
   seasonId: string,
-  category: LeaderboardCategory,
+  category: string,
   minecraftUuid: string
 ): Promise<PlayerRankResult> => {
   const { data, error } = await supabase.rpc(
@@ -163,23 +145,17 @@ export const getPlayerRank = async (
     }
   );
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   const row = Array.isArray(data) ? data[0] : null;
 
   if (!row) {
-    return {
-      rank: null,
-      score: null,
-      totalPlayers: 0,
-    };
+    return { rank: null, score: null, totalPlayers: 0 };
   }
 
   return {
-    rank: Number(row.rank),
-    score: Number(row.score),
-    totalPlayers: Number(row.total_players),
+    rank: row.rank == null ? null : Number(row.rank),
+    score: row.score == null ? null : Number(row.score),
+    totalPlayers: Number(row.total_players) || 0,
   };
 };

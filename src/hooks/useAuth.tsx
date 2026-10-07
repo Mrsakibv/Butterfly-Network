@@ -20,7 +20,6 @@ export type AdminPermission =
   | 'users'
   | 'social'
   | 'applications'
-  | 'bot'
   | 'leaderboard'
   | 'seasons'
   | 'memories'
@@ -46,7 +45,7 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'users',
   'social',
   'applications',
-  'bot',
+
   'leaderboard',
   'seasons',
   'memories',

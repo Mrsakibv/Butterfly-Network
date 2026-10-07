@@ -1,0 +1,46 @@
+# ============================================================
+# BUTTERFLY NETWORK BRIDGE
+# ============================================================
+
+server-id: main
+
+api:
+  url: "https://butterfly-network.vercel.app/api/minecraft-sync"
+
+  # Keep your existing MINECRAFT_API_KEY value here.
+  # Never publish this value.
+  api-key: "sakib_mc_secrate_api_key_01804825476_butterfly"
+
+  # Periodic full sync interval.
+  # Example: 2400 = 40 minutes.
+  interval-seconds: 2400
+
+bridge:
+  version: "1.2.1"
+
+  # These are independent of the periodic timer.
+  # true  = sync that player immediately
+  # false = do not sync on that event
+  sync-on-join: true
+  sync-on-leave: true
+
+  # How many online players are snapshotted per server tick
+  # during a periodic full sync.
+  # 1 is the safest setting for server performance.
+  # 2-4 can be used on larger/higher-performance servers.
+  players-per-tick: 1
+
+  # Only these worlds will be treated as Lifesteal worlds.
+  lifesteal-worlds:
+    - "Lifesteal"
+    - "Lifesteal_nether"
+    - "Lifesteal_the_end"
+
+logging:
+  enabled: true
+  success: true
+  errors: true
+
+  # Detailed per-player snapshot logging is disabled by default
+  # to avoid unnecessary console/log overhead.
+  snapshot-details: false

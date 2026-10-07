@@ -1,8 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
+interface MinecraftAdvancementPayload {
+  key: string;
+  title: string;
+  description: string;
+  iconMaterial: string;
+  completed: boolean;
+  completedAt?: string | null;
+}
+
 interface MinecraftPlayerPayload {
   uuid: string;
   username: string;
+
+  rankName?: string;
+  teamName?: string;
 
   hearts?: number;
   kills?: number;
@@ -16,6 +28,7 @@ interface MinecraftPlayerPayload {
   blocksPlaced?: number;
   itemsCrafted?: number;
   itemsUsed?: number;
+
   mobsKilled?: number;
   playersKilled?: number;
 
@@ -25,26 +38,19 @@ interface MinecraftPlayerPayload {
 
   damageDealt?: number;
   damageTaken?: number;
-
   jumps?: number;
 
   statistics?: Record<string, number>;
+  advancements?: MinecraftAdvancementPayload[];
 }
 
 interface MinecraftSyncPayload {
   serverId: string;
   bridgeVersion?: string;
   sentAt?: string;
+  syncType?: 'periodic' | 'join' | 'leave';
   players: MinecraftPlayerPayload[];
 }
-
-interface ExistingStatRow {
-  minecraft_uuid: string;
-  first_seen_at: string | null;
-}
-
-const MAX_PLAYERS = 500;
-const MAX_STATISTICS_PER_PLAYER = 100;
 
 const cleanText = (
   value: unknown,
@@ -71,12 +77,70 @@ const safeNumber = (
   return Math.max(0, value);
 };
 
-const integer = (
-  value: unknown,
-  fallback = 0
-): number => {
-  return Math.floor(
-    safeNumber(value, fallback)
+const normalizeAdvancements = (
+  value: unknown
+): MinecraftAdvancementPayload[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const normalized = value
+    .filter(
+      (item) =>
+        item &&
+        typeof item === 'object'
+    )
+    .map((item) => {
+      const row = item as Record<string, unknown>;
+
+      return {
+        key: cleanText(
+          row.key ??
+            row.advancementKey ??
+            row.advancement_key,
+          300
+        ),
+        title: cleanText(
+          row.title,
+          300
+        ),
+        description: cleanText(
+          row.description,
+          500
+        ),
+        iconMaterial: cleanText(
+          row.iconMaterial ??
+            row.icon_material,
+          120
+        ),
+        completed:
+          row.completed === true ||
+          row.completed === 1 ||
+          String(row.completed ?? '')
+            .toLowerCase() === 'true',
+        completedAt:
+          cleanText(
+            row.completedAt ??
+              row.completed_at,
+            64
+          ) || null,
+      };
+    })
+    .filter(
+      (item) => item.key.length > 0
+    );
+
+  const seen = new Set<string>();
+
+  return normalized.filter(
+    (item) => {
+      if (seen.has(item.key)) {
+        return false;
+      }
+
+      seen.add(item.key);
+      return true;
+    }
   );
 };
 
@@ -85,26 +149,7 @@ const sendJson = (
   status: number,
   body: Record<string, unknown>
 ) => {
-  return res.status(status).json(body);
-};
-
-const statisticValue = (
-  statistics: Record<string, number>,
-  keys: string[],
-  fallback = 0
-): number => {
-  for (const key of keys) {
-    const value = statistics[key];
-
-    if (
-      typeof value === 'number' &&
-      Number.isFinite(value)
-    ) {
-      return Math.max(0, value);
-    }
-  }
-
-  return fallback;
+  res.status(status).json(body);
 };
 
 export default async function handler(
@@ -117,40 +162,65 @@ export default async function handler(
   );
 
   if (req.method !== 'POST') {
-    return sendJson(res, 405, {
-      success: false,
-      message: 'Method not allowed.',
-    });
+    return sendJson(
+      res,
+      405,
+      {
+        success: false,
+        message: 'Method not allowed.',
+      }
+    );
   }
 
   const expectedApiKey =
     process.env.MINECRAFT_API_KEY;
-
   const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL;
-
-  const supabaseServiceKey =
+    process.env.SUPABASE_URL;
+  const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY;
-
   const configuredServerId =
     process.env.MINECRAFT_SERVER_ID ||
     'main';
 
-  if (
-    !expectedApiKey ||
-    !supabaseUrl ||
-    !supabaseServiceKey
-  ) {
-    return sendJson(res, 500, {
-      success: false,
-      message:
-        'Minecraft sync server configuration is incomplete.',
-    });
+  if (!expectedApiKey) {
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'MINECRAFT_API_KEY is not configured.',
+      }
+    );
+  }
+
+  if (!supabaseUrl) {
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'SUPABASE_URL is not configured.',
+      }
+    );
+  }
+
+  if (!serviceRoleKey) {
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'SUPABASE_SERVICE_ROLE_KEY is not configured.',
+      }
+    );
   }
 
   const receivedApiKey =
-    typeof req.headers?.['x-api-key'] === 'string'
+    typeof req.headers?.['x-api-key'] ===
+    'string'
       ? req.headers['x-api-key']
       : '';
 
@@ -158,10 +228,14 @@ export default async function handler(
     !receivedApiKey ||
     receivedApiKey !== expectedApiKey
   ) {
-    return sendJson(res, 401, {
-      success: false,
-      message: 'Unauthorized.',
-    });
+    return sendJson(
+      res,
+      401,
+      {
+        success: false,
+        message: 'Unauthorized.',
+      }
+    );
   }
 
   let body: MinecraftSyncPayload;
@@ -172,60 +246,88 @@ export default async function handler(
         ? JSON.parse(req.body)
         : req.body;
   } catch {
-    return sendJson(res, 400, {
-      success: false,
-      message: 'Invalid JSON body.',
-    });
+    return sendJson(
+      res,
+      400,
+      {
+        success: false,
+        message: 'Invalid JSON body.',
+      }
+    );
   }
 
   if (
     !body ||
     typeof body !== 'object'
   ) {
-    return sendJson(res, 400, {
-      success: false,
-      message: 'Invalid request body.',
-    });
+    return sendJson(
+      res,
+      400,
+      {
+        success: false,
+        message: 'Invalid request body.',
+      }
+    );
   }
 
-  const serverId =
-    cleanText(body.serverId, 64);
+  const serverId = cleanText(
+    body.serverId,
+    64
+  );
+
+  const syncType =
+    body.syncType === 'join' ||
+    body.syncType === 'leave'
+      ? body.syncType
+      : 'periodic';
 
   if (!serverId) {
-    return sendJson(res, 400, {
-      success: false,
-      message: 'serverId is required.',
-    });
+    return sendJson(
+      res,
+      400,
+      {
+        success: false,
+        message: 'serverId is required.',
+      }
+    );
   }
 
   if (
     serverId !== configuredServerId
   ) {
-    return sendJson(res, 403, {
-      success: false,
-      message:
-        'Unknown Minecraft server.',
-    });
+    return sendJson(
+      res,
+      403,
+      {
+        success: false,
+        message:
+          'Unknown Minecraft server.',
+      }
+    );
   }
 
-  if (
-    !Array.isArray(body.players)
-  ) {
-    return sendJson(res, 400, {
-      success: false,
-      message:
-        'players must be an array.',
-    });
+  if (!Array.isArray(body.players)) {
+    return sendJson(
+      res,
+      400,
+      {
+        success: false,
+        message:
+          'players must be an array.',
+      }
+    );
   }
 
-  if (
-    body.players.length > MAX_PLAYERS
-  ) {
-    return sendJson(res, 413, {
-      success: false,
-      message:
-        `Too many players. Maximum is ${MAX_PLAYERS}.`,
-    });
+  if (body.players.length > 500) {
+    return sendJson(
+      res,
+      413,
+      {
+        success: false,
+        message:
+          'Too many players in one request.',
+      }
+    );
   }
 
   const players =
@@ -233,377 +335,229 @@ export default async function handler(
       .filter(
         (player) =>
           player &&
-          typeof player === 'object' &&
-          typeof player.uuid === 'string' &&
-          typeof player.username === 'string'
+          typeof player === 'object'
       )
-      .map((player) => {
-        const statistics =
+      .map((player) => ({
+        uuid: cleanText(
+          player.uuid,
+          64
+        ),
+        username: cleanText(
+          player.username,
+          32
+        ),
+        rankName: cleanText(
+          player.rankName,
+          120
+        ),
+        teamName: cleanText(
+          player.teamName,
+          120
+        ),
+        hearts: safeNumber(
+          player.hearts
+        ),
+        kills: Math.floor(
+          safeNumber(player.kills)
+        ),
+        deaths: Math.floor(
+          safeNumber(player.deaths)
+        ),
+        money: safeNumber(
+          player.money
+        ),
+        playtimeSeconds: Math.floor(
+          safeNumber(
+            player.playtimeSeconds
+          )
+        ),
+        wins: Math.floor(
+          safeNumber(player.wins)
+        ),
+        killStreak: Math.floor(
+          safeNumber(
+            player.killStreak
+          )
+        ),
+        blocksBroken: Math.floor(
+          safeNumber(
+            player.blocksBroken
+          )
+        ),
+        blocksPlaced: Math.floor(
+          safeNumber(
+            player.blocksPlaced
+          )
+        ),
+        itemsCrafted: Math.floor(
+          safeNumber(
+            player.itemsCrafted
+          )
+        ),
+        itemsUsed: Math.floor(
+          safeNumber(player.itemsUsed)
+        ),
+        mobsKilled: Math.floor(
+          safeNumber(player.mobsKilled)
+        ),
+        playersKilled: Math.floor(
+          safeNumber(
+            player.playersKilled
+          )
+        ),
+        distanceWalked: Math.floor(
+          safeNumber(
+            player.distanceWalked
+          )
+        ),
+        distanceRun: Math.floor(
+          safeNumber(
+            player.distanceRun
+          )
+        ),
+        distanceFlown: Math.floor(
+          safeNumber(
+            player.distanceFlown
+          )
+        ),
+        damageDealt: safeNumber(
+          player.damageDealt
+        ),
+        damageTaken: safeNumber(
+          player.damageTaken
+        ),
+        jumps: Math.floor(
+          safeNumber(player.jumps)
+        ),
+        statistics:
           player.statistics &&
-          typeof player.statistics === 'object'
+          typeof player.statistics ===
+            'object'
             ? Object.fromEntries(
                 Object.entries(
                   player.statistics
                 )
                   .filter(
                     ([key, value]) =>
-                      typeof key === 'string' &&
+                      typeof key ===
+                        'string' &&
                       key.length <= 120 &&
-                      typeof value === 'number' &&
+                      typeof value ===
+                        'number' &&
                       Number.isFinite(value)
                   )
-                  .slice(
-                    0,
-                    MAX_STATISTICS_PER_PLAYER
-                  )
+                  .slice(0, 200)
                   .map(
                     ([key, value]) => [
                       cleanText(key, 120),
-                      integer(value),
+                      Math.max(
+                        0,
+                        value as number
+                      ),
                     ]
                   )
               )
-            : {};
-
-        return {
-          uuid: cleanText(
-            player.uuid,
-            64
+            : {},
+        advancements:
+          normalizeAdvancements(
+            player.advancements
           ),
-
-          username: cleanText(
-            player.username,
-            32
-          ),
-
-          hearts: safeNumber(
-            player.hearts
-          ),
-
-          kills: integer(
-            player.kills
-          ),
-
-          deaths: integer(
-            player.deaths
-          ),
-
-          money: safeNumber(
-            player.money
-          ),
-
-          playtimeSeconds: integer(
-            player.playtimeSeconds
-          ),
-
-          wins: integer(
-            player.wins
-          ),
-
-          killStreak: integer(
-            player.killStreak
-          ),
-
-          blocksBroken: integer(
-            player.blocksBroken,
-            statisticValue(
-              statistics,
-              ['MINE_BLOCK']
-            )
-          ),
-
-          blocksPlaced: integer(
-            player.blocksPlaced
-          ),
-
-          itemsCrafted: integer(
-            player.itemsCrafted
-          ),
-
-          itemsUsed: integer(
-            player.itemsUsed
-          ),
-
-          mobsKilled: integer(
-            player.mobsKilled,
-            statisticValue(
-              statistics,
-              ['MOB_KILLS']
-            )
-          ),
-
-          playersKilled: integer(
-            player.playersKilled,
-            integer(player.kills)
-          ),
-
-          distanceWalked: integer(
-            player.distanceWalked,
-            statisticValue(
-              statistics,
-              ['WALK_ONE_CM']
-            )
-          ),
-
-          distanceRun: integer(
-            player.distanceRun,
-            statisticValue(
-              statistics,
-              ['SPRINT_ONE_CM']
-            )
-          ),
-
-          distanceFlown: integer(
-            player.distanceFlown,
-            statisticValue(
-              statistics,
-              ['FLY_ONE_CM']
-            )
-          ),
-
-          damageDealt: safeNumber(
-            player.damageDealt,
-            statisticValue(
-              statistics,
-              ['DAMAGE_DEALT']
-            )
-          ),
-
-          damageTaken: safeNumber(
-            player.damageTaken,
-            statisticValue(
-              statistics,
-              ['DAMAGE_TAKEN']
-            )
-          ),
-
-          jumps: integer(
-            player.jumps,
-            statisticValue(
-              statistics,
-              ['JUMP']
-            )
-          ),
-
-          statistics,
-        };
-      })
+      }))
       .filter(
         (player) =>
           player.uuid.length > 0 &&
           player.username.length > 0
       );
 
-  if (
-    players.length === 0
-  ) {
-    return sendJson(res, 400, {
-      success: false,
-      message:
-        'No valid players received.',
-    });
-  }
-
-  const supabase =
-    createClient(
-      supabaseUrl,
-      supabaseServiceKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      }
-    );
-
-  const now =
-    new Date().toISOString();
-
-  const uuids = players.map(
-    (player) => player.uuid
+  const supabase = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
   );
 
-  /*
-   * Read existing records so first_seen_at
-   * remains permanent.
-   */
-  const {
-    data: existingRows,
-    error: existingError,
-  } =
-    await supabase
-      .from(
-        'player_minecraft_stats'
-      )
-      .select(
-        'minecraft_uuid, first_seen_at'
-      )
-      .in(
-        'minecraft_uuid',
-        uuids
-      );
+  const now = new Date().toISOString();
 
-  if (existingError) {
-    console.error(
-      '[Minecraft Sync] Existing player lookup failed:',
-      existingError
+  /* =========================================================
+   * PLAYER MINECRAFT STATS
+   * ========================================================= */
+
+  if (players.length > 0) {
+    const statsRows = players.map(
+      (player) => ({
+        minecraft_uuid: player.uuid,
+        minecraft_username:
+          player.username,
+        server_id: serverId,
+        hearts: player.hearts,
+        kills: player.kills,
+        deaths: player.deaths,
+        money: player.money,
+        playtime_seconds:
+          player.playtimeSeconds,
+        wins: player.wins,
+        kill_streak:
+          player.killStreak,
+        blocks_broken:
+          player.blocksBroken,
+        blocks_placed:
+          player.blocksPlaced,
+        items_crafted:
+          player.itemsCrafted,
+        items_used:
+          player.itemsUsed,
+        mobs_killed:
+          player.mobsKilled,
+        players_killed:
+          player.playersKilled,
+        distance_walked:
+          player.distanceWalked,
+        distance_run:
+          player.distanceRun,
+        distance_flown:
+          player.distanceFlown,
+        damage_dealt:
+          player.damageDealt,
+        damage_taken:
+          player.damageTaken,
+        jumps: player.jumps,
+        /* Keep the existing first_seen_at on upserts. */
+        last_seen_at: now,
+        updated_at: now,
+      })
     );
 
-    return sendJson(res, 500, {
-      success: false,
-      message:
-        'Failed to prepare player stats sync.',
-      code:
-        existingError.code || null,
-    });
-  }
-
-  const existingMap =
-    new Map<
-      string,
-      string | null
-    >(
-      (
-        (existingRows ?? []) as ExistingStatRow[]
-      ).map((row) => [
-        row.minecraft_uuid,
-        row.first_seen_at,
-      ])
-    );
-
-  /*
-   * IMPORTANT:
-   * Every NOT NULL stats column is sent explicitly.
-   */
-  const statsRows =
-    players.map((player) => ({
-      minecraft_uuid:
-        player.uuid,
-
-      minecraft_username:
-        player.username,
-
-      server_id:
-        serverId,
-
-      hearts:
-        player.hearts,
-
-      kills:
-        player.kills,
-
-      deaths:
-        player.deaths,
-
-      money:
-        player.money,
-
-      playtime_seconds:
-        player.playtimeSeconds,
-
-      wins:
-        player.wins,
-
-      kill_streak:
-        player.killStreak,
-
-      blocks_broken:
-        player.blocksBroken,
-
-      blocks_placed:
-        player.blocksPlaced,
-
-      items_crafted:
-        player.itemsCrafted,
-
-      items_used:
-        player.itemsUsed,
-
-      mobs_killed:
-        player.mobsKilled,
-
-      players_killed:
-        player.playersKilled,
-
-      distance_walked:
-        player.distanceWalked,
-
-      distance_run:
-        player.distanceRun,
-
-      distance_flown:
-        player.distanceFlown,
-
-      damage_dealt:
-        player.damageDealt,
-
-      damage_taken:
-        player.damageTaken,
-
-      jumps:
-        player.jumps,
-
-      first_seen_at:
-        existingMap.get(
-          player.uuid
-        ) ?? now,
-
-      last_seen_at:
-        now,
-
-      updated_at:
-        now,
-    }));
-
-  const {
-    error: statsError,
-  } =
-    await supabase
-      .from(
-        'player_minecraft_stats'
-      )
-      .upsert(
-        statsRows,
-        {
+    const { error: statsError } =
+      await supabase
+        .from('player_minecraft_stats')
+        .upsert(statsRows, {
           onConflict:
             'minecraft_uuid',
-        }
+        });
+
+    if (statsError) {
+      console.error(
+        '[Minecraft Sync] Stats error:',
+        statsError
       );
 
-  if (statsError) {
-    console.error(
-      '[Minecraft Sync] Stats upsert failed:',
-      {
-        code:
-          statsError.code,
-        message:
-          statsError.message,
-        details:
-          statsError.details,
-        hint:
-          statsError.hint,
-      }
-    );
+      return sendJson(
+        res,
+        500,
+        {
+          success: false,
+          message:
+            'Failed to update player stats.',
+        }
+      );
+    }
 
-    return sendJson(res, 500, {
-      success: false,
-      message:
-        'Failed to update player stats.',
-      code:
-        statsError.code || null,
-      details:
-        statsError.details || null,
-      hint:
-        statsError.hint || null,
-    });
-  }
-
-  /*
-   * Generic Minecraft statistics.
-   */
-  const statisticRows =
-    players.flatMap(
-      (player) =>
+    const statisticRows =
+      players.flatMap((player) =>
         Object.entries(
           player.statistics
         ).map(
@@ -613,32 +567,21 @@ export default async function handler(
           ]) => ({
             minecraft_uuid:
               player.uuid,
-
             statistic_key:
               statisticKey,
-
             statistic_value:
               statisticValue,
-
-            category:
-              'minecraft',
-
-            updated_at:
-              now,
+            category: 'minecraft',
+            updated_at: now,
           })
         )
-    );
+      );
 
-  if (
-    statisticRows.length > 0
-  ) {
-    const {
-      error: statisticError,
-    } =
-      await supabase
-        .from(
-          'player_statistics'
-        )
+    if (statisticRows.length > 0) {
+      const {
+        error: statisticError,
+      } = await supabase
+        .from('player_statistics')
         .upsert(
           statisticRows,
           {
@@ -647,173 +590,374 @@ export default async function handler(
           }
         );
 
-    if (statisticError) {
-      console.error(
-        '[Minecraft Sync] Statistics upsert failed:',
-        {
-          code:
-            statisticError.code,
-          message:
-            statisticError.message,
-          details:
-            statisticError.details,
-          hint:
-            statisticError.hint,
-        }
-      );
+      if (statisticError) {
+        console.error(
+          '[Minecraft Sync] Statistic error:',
+          statisticError
+        );
 
-      return sendJson(res, 500, {
-        success: false,
-        message:
-          'Failed to update Minecraft statistics.',
-        code:
-          statisticError.code || null,
-        details:
-          statisticError.details || null,
-        hint:
-          statisticError.hint || null,
-      });
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            message:
+              'Failed to update statistics.',
+          }
+        );
+      }
     }
   }
 
-  /*
-   * Find current active season.
-   */
-  const {
-    data: activeSeason,
-    error: seasonError,
-  } =
-    await supabase
+  /* =========================================================
+   * ACTIVE SEASON BEFORE FINALIZATION
+   * ========================================================= */
+
+  const getActiveSeason = async () =>
+    supabase
       .from('seasons')
       .select(
         'id, season_number, name, slug, status'
       )
-      .eq(
-        'server_id',
-        serverId
-      )
-      .eq(
-        'status',
-        'active'
-      )
-      .order(
-        'season_number',
-        {
-          ascending: false,
-        }
-      )
+      .eq('server_id', serverId)
+      .eq('status', 'active')
+      .order('season_number', {
+        ascending: false,
+      })
       .limit(1)
       .maybeSingle();
 
+  const {
+    data: activeSeasonBeforeFinalization,
+    error: seasonError,
+  } = await getActiveSeason();
+
   if (seasonError) {
     console.error(
-      '[Minecraft Sync] Active season lookup failed:',
+      '[Minecraft Sync] Season lookup error:',
       seasonError
     );
 
-    return sendJson(res, 500, {
-      success: false,
-      message:
-        'Failed to read active season.',
-      code:
-        seasonError.code || null,
-      details:
-        seasonError.details || null,
-      hint:
-        seasonError.hint || null,
-    });
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'Failed to read active season.',
+      }
+    );
   }
 
-  /*
-   * Update season leaderboard automatically.
-   *
-   * This function:
-   * 1. Creates missing season baselines.
-   * 2. Calculates season-specific kills/deaths/playtime.
-   * 3. Updates current hearts/money/wins/streak.
+  /* =========================================================
+   * SEASON PARTICIPATION + IDENTITY + ADVANCEMENTS
+   * ========================================================= */
+
+  let participationSyncedCount = 0;
+  let advancementSyncedCount = 0;
+  const syncWarnings: string[] = [];
+
+  if (
+    activeSeasonBeforeFinalization &&
+    players.length > 0
+  ) {
+    /*
+     * Do not make one player's seasonal sync failure abort the
+     * entire server sync. Stats have already been written above.
+     * This is especially important when an older Supabase RPC is
+     * temporarily unavailable or its EXECUTE privilege is missing.
+     */
+    const seasonResults =
+      await Promise.all(
+        players.map(async (player) => {
+          let participationOk = false;
+          let advancementCount = 0;
+
+          try {
+            const {
+              data,
+              error,
+            } = await supabase.rpc(
+              'record_season_player_participation',
+              {
+                p_season_id:
+                  activeSeasonBeforeFinalization.id,
+                p_minecraft_uuid:
+                  player.uuid,
+                p_minecraft_username:
+                  player.username,
+                p_server_id: serverId,
+                p_rank_name:
+                  player.rankName || '',
+                p_team_name:
+                  player.teamName || '',
+              }
+            );
+
+            if (error) {
+              console.warn(
+                '[Minecraft Sync] Seasonal identity RPC warning:',
+                error.message
+              );
+              return {
+                participationOk: false,
+                advancementCount: 0,
+                warning:
+                  `Season identity sync skipped for ${player.username}.`,
+              };
+            }
+
+            participationOk =
+              data === true;
+          } catch (error) {
+            console.warn(
+              '[Minecraft Sync] Seasonal identity exception:',
+              error
+            );
+
+            return {
+              participationOk: false,
+              advancementCount: 0,
+              warning:
+                `Season identity sync skipped for ${player.username}.`,
+            };
+          }
+
+          try {
+            const {
+              data,
+              error,
+            } = await supabase.rpc(
+              'sync_player_season_advancement_states',
+              {
+                p_season_id:
+                  activeSeasonBeforeFinalization.id,
+                p_minecraft_uuid:
+                  player.uuid,
+                p_minecraft_username:
+                  player.username,
+                p_server_id: serverId,
+                p_advancements:
+                  player.advancements || [],
+              }
+            );
+
+            if (error) {
+              console.warn(
+                '[Minecraft Sync] Advancement RPC warning:',
+                error.message
+              );
+
+              return {
+                participationOk,
+                advancementCount: 0,
+                warning:
+                  `Advancement sync skipped for ${player.username}.`,
+              };
+            }
+
+            if (
+              typeof data === 'number'
+            ) {
+              advancementCount =
+                data;
+            }
+          } catch (error) {
+            console.warn(
+              '[Minecraft Sync] Advancement exception:',
+              error
+            );
+
+            return {
+              participationOk,
+              advancementCount: 0,
+              warning:
+                `Advancement sync skipped for ${player.username}.`,
+            };
+          }
+
+          return {
+            participationOk,
+            advancementCount,
+            warning: null,
+          };
+        })
+      );
+
+    for (const result of seasonResults) {
+      if (result.participationOk) {
+        participationSyncedCount += 1;
+      }
+
+      advancementSyncedCount +=
+        result.advancementCount || 0;
+
+      if (result.warning) {
+        syncWarnings.push(
+          result.warning
+        );
+      }
+    }
+  }
+
+  /* =========================================================
+   * FINALIZE EXPIRED SEASONS AFTER THE LAST SYNC
+   * ========================================================= */
+
+  const {
+    data: finalizedSeasonCount,
+    error: finalizeError,
+  } = await supabase.rpc(
+    'finalize_expired_seasons',
+    {
+      p_server_id: serverId,
+    }
+  );
+
+  if (finalizeError) {
+    console.error(
+      '[Minecraft Sync] Season finalization error:',
+      finalizeError
+    );
+
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'Player data synced, but season finalization failed.',
+      }
+    );
+  }
+
+  /* =========================================================
+   * ACTIVE SEASON AFTER FINALIZATION
+   * ========================================================= */
+
+  const {
+    data: activeSeason,
+    error: activeSeasonAfterError,
+  } = await getActiveSeason();
+
+  if (activeSeasonAfterError) {
+    console.error(
+      '[Minecraft Sync] Active season re-check error:',
+      activeSeasonAfterError
+    );
+
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        message:
+          'Failed to re-check active season.',
+      }
+    );
+  }
+
+  /* =========================================================
+   * DYNAMIC LEADERBOARD SYNC
+   * =========================================================
+   * Existing leaderboard function and behavior remain unchanged.
    */
+
   let leaderboardSyncedCount = 0;
 
   if (activeSeason) {
     const {
-      data: leaderboardResult,
-      error: leaderboardError,
-    } =
-      await supabase.rpc(
-        'sync_active_season_leaderboard',
-        {
-          p_server_id:
-            serverId,
-        }
+      data: syncResult,
+      error: syncError,
+    } = await supabase.rpc(
+      'sync_active_season_leaderboard',
+      {
+        p_server_id: serverId,
+      }
+    );
+
+    if (syncError) {
+      console.warn(
+        '[Minecraft Sync] Leaderboard sync warning:',
+        syncError.message
       );
 
-    if (leaderboardError) {
-      console.error(
-        '[Minecraft Sync] Leaderboard sync failed:',
-        {
-          code:
-            leaderboardError.code,
-          message:
-            leaderboardError.message,
-          details:
-            leaderboardError.details,
-          hint:
-            leaderboardError.hint,
-        }
+      syncWarnings.push(
+        'Leaderboard sync could not be refreshed; player data was still saved.'
       );
-
-      return sendJson(res, 500, {
-        success: false,
-        message:
-          'Player stats synced, but leaderboard sync failed.',
-        code:
-          leaderboardError.code || null,
-        details:
-          leaderboardError.details || null,
-        hint:
-          leaderboardError.hint || null,
-      });
     }
 
-    /*
-     * Supabase may return the scalar directly
-     * or a single-item array depending on API layer.
-     */
     if (
-      Array.isArray(
-        leaderboardResult
-      )
+      typeof syncResult === 'number'
     ) {
       leaderboardSyncedCount =
-        Number(
-          leaderboardResult[0]
-        ) || 0;
-    } else {
-      leaderboardSyncedCount =
-        Number(
-          leaderboardResult
-        ) || 0;
+        syncResult;
     }
   }
 
-  return sendJson(res, 200, {
-    success: true,
+  /* =========================================================
+   * SYNC HEARTBEAT
+   * ========================================================= */
 
-    syncedPlayers:
-      players.length,
+  await supabase
+    .from('leaderboard_sync_state')
+    .upsert(
+      {
+        server_id: serverId,
+        bridge_version:
+          cleanText(
+            body.bridgeVersion,
+            32
+          ) || 'unknown',
+        active_season_id:
+          activeSeason?.id || null,
+        last_success_at: now,
+        updated_at: now,
+      },
+      {
+        onConflict: 'server_id',
+      }
+    );
 
-    leaderboardSyncedCount,
+  /* =========================================================
+   * RESPONSE
+   * ========================================================= */
 
-    activeSeason:
-      activeSeason || null,
-
-    syncedAt:
-      now,
-
-    bridgeVersion:
-      cleanText(
-        body.bridgeVersion,
-        32
-      ) || 'unknown',
-  });
+  return sendJson(
+    res,
+    200,
+    {
+      success: true,
+      syncType,
+      syncedPlayers: players.length,
+      participationSyncedCount,
+      advancementSyncedCount,
+      leaderboardSyncedCount,
+      finalizedSeasonCount:
+        typeof finalizedSeasonCount ===
+        'number'
+          ? finalizedSeasonCount
+          : 0,
+      activeSeason: activeSeason
+        ? {
+            id: activeSeason.id,
+            seasonNumber:
+              activeSeason.season_number,
+            name: activeSeason.name,
+            slug: activeSeason.slug,
+            status: activeSeason.status,
+          }
+        : null,
+      previousActiveSeasonId:
+        activeSeasonBeforeFinalization?.id ||
+        null,
+      bridgeVersion:
+        cleanText(
+          body.bridgeVersion,
+          32
+        ) || 'unknown',
+      syncedAt: now,
+      warnings: syncWarnings.slice(0, 25),
+    }
+  );
 }

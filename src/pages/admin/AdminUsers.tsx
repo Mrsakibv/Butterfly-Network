@@ -42,6 +42,7 @@ const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'memories', label: 'Memories' },
   { key: 'achievements', label: 'Achievements' },
   { key: 'minecraft', label: 'Minecraft Integration' },
+  
 ];
 
 export const AdminUsers: React.FC = () => {
