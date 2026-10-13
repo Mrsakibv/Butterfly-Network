@@ -24,6 +24,7 @@ import {
   BrainCircuit,
   BadgeCheck,
   Cable,
+  Zap,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
@@ -58,7 +59,8 @@ export type AdminSectionKey =
   | 'seasons'
   | 'memories'
   | 'achievements'
-  | 'minecraft';
+  | 'minecraft'
+  | 'afk';
 
 const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
@@ -220,6 +222,13 @@ const ADMIN_NAV_ITEMS: {
     label: 'Minecraft Integration',
     icon: Cable,
     path: '/admin/minecraft',
+  },
+  {
+    key: 'afk',
+    permission: 'afk',
+    label: 'AFK Management',
+    icon: Zap,
+    path: '/admin/afk',
   },
   {
     key: 'users',

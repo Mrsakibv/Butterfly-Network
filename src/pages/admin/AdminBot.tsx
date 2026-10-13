@@ -230,7 +230,7 @@ export const AdminBot: React.FC = () => {
 
   if (loading) {
     return (
-      <AdminLayout active="bot">
+      <AdminLayout active="afk">
         <div className="flex min-h-[400px] items-center justify-center">
           <div className="flex items-center gap-3 text-white/60">
             <RefreshCw className="h-5 w-5 animate-spin" />
@@ -243,7 +243,7 @@ export const AdminBot: React.FC = () => {
 
   if (!bot) {
     return (
-      <AdminLayout active="bot">
+      <AdminLayout active="afk">
         <div className="mx-auto max-w-5xl">
           <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
             <div className="flex items-start gap-4">
@@ -278,7 +278,7 @@ export const AdminBot: React.FC = () => {
   const StatusIcon = statusConfig.icon;
 
   return (
-    <AdminLayout active="bot">
+    <AdminLayout active="afk">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

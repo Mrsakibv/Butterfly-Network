@@ -5,7 +5,6 @@ import ch.njol.skript.variables.Variables;
 import io.papermc.paper.advancement.AdvancementDisplay;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.advancement.Advancement;
@@ -871,10 +870,6 @@ public final class ButterflyNetworkBridge
         );
     }
 
-    private void collectAndSendSnapshot() {
-        startPeriodicSnapshot();
-    }
-
     private void collectAndSendSnapshotForPlayer(
             Player player,
             boolean includeAdvancements
@@ -901,17 +896,6 @@ public final class ButterflyNetworkBridge
                         "join"
                 ),
                 1
-        );
-    }
-
-    private Map<String, Object> createPlayerSnapshot(
-            Player player
-    ) {
-
-        return createPlayerSnapshot(
-                player,
-                true,
-                true
         );
     }
 

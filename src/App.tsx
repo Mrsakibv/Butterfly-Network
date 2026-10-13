@@ -56,11 +56,15 @@ import { AdminSocial } from './pages/admin/AdminSocial';
 import { AdminApplications } from './pages/admin/AdminApplications';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
+import { AfkRewardsPage } from './pages/AfkRewardsPage';
 import { AdminLeaderboard } from './pages/admin/AdminLeaderboard';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminSeasons } from './pages/admin/AdminSeasons';
 import { AdminMinecraft } from './pages/admin/AdminMinecraft';
 import { AdminAchievements } from './pages/admin/AdminAchievements';
+import { AdminLayout } from './pages/admin/AdminPanelPage';
+import { AdminAfk } from './pages/admin/AdminAfk';
+
 
 /* =========================================================
    PREMIUM LOADING SCREEN
@@ -510,6 +514,9 @@ function AppContent() {
     if (path === '/login-required') {
       return <LoginRequiredPage />;
     }
+    if (path === '/afk') {
+  return <AfkRewardsPage />;
+    }
 
     if (path === '/update-password') {
       return <UpdatePasswordPage />;
@@ -622,6 +629,9 @@ function AppContent() {
     if (path === '/admin/store') {
       return <AdminStore />;
     }
+      if (path === '/admin/afk') {
+      return <AdminAfk />;
+    }
 
     if (path === '/admin/home') {
       return <AdminHomeContent />;
@@ -711,7 +721,6 @@ function AppContent() {
     if (path === '/gallery') {
       return <GalleryPage />;
     }
-
     if (path === '/commands') {
       return <CommandsPage />;
     }
