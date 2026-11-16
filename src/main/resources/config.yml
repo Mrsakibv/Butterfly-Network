@@ -7,13 +7,12 @@ server-id: main
 api:
   url: "https://butterfly-network.vercel.app/api/minecraft-sync"
 
-  # Keep your existing MINECRAFT_API_KEY value here.
-  # Never publish this value.
-  api-key: "sakib_mc_secrate_api_key_01804825476_butterfly"
+  # Set this to the same secret as the website's MINECRAFT_API_KEY.
+  # Do not publish or commit the real key.
+  api-key: ""
 
-  # Periodic full sync interval.
-  # Example: 2400 = 40 minutes.
-  interval-seconds: 2400
+  # Periodic full sync interval. Join/leave snapshots are sent separately.
+  interval-seconds: 60
 
 bridge:
   version: "1.2.1"
@@ -29,12 +28,6 @@ bridge:
   # 1 is the safest setting for server performance.
   # 2-4 can be used on larger/higher-performance servers.
   players-per-tick: 1
-
-  # Only these worlds will be treated as Lifesteal worlds.
-  lifesteal-worlds:
-    - "Lifesteal"
-    - "Lifesteal_nether"
-    - "Lifesteal_the_end"
 
 logging:
   enabled: true

@@ -1,14 +1,12 @@
 package com.butterflynetwork.bridge;
 
-import ch.njol.skript.variables.Variables;
-
 import io.papermc.paper.advancement.AdvancementDisplay;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.Statistic;
 import org.bukkit.advancement.Advancement;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -39,11 +37,9 @@ import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,9 +64,6 @@ public final class ButterflyNetworkBridge
     private LuckPerms luckPerms;
     private final PlainTextComponentSerializer plainTextSerializer =
             PlainTextComponentSerializer.plainText();
-
-    private final Set<String> lifestealWorlds =
-            new HashSet<>();
 
     private final Map<UUID, Long> sessionStartMillis =
             new HashMap<>();
@@ -157,11 +150,6 @@ public final class ButterflyNetworkBridge
         getLogger().info(
                 " Cached advancements: "
                         + cachedAdvancements.size()
-        );
-
-        getLogger().info(
-                " Lifesteal worlds: "
-                        + lifestealWorlds
         );
 
         getLogger().info(
@@ -327,7 +315,7 @@ public final class ButterflyNetworkBridge
                 getConfig()
                         .getString(
                                 "bridge.version",
-                                "1.1.0"
+                                "1.2.1"
                         )
                         .trim();
 
@@ -371,26 +359,6 @@ public final class ButterflyNetworkBridge
                         false
                 );
 
-        lifestealWorlds.clear();
-
-        for (
-                String worldName
-                : getConfig()
-                        .getStringList(
-                                "bridge.lifesteal-worlds"
-                        )
-        ) {
-
-            if (
-                    worldName != null
-                            && !worldName.isBlank()
-            ) {
-
-                lifestealWorlds.add(
-                        worldName.trim()
-                );
-            }
-        }
     }
 
     private void startSyncTask() {
@@ -911,57 +879,26 @@ public final class ButterflyNetworkBridge
         String uuidString =
                 uuid.toString();
 
-        boolean lifestealWorld =
-                isLifestealWorld(
-                        player.getWorld()
+        double hearts =
+                Math.max(
+                        0,
+                        player.getHealth() / 2.0
                 );
 
-        double hearts = 10.0;
-
-        if (lifestealWorld) {
-
-            hearts =
-                    readLifestealVariable(
-                            "lifesteal::player::"
-                                    + uuidString
-                                    + "::hearts",
-                            readMaximumHealthFallback(
-                                    player
-                            )
-                    );
-        }
-
         long kills =
-                readLifestealVariable(
-                        "lifesteal::player::"
-                                + uuidString
-                                + "::kills",
-                        0
+                safeGetStatisticLong(
+                        player,
+                        Statistic.PLAYER_KILLS
                 );
 
         long deaths =
-                readLifestealVariable(
-                        "lifesteal::player::"
-                                + uuidString
-                                + "::deaths",
-                        0
+                safeGetStatisticLong(
+                        player,
+                        Statistic.DEATHS
                 );
 
-        long killStreak =
-                readLifestealVariable(
-                        "lifesteal::player::"
-                                + uuidString
-                                + "::streak",
-                        0
-                );
-
-        long wins =
-                readLifestealVariable(
-                        "lifesteal::player::"
-                                + uuidString
-                                + "::wins",
-                        0
-                );
+        MaterialStatisticTotals materialStatistics =
+                collectMaterialStatistics(player);
 
         double money =
                 readVaultBalance(
@@ -974,9 +911,12 @@ public final class ButterflyNetworkBridge
                 );
 
         long blocksBroken =
-                getPersistentLong(
-                        player.getPersistentDataContainer(),
-                        blocksBrokenKey
+                Math.max(
+                        getPersistentLong(
+                                player.getPersistentDataContainer(),
+                                blocksBrokenKey
+                        ),
+                        materialStatistics.blocksMined()
                 );
 
         long blocksPlaced =
@@ -1042,101 +982,21 @@ public final class ButterflyNetworkBridge
         Map<String, Object> statistics =
                 new LinkedHashMap<>();
 
-        /*
-         * Keep the real Minecraft statistic meaning:
-         * PLAY_ONE_MINUTE is stored in ticks.
-         */
+        for (Statistic statistic : Statistic.values()) {
+            if (statistic.getType() == Statistic.Type.UNTYPED) {
+                statistics.put(
+                        statistic.getKey().toString(),
+                        safeGetStatisticLong(
+                                player,
+                                statistic
+                        )
+                );
+            }
+        }
+
         statistics.put(
                 "minecraft:play_one_minute",
                 playtimeSeconds * 20L
-        );
-
-        statistics.put(
-                "minecraft:player_kills",
-                Math.max(
-                        0,
-                        playerKills
-                )
-        );
-
-        statistics.put(
-                "minecraft:mob_kills",
-                Math.max(
-                        0,
-                        mobKills
-                )
-        );
-
-        statistics.put(
-                "minecraft:jumps",
-                Math.max(
-                        0,
-                        jumps
-                )
-        );
-
-        statistics.put(
-                "minecraft:walk_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.WALK_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:sprint_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.SPRINT_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:fly_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.FLY_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:walk_on_water_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.WALK_ON_WATER_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:walk_under_water_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.WALK_UNDER_WATER_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:climb_one_cm",
-                safeGetStatisticLong(
-                        player,
-                        org.bukkit.Statistic.CLIMB_ONE_CM
-                )
-        );
-
-        statistics.put(
-                "minecraft:damage_dealt",
-                Math.max(
-                        0,
-                        damageDealt
-                )
-        );
-
-        statistics.put(
-                "minecraft:damage_taken",
-                Math.max(
-                        0,
-                        damageTaken
-                )
         );
 
         String rankName =
@@ -1224,22 +1084,6 @@ public final class ButterflyNetworkBridge
         );
 
         snapshot.put(
-                "wins",
-                Math.max(
-                        0L,
-                        wins
-                )
-        );
-
-        snapshot.put(
-                "killStreak",
-                Math.max(
-                        0L,
-                        killStreak
-                )
-        );
-
-        snapshot.put(
                 "blocksBroken",
                 Math.max(
                         0L,
@@ -1257,12 +1101,12 @@ public final class ButterflyNetworkBridge
 
         snapshot.put(
                 "itemsCrafted",
-                0L
+                materialStatistics.itemsCrafted()
         );
 
         snapshot.put(
                 "itemsUsed",
-                0L
+                materialStatistics.itemsUsed()
         );
 
         snapshot.put(
@@ -1637,89 +1481,50 @@ public final class ButterflyNetworkBridge
         return result;
     }
 
-    private boolean isLifestealWorld(
-            World world
-    ) {
-
-        if (world == null) {
-            return false;
-        }
-
-        return lifestealWorlds.contains(
-                world.getName()
-        );
-    }
-
-    private double readMaximumHealthFallback(
+    private MaterialStatisticTotals collectMaterialStatistics(
             Player player
     ) {
 
-        try {
+        long blocksMined = 0;
+        long itemsCrafted = 0;
+        long itemsUsed = 0;
 
-            var attribute =
-                    player.getAttribute(
-                            Attribute.MAX_HEALTH
-                    );
+        for (Material material : Material.values()) {
 
-            if (attribute == null) {
-                return 10.0;
+            if (material.isBlock()) {
+                blocksMined += Math.max(
+                        0,
+                        player.getStatistic(
+                                Statistic.MINE_BLOCK,
+                                material
+                        )
+                );
             }
 
-            return Math.max(
-                    0,
-                    attribute.getValue()
-            );
-
-        } catch (Exception ignored) {
-
-            return 10.0;
-        }
-    }
-
-    private long readLifestealVariable(
-            String variableName,
-            long fallback
-    ) {
-
-        Object value =
-                Variables.getVariable(
-                        variableName,
-                        null,
-                        false
+            if (material.isItem()) {
+                itemsCrafted += Math.max(
+                        0,
+                        player.getStatistic(
+                                Statistic.CRAFT_ITEM,
+                                material
+                        )
                 );
 
-        if (value instanceof Number number) {
-
-            return Math.max(
-                    0L,
-                    number.longValue()
-            );
-        }
-
-        return fallback;
-    }
-
-    private double readLifestealVariable(
-            String variableName,
-            double fallback
-    ) {
-
-        Object value =
-                Variables.getVariable(
-                        variableName,
-                        null,
-                        false
+                itemsUsed += Math.max(
+                        0,
+                        player.getStatistic(
+                                Statistic.USE_ITEM,
+                                material
+                        )
                 );
-
-        if (value instanceof Number number) {
-
-            return Math.max(
-                    0D,
-                    number.doubleValue()
-            );
+            }
         }
 
-        return fallback;
+        return new MaterialStatisticTotals(
+                blocksMined,
+                itemsCrafted,
+                itemsUsed
+        );
     }
 
     private double readVaultBalance(
@@ -2119,5 +1924,12 @@ public final class ButterflyNetworkBridge
                     "[Sync] " + message
             );
         }
+    }
+
+    private record MaterialStatisticTotals(
+            long blocksMined,
+            long itemsCrafted,
+            long itemsUsed
+    ) {
     }
 }

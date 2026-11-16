@@ -5,13 +5,13 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'how-to-join',
     category: 'Connection',
     question: 'How do I join Butterfly network?',
-    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly network" as the name and "play.butterfly.cc.cd" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.butterfly.cc.cd) and default port 19140.'
+    answer: 'Joining is simple! Open Minecraft, click Multiplayer > Add Server, enter "Butterfly network" as the name and "play.butterfly.cc.cd" as the server address, then click Done and Connect. For Bedrock edition, use the same server IP (play.butterfly.cc.cd) and default port 25506.'
   },
   {
     id: 'bedrock-support',
     category: 'Connection',
     question: 'Does Butterfly network support Bedrock?',
-    answer: 'Yes! Butterfly network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.butterfly.cc.cd" on port  19140.'
+    answer: 'Yes! Butterfly network features seamless cross-play compatibility via GeyserMC. Players on Windows 10/11 Bedrock, iOS, Android, Xbox, PlayStation, and Nintendo Switch can connect using the IP "play.butterfly.cc.cd" on port  25506.'
   },
   {
     id: 'versions-supported',
@@ -41,7 +41,7 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'join-discord',
     category: 'Support',
     question: 'How can I join the Discord community?',
-    answer: 'Click any "Join Discord" button across our website, or visit directly via https://discord.com/invite/d57g4gjXuc. Once you join, you will gain access to server announcements, giveaways, tournament signups, and community voice channels.'
+    answer: 'Click any "Join Discord" button across our website, or visit directly via https://discord.gg/9EMGJ4eZWB. Once you join, you will gain access to server announcements, giveaways, tournament signups, and community voice channels.'
   },
   {
     id: 'Buy-Rank',
@@ -53,6 +53,6 @@ export const FAQ_DATA: FaqItem[] = [
     id: 'contact-staff',
     category: 'Support',
     question: 'How do I contact staff?',
-    answer: 'Our international staff team is active 24/7. You can reach out by opening a ticket on our Discord server (https://discord.com/invite/d57g4gjXuc), asking in the #help channel, or messaging online Moderators and Helpers in-game with /helpop.'
+    answer: 'Our international staff team is active 24/7. You can reach out by opening a ticket on our Discord server (https://discord.gg/9EMGJ4eZWB), asking in the #help channel, or messaging online Moderators and Helpers in-game with /helpop.'
   }
 ];

@@ -1,13 +1,10 @@
 name: ButterflyNetworkBridge
-version: '1.2.0'
+version: '1.2.1'
 main: com.butterflynetwork.bridge.ButterflyNetworkBridge
 description: Butterfly Network Minecraft to Website live statistics bridge
 author: Butterfly Network
 website: https://butterfly-network.vercel.app
 api-version: '26.2'
-
-depend:
-  - Skript
 
 softdepend:
   - Vault
