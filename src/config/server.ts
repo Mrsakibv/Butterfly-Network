@@ -43,8 +43,8 @@ export const DEFAULT_HERO_SETTINGS: HeroSettings = {
 export const SERVER_CONFIG: ServerConfig = {
   serverName: "Butterfly network",
   tagline: "Your next Minecraft adventure starts here :)",
-  javaIp: "butterfly.naksh.gg",
-  bedrockIp: "butterfly.naksh.gg",
+  javaIp: "play.butterfly.cc.cd",
+  bedrockIp: "play.butterfly.cc.cd",
   port: 25565,
   bedrockPort: 19140,
   version: "1.8.x - 1.21.x",
@@ -55,7 +55,7 @@ export const SERVER_CONFIG: ServerConfig = {
   storeUrl: "#",
   voteUrl: "#",
   // Leave empty or set to custom endpoint. If empty, will use public mcstatus.io API with demo fallback
-  serverStatusApi: "https://api.mcstatus.io/v2/status/java/butterfly.naksh.gg",
+  serverStatusApi: "https://api.mcstatus.io/v2/status/java/play.butterfly.cc.cd",
   copyrightYear: 2026,
 };
 

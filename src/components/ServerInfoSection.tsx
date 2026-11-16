@@ -84,7 +84,7 @@ export const ServerInfoSection: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Network Port:</span>
-                <span className="font-mono text-purple-300 font-bold">{SERVER_CONFIG.port}</span>
+                <span className="font-mono text-purple-300 font-bold">{SERVER_CONFIG.bedrockPort}</span>
               </div>
               <div className="pt-2">
                 <CopyIpButton ip={SERVER_CONFIG.javaIp} label="Copy Server IP" variant="glass" className="w-full text-xs py-2" />

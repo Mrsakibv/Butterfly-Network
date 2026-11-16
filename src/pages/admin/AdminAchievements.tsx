@@ -399,36 +399,146 @@ export const AdminAchievements: React.FC = () => {
     item: ActivityType,
     field: 'is_enabled' | 'show_on_profile'
   ) => {
-    const next = !item[field];
+    setError('');
+    setMessage('');
 
-    const { error: updateError } = await supabase
-      .from('profile_activity_types')
-      .update({ [field]: next })
-      .eq('activity_key', item.activity_key);
+    try {
+      // Always derive the next state from the database, not a possibly stale
+      // React item. This is important when turning a Disabled item back on.
+      const { data: currentRow, error: readError } = await supabase
+        .from('profile_activity_types')
+        .select('activity_key, display_name, source_stat_key, is_enabled, show_on_profile')
+        .eq('activity_key', item.activity_key)
+        .maybeSingle();
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
+      if (readError) throw readError;
+      if (!currentRow) {
+        throw new Error(`Activity "${item.activity_key}" was not returned by Supabase. Check SELECT permissions/RLS.`);
+      }
 
-    await logAdminActivity({
-      action: 'visibility_changed',
-      section: 'profile_activities',
-      itemName: item.display_name,
-      details: {
-        activity_key: item.activity_key,
-        field,
-        value: next,
-      },
-    });
+      const next = currentRow[field] !== true;
 
-    setActivities((current) =>
-      current.map((activity) =>
-        activity.activity_key === item.activity_key
-          ? { ...activity, [field]: next }
+      // Persist the activity setting and require a returned row. If RLS blocks
+      // the update, do not display a success message.
+      const { data: updatedRow, error: updateError } = await supabase
+        .from('profile_activity_types')
+        .update({ [field]: next, updated_at: new Date().toISOString() })
+        .eq('activity_key', item.activity_key)
+        .select('activity_key, display_name, source_stat_key, is_enabled, show_on_profile')
+        .maybeSingle();
+
+      if (updateError) throw updateError;
+      if (!updatedRow) {
+        throw new Error('Supabase did not return an updated activity row. Check UPDATE policy/RLS for profile_activity_types.');
+      }
+
+      // Confirm with a fresh SELECT. Some triggers/policies can make a write
+      // appear successful while the final stored value differs.
+      const { data: verifiedRow, error: verifyError } = await supabase
+        .from('profile_activity_types')
+        .select('activity_key, display_name, source_stat_key, is_enabled, show_on_profile')
+        .eq('activity_key', item.activity_key)
+        .maybeSingle();
+
+      if (verifyError) throw verifyError;
+      if (!verifiedRow || verifiedRow[field] !== next) {
+        throw new Error(`Database verification failed: ${field} is still ${String(verifiedRow?.[field])}, expected ${String(next)}.`);
+      }
+
+      // ProfilePage reads leaderboard_categories, so mirror matching stat rows.
+      // Check affected row counts; an UPDATE that matches zero rows is not a
+      // successful profile-category change even if Supabase returns no error.
+      let categoryNotice = '';
+      const statKey = verifiedRow.source_stat_key?.trim();
+      if (statKey) {
+        const { data: matchingCategories, error: categoryReadError } = await supabase
+          .from('leaderboard_categories')
+          .select('id, stat_key, is_active, show_on_profile')
+          .eq('stat_key', statKey);
+
+        if (categoryReadError) throw categoryReadError;
+
+        if (!matchingCategories || matchingCategories.length === 0) {
+          categoryNotice = ` Activity saved, but no leaderboard_categories row has stat_key "${statKey}"; the public profile category cannot be synced until that mapping exists.`;
+        } else {
+          const categoryField = field === 'is_enabled' ? 'is_active' : 'show_on_profile';
+          const { data: updatedCategories, error: categoryUpdateError } = await supabase
+            .from('leaderboard_categories')
+            .update({ [categoryField]: next, updated_at: new Date().toISOString() })
+            .eq('stat_key', statKey)
+            .select('id, stat_key, is_active, show_on_profile');
+
+          if (categoryUpdateError) throw categoryUpdateError;
+          if (!updatedCategories || updatedCategories.length !== matchingCategories.length) {
+            throw new Error(`Activity setting saved, but leaderboard category update matched ${updatedCategories?.length ?? 0} row(s), expected ${matchingCategories.length}. Check UPDATE policy/RLS on leaderboard_categories.`);
+          }
+
+          const { data: verifiedCategories, error: categoryVerifyError } = await supabase
+            .from('leaderboard_categories')
+            .select('id, stat_key, is_active, show_on_profile')
+            .eq('stat_key', statKey);
+
+          if (categoryVerifyError) throw categoryVerifyError;
+          const allMatch = (verifiedCategories || []).length === matchingCategories.length &&
+            (verifiedCategories || []).every((category) => category[categoryField] === next);
+          if (!allMatch) {
+            throw new Error(`Activity setting saved, but leaderboard_categories.${categoryField} did not persist for stat_key "${statKey}".`);
+          }
+        }
+      }
+
+      // Update local state directly from the verified database row. Do not call
+      // loadAll() here: its concurrent request could overwrite this state.
+      setActivities((current) => current.map((activity) =>
+        activity.activity_key === verifiedRow.activity_key
+          ? {
+              ...activity,
+              is_enabled: verifiedRow.is_enabled,
+              show_on_profile: verifiedRow.show_on_profile,
+            }
           : activity
-      )
-    );
+      ));
+
+      try {
+        await logAdminActivity({
+          action: 'visibility_changed',
+          section: 'profile_activities',
+          itemName: verifiedRow.display_name || item.display_name,
+          details: {
+            activity_key: verifiedRow.activity_key,
+            field,
+            value: verifiedRow[field],
+          },
+        });
+      } catch (logError) {
+        console.error('Activity audit log failed:', logError);
+      }
+
+      const status = field === 'is_enabled'
+        ? (verifiedRow.is_enabled ? 'enabled' : 'disabled')
+        : (verifiedRow.show_on_profile ? 'visible on profile' : 'hidden from profile');
+      setMessage(`Activity ${status} and verified in database.${categoryNotice}`);
+    } catch (error) {
+      console.error('Activity setting update failed:', error);
+      setError(`Save/verification failed: ${error instanceof Error ? error.message : String(error)}`);
+
+      // Restore UI to whatever the database currently says after a failure.
+      const { data: actualRow, error: actualReadError } = await supabase
+        .from('profile_activity_types')
+        .select('activity_key, is_enabled, show_on_profile')
+        .eq('activity_key', item.activity_key)
+        .maybeSingle();
+
+      if (actualReadError) {
+        console.error('Could not re-read activity after failure:', actualReadError);
+      } else if (actualRow) {
+        setActivities((current) => current.map((activity) =>
+          activity.activity_key === actualRow.activity_key
+            ? { ...activity, is_enabled: actualRow.is_enabled, show_on_profile: actualRow.show_on_profile }
+            : activity
+        ));
+      }
+    }
   };
 
   const deleteActivity = async (item: ActivityType) => {
@@ -554,34 +664,50 @@ export const AdminAchievements: React.FC = () => {
     item: CustomAchievement
   ) => {
     const next = !item.is_enabled;
+    setError('');
+    setMessage('');
 
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from('profile_custom_achievements')
       .update({ is_enabled: next })
-      .eq('id', item.id);
+      .eq('id', item.id)
+      .select('id, is_enabled')
+      .maybeSingle();
 
     if (updateError) {
-      setError(updateError.message);
+      setError(`Could not save achievement setting: ${updateError.message}`);
       return;
     }
 
-    await logAdminActivity({
-      action: 'visibility_changed',
-      section: 'profile_achievements',
-      itemName: item.title,
-      details: {
-        achievement_id: item.id,
-        value: next,
-      },
-    });
+    if (!data) {
+      setError(
+        'Achievement setting was not saved: no database row was updated. Check Supabase RLS policies and permissions.'
+      );
+      return;
+    }
 
     setAchievements((current) =>
       current.map((achievement) =>
-        achievement.id === item.id
-          ? { ...achievement, is_enabled: next }
+        achievement.id === data.id
+          ? { ...achievement, is_enabled: data.is_enabled }
           : achievement
       )
     );
+    setMessage('Achievement setting saved successfully.');
+
+    try {
+      await logAdminActivity({
+        action: 'visibility_changed',
+        section: 'profile_achievements',
+        itemName: item.title,
+        details: {
+          achievement_id: item.id,
+          value: data.is_enabled,
+        },
+      });
+    } catch (logError) {
+      console.error('Achievement audit log failed:', logError);
+    }
   };
 
   const awardAchievement = async () => {

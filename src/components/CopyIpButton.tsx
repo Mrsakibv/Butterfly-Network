@@ -12,7 +12,7 @@ interface CopyIpButtonProps {
 }
 
 export const CopyIpButton: React.FC<CopyIpButtonProps> = ({
-  ip = 'butterfly.naksh.gg',
+  ip = 'play.butterfly.cc.cd',
   label = 'Copy IP',
   variant = 'primary',
   className = '',

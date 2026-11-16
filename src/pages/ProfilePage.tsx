@@ -1326,6 +1326,9 @@ export const ProfilePage: React.FC = () => {
     setShowAllAdvancements,
   ] = useState(false);
 
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
+  const [customAchievementCatalog, setCustomAchievementCatalog] = useState<UnknownRecord[]>([]);
+
   const [awards, setAwards] =
     useState<SeasonAward[]>(
       []
@@ -2982,6 +2985,8 @@ export const ProfilePage: React.FC = () => {
           );
 
           setShowAllAdvancements(false);
+          setShowAllAchievements(false);
+          setCustomAchievementCatalog([]);
 
           setTeamInfo(
             null
@@ -3003,6 +3008,8 @@ export const ProfilePage: React.FC = () => {
           awardRows,
           recordHighlightsResult,
           advancementStatesResult,
+          customAchievementDefinitions,
+          customAchievementAwardRows,
         ] =
           await Promise.all([
             loadTable(
@@ -3046,7 +3053,18 @@ export const ProfilePage: React.FC = () => {
               }
             ),
 
+            // Admin-managed custom achievements and player awards are stored separately
+            // from the legacy player_achievements tables. Read-only queries; no schema changes.
+            supabase.from('profile_custom_achievements').select('*').eq('is_enabled', true).order('sort_order', { ascending: true }).limit(500),
+            supabase.from('profile_custom_achievement_awards').select('*').eq('minecraft_uuid', minecraftUuid).eq('season_id', selectedSeason.season_id).limit(500),
           ]);
+
+        const customDefinitions = (!customAchievementDefinitions.error ? (customAchievementDefinitions.data || []) : []) as UnknownRecord[];
+        const customAwards = (!customAchievementAwardRows.error ? (customAchievementAwardRows.data || []) : []) as UnknownRecord[];
+        setCustomAchievementCatalog([
+          ...customDefinitions.map((item) => ({ ...item, _catalogKind: 'custom' })),
+          ...achievementRows.filter((item) => item.is_enabled !== false).map((item) => ({ ...item, _catalogKind: 'standard' })),
+        ]);
 
         const matchingAchievementLinks =
           playerAchievementRows.filter(
@@ -3355,7 +3373,25 @@ export const ProfilePage: React.FC = () => {
             statKey: '',
             recordValue: null,
           })),
-        ] as SeasonAchievement[];
+          ...customAwards.map((award, index) => {
+            const achievementId = readString(award, ['achievement_id']);
+            const definition = customDefinitions.find((item) => readString(item, ['id']) === achievementId);
+            if (!definition) return null;
+            return {
+              id: `custom-${achievementId}-${readString(award, ['id'], String(index))}`,
+              title: readString(definition, ['title'], 'Custom Achievement'),
+              description: readString(definition, ['description']),
+              iconUrl: readString(definition, ['icon_url']),
+              rarity: readString(definition, ['rarity'], 'Common'),
+              reward: readString(definition, ['reward_text']),
+              isCustom: true,
+              earnedAt: readString(award, ['awarded_at', 'created_at']) || null,
+              kind: 'custom' as const,
+              statKey: '',
+              recordValue: null,
+            };
+          }).filter((item): item is NonNullable<typeof item> => item !== null),
+        ].filter((item, index, array) => array.findIndex((other) => other.id === item.id) === index) as SeasonAchievement[];
 
         const normalizedAwards =
           awardRows
@@ -4706,7 +4742,11 @@ export const ProfilePage: React.FC = () => {
                                         key={
                                           achievement.id
                                         }
-                                        className="rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setShowAllAchievements(true)}
+                                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setShowAllAchievements(true); }}
+                                        className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center transition hover:border-amber-400/30 hover:bg-amber-500/[0.04]"
                                       >
                                         <div className="mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/30 text-purple-300">
                                           {achievement.iconUrl ? (
@@ -4763,6 +4803,16 @@ export const ProfilePage: React.FC = () => {
                                   }
                                 )}
                             </div>
+                          )}
+                          {!extrasLoading && customAchievementCatalog.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllAchievements(true)}
+                              className="mt-4 flex w-full items-center justify-between rounded-xl border border-amber-400/15 bg-amber-500/5 px-3 py-2.5 text-[10px] font-bold text-amber-100 transition hover:border-amber-400/30 hover:bg-amber-500/10"
+                            >
+                              View all {formatInteger(customAchievementCatalog.length)} achievements
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -5204,6 +5254,45 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 )}
               </section>
+            )}
+
+            {showAllAchievements && selectedSeason && (
+              <div className="fixed inset-0 z-[81] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Season achievements">
+                <button type="button" aria-label="Close achievements" onClick={() => setShowAllAchievements(false)} className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+                <div className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#09090e]/95 shadow-2xl shadow-black/50">
+                  <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4 sm:px-6">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400/80">{selectedSeason.season_name}</p>
+                      <h3 className="mt-1 text-lg font-black text-white">All Achievements</h3>
+                      <p className="mt-1 text-xs text-slate-500">Unlocked achievements are highlighted; the rest are still available to earn.</p>
+                    </div>
+                    <button type="button" onClick={() => setShowAllAchievements(false)} className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
+                  </div>
+                  <div className="overflow-y-auto p-4 sm:p-6">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {customAchievementCatalog.map((item) => {
+                        const id = readString(item, ['id', 'achievement_id', 'slug', 'key']);
+                        const itemTitle = readString(item, ['title', 'name', 'display_name'], 'Achievement');
+                        const unlocked = achievements.some((achievement) => achievement.id.includes(id) || achievement.title === itemTitle || achievement.id === id);
+                        return (
+                          <div key={id} className={`rounded-2xl border p-3 ${unlocked ? 'border-emerald-400/20 bg-emerald-500/[0.06]' : 'border-white/10 bg-white/[0.02]'}`}>
+                            <div className="flex items-start gap-3">
+                              <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${unlocked ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300' : 'border-white/10 bg-black/30 text-slate-500'}`}>
+                                {readString(item, ['icon_url']) ? <img src={readString(item, ['icon_url'])} alt="" className="h-full w-full object-cover" /> : unlocked ? <CheckCircle2 className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2"><p className="text-[11px] font-extrabold text-white">{itemTitle}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black uppercase ${unlocked ? 'bg-emerald-400/10 text-emerald-300' : 'bg-white/5 text-slate-500'}`}>{unlocked ? 'Unlocked' : 'Locked'}</span></div>
+                                <p className="mt-1 text-[9px] leading-4 text-slate-400">{readString(item, ['description', 'desc'], 'No description provided.')}</p>
+                                <span className="mt-2 inline-flex rounded-full border border-white/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-200">{readString(item, ['rarity', 'tier'], 'Common')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {showAllAdvancements && selectedSeason && (
