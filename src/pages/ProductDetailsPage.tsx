@@ -24,6 +24,7 @@ interface StoreProduct {
   image_url: string | null;
   category: string | null;
   price: number;
+  coin_price: number | null;
   currency: string;
   features: string[] | null;
   is_active: boolean;
@@ -63,7 +64,9 @@ const formatPrice = (price: number, currency: string) => {
   const symbol =
     currency === 'BDT' || currency === '৳'
       ? '৳'
-      : currency;
+      : currency === 'BFC'
+        ? 'BC'
+        : currency;
 
   return `${symbol} ${Number(price).toLocaleString()}`;
 };
@@ -105,6 +108,7 @@ export const ProductDetailsPage: React.FC = () => {
               image_url,
               category,
               price,
+              coin_price,
               currency,
               features,
               is_active,
@@ -142,21 +146,24 @@ export const ProductDetailsPage: React.FC = () => {
     loadProduct();
   }, []);
 
-  const handleBuyNow = () => {
+  const handleBuyNow = (useCoins = false) => {
     if (!product) return;
+
+    const coinQuery = useCoins ? '&payment=coins' : '';
+    const checkoutPath = `/store/checkout?product=${encodeURIComponent(product.id)}${coinQuery}`;
 
     // Check if user is logged in
     if (!user) {
       // Redirect to login required page with return path
-      const currentPath = window.location.pathname + window.location.search;
-      navigate(`/login-required?return=${encodeURIComponent(currentPath)}`);
+      const returnPath = useCoins
+        ? checkoutPath
+        : window.location.pathname + window.location.search;
+      navigate(`/login-required?return=${encodeURIComponent(returnPath)}`);
       return;
     }
 
     // User is logged in, proceed to checkout
-    navigate(
-      `/store/checkout?product=${encodeURIComponent(product.id)}`
-    );
+    navigate(checkoutPath);
   };
 
   if (loading) {
@@ -283,6 +290,11 @@ export const ProductDetailsPage: React.FC = () => {
                 <div className="text-3xl font-black text-white sm:text-4xl">
                   {formatPrice(product.price, product.currency)}
                 </div>
+                {product.coin_price != null && (
+                  <div className="mt-2 text-lg font-bold text-amber-200">
+                    or {formatPrice(product.coin_price, 'BFC')}
+                  </div>
+                )}
 
                 <p className="mt-1 text-xs text-slate-500">
                   One-time purchase
@@ -327,16 +339,27 @@ export const ProductDetailsPage: React.FC = () => {
 
               {/* Buy */}
               <div className="mt-auto pt-9">
-                <button
-                  onClick={handleBuyNow}
-                  className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-purple-600 to-violet-500 px-6 py-4 text-sm font-black text-white shadow-[0_15px_45px_rgba(124,58,237,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(124,58,237,0.4)]"
-                >
-                  <ShoppingCart className="h-5 w-5 transition-transform group-hover:scale-110" />
-                  Buy Now
-                </button>
+                <div className={product.coin_price != null ? 'grid gap-3 sm:grid-cols-2' : ''}>
+                  <button
+                    onClick={() => handleBuyNow()}
+                    className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-purple-600 to-violet-500 px-6 py-4 text-sm font-black text-white shadow-[0_15px_45px_rgba(124,58,237,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(124,58,237,0.4)]"
+                  >
+                    <ShoppingCart className="h-5 w-5 transition-transform group-hover:scale-110" />
+                    Buy with {formatPrice(product.price, product.currency)}
+                  </button>
+                  {product.coin_price != null && (
+                    <button
+                      onClick={() => handleBuyNow(true)}
+                      className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-6 py-4 text-sm font-black text-amber-100 transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-300/15"
+                    >
+                      <Coins className="h-5 w-5 transition-transform group-hover:scale-110" />
+                      Buy with {formatPrice(product.coin_price, 'BFC')}
+                    </button>
+                  )}
+                </div>
 
                 <p className="mt-3 text-center text-xs text-slate-500">
-                  You will enter your Minecraft username in the next step.
+                  Choose a payment option. You will enter your Minecraft username next.
                 </p>
               </div>
             </div>

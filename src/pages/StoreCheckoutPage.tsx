@@ -12,10 +12,12 @@ import {
   User,
   CreditCard,
   Copy,
+  Coins,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from '../hooks/useRouter';
+import { useAuth } from '../hooks/useAuth';
 
 interface StoreProduct {
   id: string;
@@ -25,6 +27,7 @@ interface StoreProduct {
   image_url: string | null;
   category: string | null;
   price: number;
+  coin_price: number | null;
   currency: string;
   features: string[] | null;
   is_active: boolean;
@@ -63,6 +66,7 @@ interface CreatedOrder {
   final_amount: number;
   payment_status: string;
   delivery_status: string;
+  new_balance?: number;
 }
 
 const formatPrice = (
@@ -79,9 +83,17 @@ const formatPrice = (
 
 export const StoreCheckoutPage: React.FC = () => {
   const { navigate } = useRouter();
+  const { userId, loading: authLoading } = useAuth();
+  const coinPayment = useMemo(
+    () => new URLSearchParams(window.location.search).get('payment') === 'coins',
+    []
+  );
 
   const [product, setProduct] =
     useState<StoreProduct | null>(null);
+
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(false);
 
   const [paymentMethods, setPaymentMethods] =
     useState<PaymentMethod[]>([]);
@@ -156,6 +168,7 @@ export const StoreCheckoutPage: React.FC = () => {
                 image_url,
                 category,
                 price,
+                coin_price,
                 currency,
                 features,
                 is_active
@@ -165,7 +178,9 @@ export const StoreCheckoutPage: React.FC = () => {
             .eq('is_active', true)
             .maybeSingle(),
 
-          supabase
+          coinPayment
+            ? Promise.resolve(null)
+            : supabase
             .from('store_payment_methods')
             .select(
               `
@@ -210,7 +225,7 @@ export const StoreCheckoutPage: React.FC = () => {
           productResult.data as StoreProduct
         );
 
-        if (paymentResult.error) {
+        if (paymentResult?.error) {
           console.error(
             'Payment methods error:',
             paymentResult.error
@@ -224,11 +239,11 @@ export const StoreCheckoutPage: React.FC = () => {
         }
 
         setPaymentMethods(
-          (paymentResult.data || []) as PaymentMethod[]
+          (paymentResult?.data || []) as PaymentMethod[]
         );
 
         if (
-          paymentResult.data &&
+          paymentResult?.data &&
           paymentResult.data.length > 0
         ) {
           setSelectedPaymentMethodId(
@@ -252,12 +267,47 @@ export const StoreCheckoutPage: React.FC = () => {
     loadCheckout();
   }, []);
 
+  useEffect(() => {
+    if (!coinPayment || authLoading) return;
+    if (!userId) {
+      const returnPath = window.location.pathname + window.location.search;
+      navigate(`/login-required?return=${encodeURIComponent(returnPath)}`);
+      return;
+    }
+
+    let cancelled = false;
+    const loadWallet = async () => {
+      setWalletLoading(true);
+      const { data, error: walletError } = await supabase
+        .from('afk_user_wallets')
+        .select('balance')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (walletError) {
+        console.error('Store coin wallet load failed:', walletError);
+        if (!cancelled) setError(`Unable to load Butterfly Coins: ${walletError.message}`);
+      } else if (!cancelled) {
+        setWalletBalance(Number(data?.balance ?? 0));
+      }
+
+      if (!cancelled) setWalletLoading(false);
+    };
+
+    void loadWallet();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, coinPayment, navigate, userId]);
+
   const originalPrice = product
-    ? Number(product.price)
+    ? coinPayment
+      ? Number(product.coin_price ?? 0)
+      : Number(product.price)
     : 0;
 
   const discountAmount = useMemo(() => {
-    if (!product || !promo) {
+    if (!product || !promo || coinPayment) {
       return 0;
     }
 
@@ -289,6 +339,7 @@ export const StoreCheckoutPage: React.FC = () => {
     product,
     promo,
     originalPrice,
+    coinPayment,
   ]);
 
   const finalPrice = Math.max(
@@ -297,7 +348,9 @@ export const StoreCheckoutPage: React.FC = () => {
   );
 
   const isFreeOrder =
-    finalPrice === 0;
+    !coinPayment && finalPrice === 0;
+
+  const priceCurrency = coinPayment ? 'BFC' : product?.currency || 'BDT';
 
   const selectedPaymentMethod =
     paymentMethods.find(
@@ -331,6 +384,13 @@ export const StoreCheckoutPage: React.FC = () => {
   };
 
   const validatePayment = () => {
+    if (coinPayment) {
+      if (!userId) return 'Login is required to spend Butterfly Coins.';
+      if (!product?.coin_price) return 'This product cannot be purchased with Butterfly Coins.';
+      if (walletBalance < product.coin_price) return 'You do not have enough Butterfly Coins.';
+      return null;
+    }
+
     if (isFreeOrder) {
       return null;
     }
@@ -542,10 +602,12 @@ export const StoreCheckoutPage: React.FC = () => {
     setPlacingOrder(true);
 
     try {
-      const { data, error: orderError } =
-        await supabase.rpc(
-          'create_store_order',
-          {
+      const { data, error: orderError } = coinPayment
+        ? await supabase.rpc('purchase_store_product_with_coins', {
+            p_player_username: username.trim(),
+            p_product_id: product.id,
+          })
+        : await supabase.rpc('create_store_order', {
             p_player_username:
               username.trim(),
 
@@ -567,8 +629,7 @@ export const StoreCheckoutPage: React.FC = () => {
               isFreeOrder
                 ? null
                 : transactionId.trim(),
-          }
-        );
+          });
 
       if (orderError) {
         console.error(
@@ -600,6 +661,9 @@ export const StoreCheckoutPage: React.FC = () => {
       setCreatedOrder(
         order as CreatedOrder
       );
+      if (coinPayment && typeof order.new_balance === 'number') {
+        setWalletBalance(order.new_balance);
+      }
 
       // ============================================================
       // STORE ORDER NOTIFICATION
@@ -614,7 +678,9 @@ export const StoreCheckoutPage: React.FC = () => {
           const finalOrderAmount = Number(order.final_amount || 0);
           const isCreatedFreeOrder = finalOrderAmount === 0;
 
-          const notificationMessage = isCreatedFreeOrder
+          const notificationMessage = coinPayment
+            ? `🦋 Store Purchase Completed — ${order.product_name} for Minecraft username ${order.player_username}. ${order.order_number} was paid with Butterfly Coins and is awaiting delivery.`
+            : isCreatedFreeOrder
             ? `🎁 Free Order Created — ${order.product_name} for Minecraft username ${order.player_username}. Order ${order.order_number} was completed with a 100% discount.`
             : `🛒 Order Created — ${order.product_name} for Minecraft username ${order.player_username}. Order ${order.order_number} has been submitted and payment verification is pending.`;
 
@@ -656,7 +722,7 @@ export const StoreCheckoutPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || (coinPayment && authLoading)) {
     return (
       <div className="min-h-screen pt-28 pb-20">
         <div className="mx-auto flex max-w-4xl items-center justify-center px-4 py-24">
@@ -740,13 +806,7 @@ export const StoreCheckoutPage: React.FC = () => {
                   </span>
 
                   <span className="text-white">
-                    {formatPrice(
-                      Number(
-                        createdOrder.original_amount
-                      ),
-                      product?.currency ||
-                        'BDT'
-                    )}
+                    {formatPrice(Number(createdOrder.original_amount), priceCurrency)}
                   </span>
                 </div>
 
@@ -757,13 +817,7 @@ export const StoreCheckoutPage: React.FC = () => {
 
                   <span className="text-green-400">
                     -
-                    {formatPrice(
-                      Number(
-                        createdOrder.discount_amount
-                      ),
-                      product?.currency ||
-                        'BDT'
-                    )}
+                    {formatPrice(Number(createdOrder.discount_amount), priceCurrency)}
                   </span>
                 </div>
 
@@ -775,20 +829,24 @@ export const StoreCheckoutPage: React.FC = () => {
                   </span>
 
                   <span className="text-xl font-black text-purple-300">
-                    {formatPrice(
-                      Number(
-                        createdOrder.final_amount
-                      ),
-                      product?.currency ||
-                        'BDT'
-                    )}
+                    {formatPrice(Number(createdOrder.final_amount), priceCurrency)}
                   </span>
                 </div>
               </div>
 
-              {Number(
-                createdOrder.final_amount
-              ) > 0 ? (
+              {coinPayment ? (
+                <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-5">
+                  <div className="flex items-start gap-3">
+                    <Coins className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                    <div>
+                      <div className="font-bold text-white">Paid with Butterfly Coins</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">
+                        Coins were deducted securely. Your order is ready for automatic delivery.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : Number(createdOrder.final_amount) > 0 ? (
                 <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
                   <div className="flex items-start gap-3">
                     <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
@@ -899,8 +957,9 @@ export const StoreCheckoutPage: React.FC = () => {
           </h1>
 
           <p className="mt-2 text-sm text-slate-400">
-            Enter your Minecraft username, apply a promo code,
-            and complete payment.
+            {coinPayment
+              ? 'Enter your Minecraft username and pay with Butterfly Coins.'
+              : 'Enter your Minecraft username, apply a promo code, and complete payment.'}
           </p>
         </div>
 
@@ -953,6 +1012,7 @@ export const StoreCheckoutPage: React.FC = () => {
             </div>
 
             {/* Promo */}
+            {!coinPayment && (
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-green-500/20 bg-green-500/10">
@@ -1028,9 +1088,41 @@ export const StoreCheckoutPage: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* PAYMENT */}
-            {!isFreeOrder && (
+            {coinPayment ? (
+              <div className="rounded-3xl border border-amber-300/20 bg-amber-300/[0.04] p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10">
+                    <Coins className="h-5 w-5 text-amber-200" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-white">Butterfly Coins</h2>
+                    <p className="text-xs text-slate-400">Coins will be deducted when you confirm this order.</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs text-slate-500">Your balance</p>
+                    <p className="mt-1 text-xl font-black text-white">
+                      {walletLoading ? 'Loading…' : formatPrice(walletBalance, 'BFC')}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.04] p-4">
+                    <p className="text-xs text-slate-500">Cost</p>
+                    <p className="mt-1 text-xl font-black text-amber-100">
+                      {formatPrice(finalPrice, 'BFC')}
+                    </p>
+                  </div>
+                </div>
+                {!walletLoading && walletBalance < finalPrice && (
+                  <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-3 text-xs text-red-200">
+                    Not enough Butterfly Coins. Earn more from the AFK Reward Hub.
+                  </p>
+                )}
+              </div>
+            ) : !isFreeOrder && (
               <div className="rounded-3xl border border-purple-500/20 bg-purple-500/5 p-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">
@@ -1155,7 +1247,7 @@ export const StoreCheckoutPage: React.FC = () => {
                           <div className="mt-1 text-3xl font-black text-white">
                             {formatPrice(
                               finalPrice,
-                              product.currency
+                              priceCurrency
                             )}
                           </div>
 
@@ -1296,7 +1388,7 @@ export const StoreCheckoutPage: React.FC = () => {
                     <span className="text-white">
                       {formatPrice(
                         originalPrice,
-                        product.currency
+                        priceCurrency
                       )}
                     </span>
                   </div>
@@ -1312,7 +1404,7 @@ export const StoreCheckoutPage: React.FC = () => {
                         -
                         {formatPrice(
                           discountAmount,
-                          product.currency
+                          priceCurrency
                         )}
                       </span>
                     </div>
@@ -1330,7 +1422,7 @@ export const StoreCheckoutPage: React.FC = () => {
                     <div className="mt-1 text-2xl font-black text-white">
                       {formatPrice(
                         finalPrice,
-                        product.currency
+                        priceCurrency
                       )}
                     </div>
                   </div>
@@ -1353,13 +1445,15 @@ export const StoreCheckoutPage: React.FC = () => {
                   disabled={
                     placingOrder ||
                     !username.trim() ||
-                    (
+                    (coinPayment
+                      ? walletLoading || !product.coin_price || walletBalance < finalPrice
+                      : (
                       !isFreeOrder &&
                       (
                         !selectedPaymentMethod ||
                         !transactionId.trim()
                       )
-                    )
+                    ))
                   }
                   className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-5 py-4 text-sm font-black text-white shadow-[0_15px_40px_rgba(124,58,237,0.2)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(124,58,237,0.35)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
                 >
@@ -1375,16 +1469,23 @@ export const StoreCheckoutPage: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <ShoppingCart className="h-4 w-4" />
-                      Confirm Order
+                      {coinPayment ? (
+                        <>
+                          <Coins className="h-4 w-4" />
+                          Buy with Butterfly Coins
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-4 w-4" />
+                          Confirm Order
+                        </>
+                      )}
                     </>
                   )}
                 </button>
 
                 <p className="mt-3 text-center text-[11px] leading-5 text-slate-600">
-                  By placing this order, you confirm that the
-                  Minecraft username and payment information are
-                  correct.
+                  By placing this order, you confirm that the Minecraft username and payment details are correct.
                 </p>
               </div>
             </div>

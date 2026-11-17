@@ -13,6 +13,7 @@ import {
   LogIn,
   User,
   LogOut,
+  Coins,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -21,7 +22,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
-  const { user } = useAuth();
+  const { userId } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -33,12 +34,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [minecraftUsername, setMinecraftUsername] = useState('');
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
 
   const { path, navigate } = useRouter();
 
   // Keep existing prop compatibility.
   void onOpenPlayModal;
-  void user;
 
   // =========================
   // Load Profile
@@ -150,6 +151,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       loadProfile();
     }
   }, [path, isLoggedIn, loadProfile]);
+
+  useEffect(() => {
+    if (!userId) {
+      setCoinBalance(null);
+      return;
+    }
+
+    let cancelled = false;
+    let loadingBalance = false;
+
+    const refreshCoinBalance = async () => {
+      if (cancelled || loadingBalance || document.visibilityState !== 'visible') return;
+      loadingBalance = true;
+
+      const { data, error } = await supabase
+        .from('afk_user_wallets')
+        .select('balance')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Navbar coin balance load failed:', error);
+        if (!cancelled) setCoinBalance(null);
+      } else if (!cancelled) {
+        setCoinBalance(Number(data?.balance ?? 0));
+      }
+
+      loadingBalance = false;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refreshCoinBalance();
+    };
+
+    void refreshCoinBalance();
+    const intervalId = window.setInterval(() => void refreshCoinBalance(), 30_000);
+    window.addEventListener('focus', refreshCoinBalance);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshCoinBalance);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId]);
 
   // =========================
   // Listen for profile updates
@@ -362,6 +409,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     navigate('/profile');
   };
 
+  const handleAfkRewards = () => {
+    setMobileMenuOpen(false);
+    navigate('/afk');
+  };
+
   // =========================
   // Logout
   // =========================
@@ -546,6 +598,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               </button>
             ) : (
               <>
+                {coinBalance !== null && (
+                  <button
+                    onClick={handleAfkRewards}
+                    className="inline-flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-sm font-bold text-amber-100 transition hover:border-amber-200/40 hover:bg-amber-300/[0.14]"
+                    title="Open AFK Rewards"
+                    aria-label={`${coinBalance.toLocaleString()} Butterfly Coins. Open AFK Rewards`}
+                  >
+                    <Coins className="h-4 w-4 text-amber-300" />
+                    <span>{coinBalance.toLocaleString()} BC</span>
+                  </button>
+                )}
                 {/* Profile */}
                 <button
                   onClick={handleProfile}
@@ -596,6 +659,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
           {/* Mobile Menu */}
           <div className="flex items-center gap-2 md:hidden">
+
+            {isLoggedIn && coinBalance !== null && (
+              <button
+                onClick={handleAfkRewards}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-300/[0.08] px-2.5 py-2 text-xs font-bold text-amber-100"
+                title="Open AFK Rewards"
+                aria-label={`${coinBalance.toLocaleString()} Butterfly Coins. Open AFK Rewards`}
+              >
+                <Coins className="h-4 w-4 text-amber-300" />
+                <span>{coinBalance.toLocaleString()}</span>
+              </button>
+            )}
 
             {/* Mobile Minecraft Head */}
             {isLoggedIn && minecraftUsername && (

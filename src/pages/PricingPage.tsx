@@ -20,6 +20,7 @@ interface StoreProduct {
   image_url: string | null;
   category: string | null;
   price: number;
+  coin_price: number | null;
   currency: string;
   features: string[] | null;
   is_active: boolean;
@@ -63,7 +64,9 @@ const formatPrice = (price: number, currency: string) => {
   const symbol =
     currency === 'BDT' || currency === '৳'
       ? '৳'
-      : currency;
+      : currency === 'BFC'
+        ? 'BC'
+        : currency;
 
   return `${symbol} ${Number(price).toLocaleString()}`;
 };
@@ -96,6 +99,7 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
             image_url,
             category,
             price,
+            coin_price,
             currency,
             features,
             is_active,
@@ -296,10 +300,14 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
                         </p>
 
                         {/* Price */}
-                        <div className="mt-4 text-2xl font-extrabold text-white">
-                          {formatPrice(
-                            product.price,
-                            product.currency
+                        <div className="mt-4 space-y-1">
+                          <div className="text-2xl font-extrabold text-white">
+                            {formatPrice(product.price, product.currency)}
+                          </div>
+                          {product.coin_price != null && (
+                            <div className="text-sm font-bold text-amber-200">
+                              {formatPrice(product.coin_price, 'BFC')}
+                            </div>
                           )}
                         </div>
 

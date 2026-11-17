@@ -48,6 +48,7 @@ interface StoreProduct {
   image_url: string | null;
   category: string;
   price: number;
+  coin_price: number | null;
   currency: string;
   features: string[];
   minecraft_commands: string[];
@@ -90,6 +91,7 @@ interface StoreOrder {
   original_amount: number;
   discount_amount: number;
   final_amount: number;
+  currency: string;
   payment_method: string | null;
   transaction_id: string | null;
   payment_status:
@@ -133,6 +135,7 @@ interface ProductForm {
   image_url: string;
   category: string;
   price: string;
+  coin_price: string;
   features: string;
   minecraft_commands: string;
   is_active: boolean;
@@ -164,6 +167,7 @@ const EMPTY_PRODUCT: ProductForm = {
   image_url: '',
   category: '',
   price: '0',
+  coin_price: '',
   features: '',
   minecraft_commands: '',
   is_active: true,
@@ -202,7 +206,12 @@ function formatDate(value: string | null) {
 }
 
 function formatMoney(amount: number, currency = 'BDT') {
-  const symbol = currency === 'BDT' || currency === '৳' ? '৳' : currency;
+  const symbol =
+    currency === 'BDT' || currency === '৳'
+      ? '৳'
+      : currency === 'BFC'
+        ? 'BC'
+        : currency;
   return `${symbol}${Number(amount).toLocaleString()}`;
 }
 
@@ -499,6 +508,7 @@ export const AdminStore: React.FC = () => {
       image_url: product.image_url || '',
       category: product.category || '',
       price: String(product.price),
+      coin_price: product.coin_price == null ? '' : String(product.coin_price),
       features: Array.isArray(product.features) ? product.features.join('\n') : '',
       minecraft_commands: Array.isArray(product.minecraft_commands)
         ? product.minecraft_commands.join('\n')
@@ -531,6 +541,16 @@ export const AdminStore: React.FC = () => {
       return;
     }
 
+    const coinPriceInput = productForm.coin_price.trim();
+    const coinPrice = coinPriceInput ? Number(coinPriceInput) : null;
+    if (
+      coinPrice !== null &&
+      (!Number.isSafeInteger(coinPrice) || coinPrice <= 0)
+    ) {
+      showToast('Product Error', 'Coin price must be a positive whole number.', 'error');
+      return;
+    }
+
     setSavingProduct(true);
 
     const payload = {
@@ -540,6 +560,7 @@ export const AdminStore: React.FC = () => {
       image_url: productForm.image_url.trim() || null,
       category: productForm.category.trim(),
       price,
+      coin_price: coinPrice,
       currency: 'BDT',
       features: productForm.features
         .split('\n')
@@ -1160,7 +1181,11 @@ export const AdminStore: React.FC = () => {
   ========================================== */
 
   const totalRevenue = orders
-    .filter((order) => order.payment_status === 'paid')
+    .filter((order) => order.payment_status === 'paid' && order.currency !== 'BFC')
+    .reduce((sum, order) => sum + Number(order.final_amount), 0);
+
+  const coinSales = orders
+    .filter((order) => order.payment_status === 'paid' && order.currency === 'BFC')
     .reduce((sum, order) => sum + Number(order.final_amount), 0);
 
   const pendingOrders = orders.filter(
@@ -1397,12 +1422,13 @@ export const AdminStore: React.FC = () => {
             {/* OVERVIEW */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                   <StatCard label="Products" value={products.length} icon={<Package className="h-5 w-5" />} />
                   <StatCard label="Categories" value={`${activeCategories}/${categories.length}`} icon={<FolderTree className="h-5 w-5" />} />
                   <StatCard label="Pending Payment" value={awaitingPayment} icon={<Clock3 className="h-5 w-5" />} />
                   <StatCard label="Completed" value={completedOrders} icon={<CheckCircle2 className="h-5 w-5" />} />
                   <StatCard label="Revenue" value={formatMoney(totalRevenue)} icon={<Coins className="h-5 w-5" />} />
+                  <StatCard label="Coins Spent" value={formatMoney(coinSales, 'BFC')} icon={<Coins className="h-5 w-5" />} />
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -1429,7 +1455,7 @@ export const AdminStore: React.FC = () => {
                             </p>
                           </div>
                           <div className="ml-3 text-right">
-                            <p className="text-sm font-bold text-white">{formatMoney(Number(order.final_amount))}</p>
+                            <p className="text-sm font-bold text-white">{formatMoney(Number(order.final_amount), order.currency)}</p>
                             <div className="mt-1"><StatusBadge status={order.payment_status} /></div>
                           </div>
                         </button>
@@ -1492,9 +1518,16 @@ export const AdminStore: React.FC = () => {
                             <span>•</span>
                             <span className="font-mono">{product.slug}</span>
                           </div>
-                          <p className="mt-3 text-xl font-black text-white">
-                            {formatMoney(Number(product.price), product.currency)}
-                          </p>
+                          <div className="mt-3 space-y-1">
+                            <p className="text-xl font-black text-white">
+                              {formatMoney(Number(product.price), product.currency)}
+                            </p>
+                            {product.coin_price != null && (
+                              <p className="text-sm font-bold text-amber-200">
+                                {formatMoney(Number(product.coin_price), 'BFC')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1804,10 +1837,10 @@ export const AdminStore: React.FC = () => {
                               {order.product?.name || 'Deleted Product'}
                             </td>
                             <td className="px-5 py-4">
-                              <span className="font-bold text-white">{formatMoney(Number(order.final_amount))}</span>
+                              <span className="font-bold text-white">{formatMoney(Number(order.final_amount), order.currency)}</span>
                               {Number(order.discount_amount) > 0 && (
                                 <span className="ml-2 text-xs text-green-400">
-                                  -{formatMoney(Number(order.discount_amount))}
+                                  -{formatMoney(Number(order.discount_amount), order.currency)}
                                 </span>
                               )}
                             </td>
@@ -2002,7 +2035,7 @@ export const AdminStore: React.FC = () => {
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Field label="Category" required>
                   <select
                     value={productForm.category}
@@ -2036,6 +2069,22 @@ export const AdminStore: React.FC = () => {
                         price: event.target.value,
                       }))
                     }
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Price (Butterfly Coins)">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={productForm.coin_price}
+                    onChange={(event) =>
+                      setProductForm((current) => ({
+                        ...current,
+                        coin_price: event.target.value,
+                      }))
+                    }
+                    placeholder="Leave blank to disable"
                     className={inputClass}
                   />
                 </Field>
@@ -2437,15 +2486,15 @@ export const AdminStore: React.FC = () => {
                 <div className="space-y-2">
                   <DetailRow label="Payment Method" value={selectedOrder.payment_method || 'Free Order'} />
                   <DetailRow label="Transaction ID" value={selectedOrder.transaction_id || '—'} mono />
-                  <DetailRow label="Original Amount" value={formatMoney(Number(selectedOrder.original_amount))} />
-                  <DetailRow label="Discount" value={`-${formatMoney(Number(selectedOrder.discount_amount))}`} />
+                  <DetailRow label="Original Amount" value={formatMoney(Number(selectedOrder.original_amount), selectedOrder.currency)} />
+                  <DetailRow label="Discount" value={`-${formatMoney(Number(selectedOrder.discount_amount), selectedOrder.currency)}`} />
                   <div className="flex items-center justify-between rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
                     <span className="text-sm font-bold text-slate-300">Final Amount</span>
-                    <span className="text-xl font-black text-white">{formatMoney(Number(selectedOrder.final_amount))}</span>
+                    <span className="text-xl font-black text-white">{formatMoney(Number(selectedOrder.final_amount), selectedOrder.currency)}</span>
                   </div>
                 </div>
 
-                {Number(selectedOrder.final_amount) > 0 && (
+                {Number(selectedOrder.final_amount) > 0 && selectedOrder.currency !== 'BFC' && (
                   <div className="mt-4">
                     <button
                       onClick={() => {
@@ -2461,7 +2510,7 @@ export const AdminStore: React.FC = () => {
                   </div>
                 )}
 
-                {paymentEditorOpen && Number(selectedOrder.final_amount) > 0 && (
+                {paymentEditorOpen && Number(selectedOrder.final_amount) > 0 && selectedOrder.currency !== 'BFC' && (
                   <div className="mt-4 rounded-2xl border border-purple-500/15 bg-purple-500/5 p-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Payment Method" required>
@@ -2568,7 +2617,7 @@ export const AdminStore: React.FC = () => {
                 </div>
               )}
 
-              {selectedOrder.payment_status === 'paid' && Number(selectedOrder.final_amount) > 0 && (
+              {selectedOrder.payment_status === 'paid' && Number(selectedOrder.final_amount) > 0 && selectedOrder.currency !== 'BFC' && (
                 <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-5">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-green-400" />
