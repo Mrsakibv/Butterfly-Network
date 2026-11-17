@@ -77,8 +77,9 @@ function formatDuration(totalSeconds: number): string {
 }
 
 type MiniGameConfig = { enabled: boolean; reward_coins: number; cooldown_minutes: number; daily_limit: number; difficulty?: string };
+type TicTacToeDifficulty = 'easy' | 'normal' | 'hard';
 const GAME_DEFAULTS: Record<string, MiniGameConfig> = {
-  tic_tac_toe: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30 },
+  tic_tac_toe: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30, difficulty: 'normal' },
   rock_paper_scissors: { enabled: true, reward_coins: 5, cooldown_minutes: 1, daily_limit: 30 },
   number_guessing: { enabled: true, reward_coins: 10, cooldown_minutes: 2, daily_limit: 15 },
   memory_match: { enabled: true, reward_coins: 25, cooldown_minutes: 5, daily_limit: 10 },
@@ -112,6 +113,9 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const [reactionStart, setReactionStart] = useState(0);
   const [reactionResult, setReactionResult] = useState<number|null>(null);
   const [board, setBoard] = useState<string[]>(Array(9).fill(''));
+  const [botThinking, setBotThinking] = useState(false);
+  const botThinkingRef = useRef(false);
+  const botThinkTimer = useRef<number | null>(null);
   const [memoryCards, setMemoryCards] = useState(() => shuffleMemory());
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -122,11 +126,36 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const [rewardCelebration, setRewardCelebration] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase.from('afk_admin_config').select('config_value').eq('config_key','minigames').maybeSingle();
-      if (!cancelled && !error && data?.config_value) setConfigs({ ...GAME_DEFAULTS, ...(data.config_value as Record<string, MiniGameConfig>) });
-    })();
-    return () => { cancelled = true; };
+    const loadConfigs = async () => {
+      const { data, error } = await supabase
+        .from('afk_admin_config')
+        .select('config_value')
+        .eq('config_key', 'minigames')
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error('AFK minigame configuration load failed:', error);
+        return;
+      }
+      if (data?.config_value) {
+        setConfigs({
+          ...GAME_DEFAULTS,
+          ...(data.config_value as Record<string, MiniGameConfig>),
+        });
+      }
+    };
+
+    void loadConfigs();
+    const intervalId = window.setInterval(() => void loadConfigs(), 30_000);
+    window.addEventListener('focus', loadConfigs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', loadConfigs);
+      if (botThinkTimer.current !== null) {
+        window.clearTimeout(botThinkTimer.current);
+      }
+    };
   }, []);
   function finishGame(key: string, won: boolean) {
     if (!won) { setNotice('Not quite! Try again — no Coins were claimed.'); return; }
@@ -185,15 +214,48 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
       } else window.setTimeout(() => setFlipped([]), 700);
     }
   };
+  const ticDifficulty = normalizeTicDifficulty(configs.tic_tac_toe?.difficulty);
   const playTic = (idx: number) => {
-    if (board[idx] || ticWinner(board) || busy) return;
+    if (board[idx] || ticWinner(board) || busy || botThinkingRef.current) return;
     const human = [...board]; human[idx] = 'X';
     if (ticWinner(human)) { setBoard(human); finishGame('tic_tac_toe', true); return; }
-    const available = human.map((v,i)=>v ? -1 : i).filter(i=>i>=0);
-    if (!available.length) { setBoard(human); return; }
-    const bot = [...human]; bot[available[Math.floor(Math.random()*available.length)]] = 'O';
-    setBoard(bot);
-    if (ticWinner(bot)==='O' && bot.every(Boolean)) setNotice('Bot won this round. Start a new game.');
+    setBoard(human);
+    if (human.every(Boolean)) {
+      setNotice('It is a draw. Start a new round.');
+      return;
+    }
+
+    botThinkingRef.current = true;
+    setBotThinking(true);
+    botThinkTimer.current = window.setTimeout(() => {
+      const move = chooseTicMove(human, ticDifficulty);
+      if (move === null) {
+        botThinkingRef.current = false;
+        setBotThinking(false);
+        return;
+      }
+      const bot = [...human];
+      bot[move] = 'O';
+      setBoard(bot);
+      botThinkingRef.current = false;
+      botThinkTimer.current = null;
+      setBotThinking(false);
+      if (ticWinner(bot) === 'O') {
+        setNotice('Bot won this round. Start a new round.');
+      } else if (bot.every(Boolean)) {
+        setNotice('It is a draw. Start a new round.');
+      }
+    }, 650 + Math.random() * 650);
+  };
+  const resetTic = () => {
+    if (botThinkTimer.current !== null) {
+      window.clearTimeout(botThinkTimer.current);
+      botThinkTimer.current = null;
+    }
+    botThinkingRef.current = false;
+    setBotThinking(false);
+    setBoard(Array(9).fill(''));
+    setNotice('');
   };
   const chooseRps = (pick: string) => {
     const options = ['Rock','Paper','Scissors'];
@@ -210,13 +272,13 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   return <section className="space-y-4">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-black">Mini-games</h2><p className="mt-1 text-sm text-slate-400">Play against the bot and complete quick challenges to earn Coins.</p></div><span className="text-xs text-slate-500">Rewards are confirmed by Supabase</span></div>
     {!enabled ? <div className={cardClass}>Mini-games are disabled by an admin.</div> : <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map((key)=><motion.button key={key} whileHover={{y:-2}} whileTap={{scale:0.97}} transition={{duration:0.16}} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20 shadow-lg shadow-purple-950/20':''}`} onClick={()=>{setActiveGame(key);setNotice('');}} disabled={!(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</motion.button>)}</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map((key)=><motion.button key={key} whileHover={{y:-2}} whileTap={{scale:0.97}} transition={{duration:0.16}} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20 shadow-lg shadow-purple-950/20':''}`} onClick={()=>{setActiveGame(key);setNotice('');}} disabled={botThinking || !(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</motion.button>)}</div>
       <motion.div key={activeGame} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.24}} className={`${cardClass} relative overflow-hidden border-purple-300/15 bg-gradient-to-br from-white/[0.055] via-slate-950/70 to-purple-950/20`}>
         <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-purple-500/10 blur-3xl" />
         <div className="relative mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-300/20 bg-purple-500/10"><Gamepad2 className="h-5 w-5 text-purple-200" /></span><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">Arcade challenge</p><h3 className="text-xl font-bold">{GAME_TITLES[activeGame]}</h3></div></div><span className="rounded-xl border border-amber-300/20 bg-gradient-to-br from-amber-300/15 to-amber-600/5 px-3 py-2 text-sm font-black text-amber-200 shadow-lg shadow-amber-950/10"><Coins className="mr-1 inline h-4 w-4" />+{cfg.reward_coins}</span></div>
         <div className="relative">
         {!cfg.enabled ? <p className="text-slate-400">This game is currently disabled.</p> : <div className="space-y-4">
-          {activeGame==='tic_tac_toe' && <><p className="text-sm text-slate-400">You are X. Beat the bot to win.</p><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><motion.button key={i} whileHover={!v?{scale:1.04}:undefined} whileTap={{scale:0.95}} className={`aspect-square rounded-xl border text-3xl font-black transition-colors ${v==='X'?'border-purple-300/30 bg-purple-500/15 text-purple-200':v==='O'?'border-sky-300/20 bg-sky-500/10 text-sky-200':'border-white/10 bg-black/20 hover:border-purple-300/30'}`} onClick={()=>playTic(i)}>{v}</motion.button>)}</div><button className={gameButton} onClick={()=>setBoard(Array(9).fill(''))}>New round</button></>}
+          {activeGame==='tic_tac_toe' && <><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-slate-400">You are X. Beat the bot to win.</p><span className="rounded-full border border-purple-300/15 bg-purple-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-200">Bot · {ticDifficulty}</span></div><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><motion.button key={i} disabled={botThinking || busy || Boolean(v) || Boolean(ticWinner(board))} whileHover={!v&&!botThinking?{scale:1.04}:undefined} whileTap={{scale:0.95}} className={`aspect-square rounded-xl border text-3xl font-black transition-colors disabled:cursor-not-allowed ${v==='X'?'border-purple-300/30 bg-purple-500/15 text-purple-200':v==='O'?'border-sky-300/20 bg-sky-500/10 text-sky-200':'border-white/10 bg-black/20 hover:border-purple-300/30 disabled:opacity-70'}`} onClick={()=>playTic(i)}>{v}</motion.button>)}</div><div className="mt-4 flex min-h-9 items-center justify-between gap-3"><div className="text-sm text-slate-400">{botThinking ? <span className="inline-flex items-center gap-2 text-sky-200"><Loader2 className="h-4 w-4 animate-spin" />Bot is thinking…</span> : <span>{ticDifficulty==='hard'?'Unbeatable strategy enabled':ticDifficulty==='normal'?'Bot will win or block when it can':'Easy random moves'}</span>}</div><button className={gameButton} onClick={resetTic}>New round</button></div></>}
           {activeGame==='rock_paper_scissors' && <><div className="flex flex-wrap gap-2">{['Rock','Paper','Scissors'].map((x)=><motion.button whileHover={{y:-3,scale:1.03}} whileTap={{scale:0.96}} transition={{duration:0.16}} className={`${primary} min-w-28`} key={x} onClick={()=>chooseRps(x)}>{x}</motion.button>)}</div><p className="text-sm text-slate-300">{lastRpsResult}</p></>}
           {activeGame==='number_guessing' && <><p className="text-sm text-slate-400">Guess the secret number from 1 to 10.</p><div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" min="1" max="10" value={guess} onChange={e=>setGuess(e.target.value)}/><button className={primary} onClick={submitGuess}>Guess</button></div></>}
           {activeGame==='memory_match' && <><p className="text-sm text-slate-400">Find all matching pairs. Moves: {memoryMoves}</p><div className="grid max-w-lg grid-cols-4 gap-2">{memoryCards.map((v,i)=>{const isFaceUp=flipped.includes(i)||matched.includes(i);return <motion.button key={i} animate={{rotateY:isFaceUp?180:0,scale:matched.includes(i)?1.03:1}} whileTap={{scale:0.94}} transition={{duration:0.22}} className={`aspect-square rounded-xl border text-xl font-black ${isFaceUp?'border-amber-300/30 bg-gradient-to-br from-amber-300/15 to-purple-500/15':'border-white/10 bg-black/20 hover:border-purple-300/30'}`} onClick={()=>flipMemory(i)}><span className="block" style={{transform:isFaceUp?'rotateY(180deg)':undefined}}>{isFaceUp?v:'?'}</span></motion.button>;})}</div><button className={gameButton} onClick={resetMemory}>Reset board</button></>}
@@ -234,6 +296,66 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
 function makeMathQuestion() { const a=2+Math.floor(Math.random()*15), b=2+Math.floor(Math.random()*12); return {label:`${a} × ${b}`, answer:a*b}; }
 function shuffleMemory() { const pairs=['🍀','💎','🦋','⚡','🌙','🔥']; return [...pairs,...pairs].sort(()=>Math.random()-.5); }
 function scrambleWord(value:string) { const chars=value.split(''); for(let i=chars.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[chars[i],chars[j]]=[chars[j],chars[i]];} const result=chars.join(''); return result===value?`${result.slice(1)}${result[0]}`:result; }
+function normalizeTicDifficulty(value: string | undefined): TicTacToeDifficulty {
+  return value === 'easy' || value === 'hard' ? value : 'normal';
+}
+function chooseTicMove(board: string[], difficulty: TicTacToeDifficulty): number | null {
+  const available = board.map((mark, index) => mark ? -1 : index).filter((index) => index >= 0);
+  if (available.length === 0) return null;
+  if (difficulty === 'easy') {
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
+  const winningMove = findTicWinningMove(board, 'O');
+  if (winningMove !== null) return winningMove;
+
+  if (difficulty === 'normal') {
+    const blockingMove = findTicWinningMove(board, 'X');
+    if (blockingMove !== null) return blockingMove;
+    if (available.includes(4)) return 4;
+    const corners = available.filter((index) => [0, 2, 6, 8].includes(index));
+    const choices = corners.length > 0 ? corners : available;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  let bestScore = Number.NEGATIVE_INFINITY;
+  let bestMoves: number[] = [];
+  for (const index of available) {
+    const next = [...board];
+    next[index] = 'O';
+    const score = minimaxTicScore(next, false, 1);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [index];
+    } else if (score === bestScore) {
+      bestMoves.push(index);
+    }
+  }
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)] ?? null;
+}
+function findTicWinningMove(board: string[], mark: 'X' | 'O'): number | null {
+  for (let index = 0; index < board.length; index += 1) {
+    if (board[index]) continue;
+    const next = [...board];
+    next[index] = mark;
+    if (ticWinner(next) === mark) return index;
+  }
+  return null;
+}
+function minimaxTicScore(board: string[], botTurn: boolean, depth: number): number {
+  const winner = ticWinner(board);
+  if (winner === 'O') return 10 - depth;
+  if (winner === 'X') return depth - 10;
+  const available = board.map((mark, index) => mark ? -1 : index).filter((index) => index >= 0);
+  if (available.length === 0) return 0;
+
+  const scores = available.map((index) => {
+    const next = [...board];
+    next[index] = botTurn ? 'O' : 'X';
+    return minimaxTicScore(next, !botTurn, depth + 1);
+  });
+  return botTurn ? Math.max(...scores) : Math.min(...scores);
+}
 function ticWinner(b:string[]) { const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,c,d] of lines) if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; return ''; }
 
 export const AfkRewardsPage: React.FC = () => {
@@ -799,12 +921,12 @@ export const AfkRewardsPage: React.FC = () => {
                   <input
                     type="text"
                     value={promoCode}
-                    onChange={(event) => setPromoCode(event.target.value)}
+                    onChange={(event) => setPromoCode(event.target.value.toUpperCase())}
                     placeholder="Enter promo code"
                     autoComplete="off"
                     maxLength={100}
                     disabled={redeemingPromo || !settings?.promo_codes_enabled}
-                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-purple-400/60 disabled:opacity-50"
+                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm uppercase text-white outline-none placeholder:normal-case placeholder:text-slate-500 focus:border-purple-400/60 disabled:opacity-50"
                     aria-label="Promo code"
                   />
                   <button

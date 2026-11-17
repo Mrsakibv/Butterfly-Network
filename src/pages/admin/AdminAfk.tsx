@@ -1292,7 +1292,7 @@ export const AdminAfk: React.FC = () => {
           )}
           {activeTab === 'games' && (
             <>
-              {heading('Mini-game Configuration', 'Reward, cooldown, daily limit ও game availability Supabase-এ save হবে।')}
+              {heading('Mini-game Configuration', 'Reward, cooldown, daily limit ও game availability Supabase-এ save হবে। Tic-Tac-Toe bot difficulty এখান থেকে নিয়ন্ত্রণ করুন।')}
               {configLoading ? <div className={panel}>Loading configuration…</div> : (
                 <div className="space-y-4">
                   {([
@@ -1313,12 +1313,14 @@ export const AdminAfk: React.FC = () => {
                         <label className="text-sm text-slate-300">Win reward coins<input className={field} type="number" min="0" value={game.reward_coins} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], reward_coins: Math.max(0, Number(e.target.value) || 0)}}}))}/></label>
                         <label className="text-sm text-slate-300">Cooldown (minutes)<input className={field} type="number" min="0" value={game.cooldown_minutes} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], cooldown_minutes: Math.max(0, Number(e.target.value) || 0)}}}))}/></label>
                         <label className="text-sm text-slate-300">Daily limit<input className={field} type="number" min="0" value={game.daily_limit} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], daily_limit: Math.max(0, Number(e.target.value) || 0)}}}))}/></label>
-                        <label className="text-sm text-slate-300">Difficulty<select className={field} value={game.difficulty ?? 'normal'} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], difficulty: e.target.value}}}))}><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+                        {key === 'tic_tac_toe' && (
+                          <label className="text-sm text-slate-300">Bot difficulty<select className={field} value={game.difficulty ?? 'normal'} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], difficulty: e.target.value}}}))}><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+                        )}
                       </div>
                     </div>;
                   })}
                   <button type="button" disabled={configSaving} onClick={() => void saveAdminConfig('minigames')} className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"><Save className="h-4 w-4"/>{configSaving ? 'Saving…' : 'Save Mini-game Settings'}</button>
-                  <p className="text-xs text-slate-500">Each game can be enabled/disabled independently. Reward, cooldown, daily limit and difficulty are saved in Supabase. Player rewards must be verified by a server-side claim function.</p>
+                  <p className="text-xs text-slate-500">Each game can be enabled/disabled independently. Reward, cooldown and daily limit are saved for every game; bot difficulty applies to Tic-Tac-Toe. Player rewards must be verified by a server-side claim function.</p>
                 </div>
               )}
             </>
