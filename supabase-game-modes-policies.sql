@@ -244,7 +244,7 @@ values
   ('home', 'Home', 'Home', '/', 'main', 10),
   ('games', 'Games', 'Games', '/games', 'main', 20),
   ('leaderboard', 'Leaderboard', 'Leaderboard', '/leaderboard', 'main', 30),
-  ('store', 'Store', 'Store', '/pricing', 'main', 40),
+  ('store', 'Store', 'Store', '/store', 'main', 40),
   ('terms', 'Terms', 'Terms', '/terms', 'more', 10),
   ('rules', 'Rules', 'Rules', '/rules', 'more', 20),
   ('contact', 'Contact', 'Contact', '/contact', 'more', 30),

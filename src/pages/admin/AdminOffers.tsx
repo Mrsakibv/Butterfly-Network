@@ -625,7 +625,7 @@ export const AdminOffers: React.FC = () => {
                 type="text"
                 value={form.extra.button_url || form.link_url || ''}
                 onChange={(e) => setForm({ ...form, link_url: e.target.value, extra: { ...form.extra, button_url: e.target.value } })}
-                placeholder="e.g., /pricing or https://discord.gg/..."
+                placeholder="e.g., /store or https://discord.gg/..."
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>

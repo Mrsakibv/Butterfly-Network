@@ -184,7 +184,7 @@ export const ProductDetailsPage: React.FC = () => {
       <div className="min-h-screen pt-28 pb-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <button
-            onClick={() => navigate('/pricing')}
+            onClick={() => navigate('/store')}
             className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -205,7 +205,7 @@ export const ProductDetailsPage: React.FC = () => {
             </p>
 
             <button
-              onClick={() => navigate('/pricing')}
+              onClick={() => navigate('/store')}
               className="mt-6 rounded-xl bg-white px-5 py-3 text-sm font-bold text-black transition-transform hover:scale-[1.02]"
             >
               Return to Store
@@ -232,7 +232,7 @@ export const ProductDetailsPage: React.FC = () => {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Back */}
           <button
-            onClick={() => navigate('/pricing')}
+            onClick={() => navigate('/store')}
             className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />

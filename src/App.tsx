@@ -57,6 +57,7 @@ import { AdminApplications } from './pages/admin/AdminApplications';
 import { DynamicPage } from './pages/DynamicPage';
 import { LoginRequiredPage } from './pages/LoginRequiredPage';
 import { AfkRewardsPage } from './pages/AfkRewardsPage';
+import { MorePage } from './pages/MorePage';
 import { AdminLeaderboard } from './pages/admin/AdminLeaderboard';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminSeasons } from './pages/admin/AdminSeasons';
@@ -64,6 +65,8 @@ import { AdminMinecraft } from './pages/admin/AdminMinecraft';
 import { AdminAchievements } from './pages/admin/AdminAchievements';
 import { AdminLayout } from './pages/admin/AdminPanelPage';
 import { AdminAfk } from './pages/admin/AdminAfk';
+import { AdminMemories } from './pages/admin/AdminMemories';
+import { MemoriesPage } from './pages/MemoriesPage';
 
 
 /* =========================================================
@@ -665,6 +668,9 @@ function AppContent() {
     if (path === '/admin/seasons') {
       return <AdminSeasons />;
     }
+    if (path === '/admin/memories') {
+      return <AdminMemories />;
+    }
 
     if (path === '/admin/achievements') {
       return <AdminAchievements />;
@@ -737,11 +743,19 @@ function AppContent() {
       return <BlogPage />;
     }
 
+    if (path === '/memories') {
+      return <MemoriesPage />;
+    }
+
+    if (path === '/more') {
+      return <MorePage />;
+    }
+
     if (path === '/privacy') {
       return <PrivacyPage />;
     }
 
-    if (path === '/pricing') {
+    if (path === '/store') {
       return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
     }
 
@@ -781,6 +795,12 @@ function AppContent() {
 
     useEffect(() => {
       const load = async () => {
+        if (path === '/pricing') {
+          setPage(null);
+          setLoading(false);
+          return;
+        }
+
         const { data } = await supabase
           .from('site_pages')
           .select('*')

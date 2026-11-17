@@ -8,7 +8,6 @@ import {
   Menu,
   X,
   ChevronRight,
-  ChevronDown,
   ExternalLink,
   LogIn,
   User,
@@ -27,9 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mainNavLinks, setMainNavLinks] = useState<Array<{ label: string; href: string }>>([]);
-  const [moreNavLinks, setMoreNavLinks] = useState<Array<{ label: string; href: string }>>([]);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
@@ -226,26 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setMoreMenuOpen(false);
   }, [path]);
-
-  useEffect(() => {
-    if (!moreMenuOpen) return;
-
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-
-      if (!target.closest('[data-more-menu]')) {
-        setMoreMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, [moreMenuOpen]);
 
   // =========================
   // Minecraft Head URL
@@ -276,12 +254,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
       if (!error && data) {
         const mainItems = data
           .filter((item) => item.menu_group === 'main')
-          .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
-          .filter((item) => item.href);
-
-        const dbMoreItems = data
-          .filter((item) => item.menu_group === 'more')
-          .map((item) => ({ label: item.menu_label || 'Page', href: item.route }))
+          .map((item) => ({
+            label: item.menu_label || 'Page',
+            href:
+              item.route === '/pricing' &&
+              item.menu_label?.toLowerCase() === 'store'
+                ? '/store'
+                : item.route,
+          }))
           .filter((item) => item.href);
 
         // Add Social to main items if not already there
@@ -290,49 +270,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
         }
 
         // Remove Games from main items if present
-        const filteredMainItems = mainItems.filter(item => item.href !== '/games');
-
-        // Add Games to more items if not already there
-        if (!dbMoreItems.some(item => item.href === '/games')) {
-          dbMoreItems.push({ label: 'Games', href: '/games' });
-        }
-
-        // Add Blog to more items if not already there
-        if (!dbMoreItems.some(item => item.href === '/blog')) {
-          dbMoreItems.push({ label: 'Blog', href: '/blog' });
-        }
-
-        // Ensure FAQ is included if not present in DB pages
-        const hasFaq = [...filteredMainItems, ...dbMoreItems].some(
-          (item) => item.href === '/faq' || item.label.toLowerCase() === 'faq'
+        const filteredMainItems = mainItems.filter(
+          (item) => item.href !== '/games' && item.href !== '/more'
         );
 
-        const moreItems = hasFaq
-          ? dbMoreItems
-          : [{ label: 'FAQ', href: '/faq' }, ...dbMoreItems];
-
-        setMainNavLinks(filteredMainItems);
-        setMoreNavLinks(moreItems);
+        setMainNavLinks([
+          ...filteredMainItems,
+          { label: 'More', href: '/more' },
+        ]);
       } else {
         setMainNavLinks([
           { label: 'Home', href: '/' },
           { label: 'Social', href: '/social' },
           { label: 'Leaderboard', href: '/leaderboard' },
-          { label: 'Store', href: '/pricing' },
-        ]);
-
-        setMoreNavLinks([
-          { label: 'Games', href: '/games' },
-          { label: 'Blog', href: '/blog' },
-          { label: 'FAQ', href: '/faq' },
-          { label: 'Terms', href: '/terms' },
-          { label: 'Rules', href: '/rules' },
-          { label: 'Contact', href: '/contact' },
-          { label: 'Events', href: '/events' },
-          { label: 'Gallery', href: '/gallery' },
-          { label: 'Commands', href: '/commands' },
-          { label: 'Vote', href: '/vote' },
-          { label: 'Players Online', href: '/players' },
+          { label: 'Store', href: '/store' },
+          { label: 'More', href: '/more' },
         ]);
       }
     };
@@ -347,7 +299,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
     e.preventDefault();
 
     setMobileMenuOpen(false);
-    setMoreMenuOpen(false);
 
     if (href.startsWith('/#')) {
       if (path !== '/') {
@@ -538,50 +489,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
               );
             })}
 
-            {moreNavLinks.length > 0 && (
-              <div className="relative" data-more-menu>
-                <button
-                  type="button"
-                  onClick={() => setMoreMenuOpen((open) => !open)}
-                  className={`relative flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-full ${
-                    moreMenuOpen
-                      ? 'text-white font-semibold bg-white/5'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span>More</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${
-                      moreMenuOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                <AnimatePresence>
-                  {moreMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.18 }}
-                      className="absolute right-0 top-[calc(100%+0.75rem)] w-52 rounded-2xl border border-white/10 bg-[#111827]/95 p-2 shadow-[0_20px_60px_rgba(15,23,42,0.8)] backdrop-blur-xl"
-                    >
-                      {moreNavLinks.map((link) => (
-                        <a
-                          key={link.label}
-                          href={link.href}
-                          onClick={(e) => handleNavClick(link.href, e)}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-200 transition-colors hover:bg-white/5 hover:text-white"
-                        >
-                          <ChevronRight className="h-4 w-4 text-purple-300" />
-                          <span>{link.label}</span>
-                        </a>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
           </nav>
 
           {/* Desktop Actions */}
@@ -727,7 +634,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPlayModal }) => {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-1.5">
-              {[...mainNavLinks, ...moreNavLinks].map((link) => {
+              {mainNavLinks.map((link) => {
                 const active = isActive(link.href);
 
                 return (

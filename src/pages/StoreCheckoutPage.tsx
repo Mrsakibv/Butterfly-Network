@@ -885,7 +885,7 @@ export const StoreCheckoutPage: React.FC = () => {
 
               <button
                 onClick={() =>
-                  navigate('/pricing')
+                  navigate('/store')
                 }
                 className="w-full rounded-xl bg-white px-5 py-3.5 text-sm font-black text-black transition-transform hover:scale-[1.01]"
               >
@@ -916,7 +916,7 @@ export const StoreCheckoutPage: React.FC = () => {
 
             <button
               onClick={() =>
-                navigate('/pricing')
+                navigate('/store')
               }
               className="mt-6 rounded-xl bg-white px-5 py-3 text-sm font-bold text-black"
             >

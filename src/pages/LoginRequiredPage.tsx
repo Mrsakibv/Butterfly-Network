@@ -9,7 +9,7 @@ export const LoginRequiredPage: React.FC = () => {
   const handleLoginRedirect = () => {
     // Get the original product page from URL params or referrer
     const urlParams = new URLSearchParams(window.location.search);
-    const returnPath = urlParams.get('return') || '/pricing';
+    const returnPath = urlParams.get('return') || '/store';
 
     // Store the return path (not the login-required page itself)
     sessionStorage.setItem('redirectAfterLogin', returnPath);
@@ -17,7 +17,7 @@ export const LoginRequiredPage: React.FC = () => {
   };
 
   const handleBackToStore = () => {
-    navigate('/pricing');
+    navigate('/store');
   };
 
   return (
