@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MotionConfig, motion } from 'motion/react';
 import {
   AlertCircle,
   ArrowRight,
@@ -117,6 +118,8 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const [memoryMoves, setMemoryMoves] = useState(0);
   const [lastRpsResult, setLastRpsResult] = useState('');
   const [higherCorrect, setHigherCorrect] = useState(0);
+  const [scrambledWord, setScrambledWord] = useState(() => scrambleWord(word));
+  const [rewardCelebration, setRewardCelebration] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -149,7 +152,9 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
       }
       setCooldowns(c => ({...c, [key]: Date.now() + cfg.cooldown_minutes * 60_000}));
       setDailyCounts(c => ({...c, [key]: (c[key] ?? 0) + 1}));
-      setNotice(`You won! +${result.reward_coins ?? cfg.reward_coins} Butterfly Coins.`);
+      const earnedCoins = result.reward_coins ?? cfg.reward_coins;
+      setNotice(`You won! +${earnedCoins} Butterfly Coins.`);
+      setRewardCelebration(earnedCoins);
       onBalance(result.new_balance);
       setBusy(false);
     }, (e: unknown) => {
@@ -158,8 +163,8 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
     });
   }
   const cfg = configs[activeGame] ?? GAME_DEFAULTS[activeGame];
-  const gameButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-white hover:bg-purple-500/20 disabled:opacity-40';
-  const primary = 'rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-purple-500 disabled:opacity-40';
+  const gameButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:border-purple-300/30 hover:bg-purple-500/20 hover:shadow-lg hover:shadow-purple-950/30 motion-reduce:transform-none motion-reduce:transition-none disabled:opacity-40';
+  const primary = 'rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-950/30 transition duration-200 hover:-translate-y-0.5 hover:from-purple-500 hover:to-indigo-500 hover:shadow-purple-900/40 motion-reduce:transform-none motion-reduce:transition-none disabled:opacity-40';
   const startReaction = () => {
     setReactionState('wait'); setReactionResult(null);
     window.setTimeout(() => { setReactionState(current => { if (current !== 'wait') return current; setReactionStart(Date.now()); return 'go'; }); }, 1000 + Math.random()*2500);
@@ -200,32 +205,35 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   };
   const submitGuess = () => { const n=Number(guess); if(n===numberTarget){finishGame('number_guessing',true);setGuess('');setNumberTarget(1+Math.floor(Math.random()*10));} else setNotice(n<numberTarget?'Too low — try again.':'Too high — try again.'); };
   const submitMath = () => { const ok=Number(mathAnswer)===mathQuestion.answer; if(ok){finishGame('math_challenge',true);setMathQuestion(makeMathQuestion());setMathAnswer('');}else setNotice('Incorrect answer. Try again.'); };
-  const submitWord = () => { if(wordAnswer.trim().toUpperCase()===word){finishGame('word_scramble',true);const next=GAME_WORDS[Math.floor(Math.random()*GAME_WORDS.length)];setWord(next);setWordAnswer('');}else setNotice('Not the right word yet.'); };
+  const submitWord = () => { if(wordAnswer.trim().toUpperCase()===word){finishGame('word_scramble',true);const next=GAME_WORDS[Math.floor(Math.random()*GAME_WORDS.length)];setWord(next);setScrambledWord(scrambleWord(next));setWordAnswer('');}else setNotice('Not the right word yet.'); };
   const guessHigher = (choice: 'higher'|'lower') => { const next=1+Math.floor(Math.random()*9); const won=(choice==='higher'&&next>higherNumber)||(choice==='lower'&&next<higherNumber); setHigherNumber(next); if(won){const score=higherCorrect+1;setHigherCorrect(score);if(score>=3){finishGame('higher_or_lower',true);setHigherCorrect(0);}}else{setHigherCorrect(0);setNotice(`New number: ${next}. Streak reset.`);} };
-  const scramble = (w:string) => w.split('').sort(()=>Math.random()-.5).join('');
   return <section className="space-y-4">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-black">Mini-games</h2><p className="mt-1 text-sm text-slate-400">Play against the bot and complete quick challenges to earn Coins.</p></div><span className="text-xs text-slate-500">Rewards are confirmed by Supabase</span></div>
     {!enabled ? <div className={cardClass}>Mini-games are disabled by an admin.</div> : <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map(key=><button key={key} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20':''}`} onClick={()=>{setActiveGame(key);setNotice('');}} disabled={!(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</button>)}</div>
-      <div className={cardClass}>
-        <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-xl font-bold">{GAME_TITLES[activeGame]}</h3><span className="rounded-lg bg-amber-400/10 px-3 py-1.5 text-sm font-bold text-amber-200">+{cfg.reward_coins} Coins</span></div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map((key)=><motion.button key={key} whileHover={{y:-2}} whileTap={{scale:0.97}} transition={{duration:0.16}} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20 shadow-lg shadow-purple-950/20':''}`} onClick={()=>{setActiveGame(key);setNotice('');}} disabled={!(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</motion.button>)}</div>
+      <motion.div key={activeGame} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.24}} className={`${cardClass} relative overflow-hidden border-purple-300/15 bg-gradient-to-br from-white/[0.055] via-slate-950/70 to-purple-950/20`}>
+        <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-purple-500/10 blur-3xl" />
+        <div className="relative mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-300/20 bg-purple-500/10"><Gamepad2 className="h-5 w-5 text-purple-200" /></span><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">Arcade challenge</p><h3 className="text-xl font-bold">{GAME_TITLES[activeGame]}</h3></div></div><span className="rounded-xl border border-amber-300/20 bg-gradient-to-br from-amber-300/15 to-amber-600/5 px-3 py-2 text-sm font-black text-amber-200 shadow-lg shadow-amber-950/10"><Coins className="mr-1 inline h-4 w-4" />+{cfg.reward_coins}</span></div>
+        <div className="relative">
         {!cfg.enabled ? <p className="text-slate-400">This game is currently disabled.</p> : <div className="space-y-4">
-          {activeGame==='tic_tac_toe' && <><p className="text-sm text-slate-400">You are X. Beat the bot to win.</p><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><button key={i} className="aspect-square rounded-xl border border-white/10 bg-black/20 text-3xl font-black" onClick={()=>playTic(i)}>{v}</button>)}</div><button className={gameButton} onClick={()=>setBoard(Array(9).fill(''))}>New round</button></>}
-          {activeGame==='rock_paper_scissors' && <><div className="flex flex-wrap gap-2">{['Rock','Paper','Scissors'].map(x=><button className={primary} key={x} onClick={()=>chooseRps(x)}>{x}</button>)}</div><p className="text-sm text-slate-300">{lastRpsResult}</p></>}
+          {activeGame==='tic_tac_toe' && <><p className="text-sm text-slate-400">You are X. Beat the bot to win.</p><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><motion.button key={i} whileHover={!v?{scale:1.04}:undefined} whileTap={{scale:0.95}} className={`aspect-square rounded-xl border text-3xl font-black transition-colors ${v==='X'?'border-purple-300/30 bg-purple-500/15 text-purple-200':v==='O'?'border-sky-300/20 bg-sky-500/10 text-sky-200':'border-white/10 bg-black/20 hover:border-purple-300/30'}`} onClick={()=>playTic(i)}>{v}</motion.button>)}</div><button className={gameButton} onClick={()=>setBoard(Array(9).fill(''))}>New round</button></>}
+          {activeGame==='rock_paper_scissors' && <><div className="flex flex-wrap gap-2">{['Rock','Paper','Scissors'].map((x)=><motion.button whileHover={{y:-3,scale:1.03}} whileTap={{scale:0.96}} transition={{duration:0.16}} className={`${primary} min-w-28`} key={x} onClick={()=>chooseRps(x)}>{x}</motion.button>)}</div><p className="text-sm text-slate-300">{lastRpsResult}</p></>}
           {activeGame==='number_guessing' && <><p className="text-sm text-slate-400">Guess the secret number from 1 to 10.</p><div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" min="1" max="10" value={guess} onChange={e=>setGuess(e.target.value)}/><button className={primary} onClick={submitGuess}>Guess</button></div></>}
-          {activeGame==='memory_match' && <><p className="text-sm text-slate-400">Find all matching pairs. Moves: {memoryMoves}</p><div className="grid max-w-lg grid-cols-4 gap-2">{memoryCards.map((v,i)=><button key={i} className="aspect-square rounded-xl border border-white/10 bg-black/20 text-xl font-black" onClick={()=>flipMemory(i)}>{flipped.includes(i)||matched.includes(i)?v:'?'}</button>)}</div><button className={gameButton} onClick={resetMemory}>Reset board</button></>}
-          {activeGame==='reaction_challenge' && <><p className="text-sm text-slate-400">Tap the button as soon as it turns green. Under 650ms wins.</p><button className={`${primary} min-h-20 w-full max-w-md ${reactionState==='go'?'bg-emerald-600':''}`} onClick={reactionState==='idle'||reactionState==='done'?startReaction:handleReaction}>{reactionState==='idle'?'Start reaction test':reactionState==='wait'?'Wait for green…':reactionState==='go'?'CLICK NOW!':reactionResult===-1?'Too early — try again':`${reactionResult} ms · Try again`}</button></>}
+          {activeGame==='memory_match' && <><p className="text-sm text-slate-400">Find all matching pairs. Moves: {memoryMoves}</p><div className="grid max-w-lg grid-cols-4 gap-2">{memoryCards.map((v,i)=>{const isFaceUp=flipped.includes(i)||matched.includes(i);return <motion.button key={i} animate={{rotateY:isFaceUp?180:0,scale:matched.includes(i)?1.03:1}} whileTap={{scale:0.94}} transition={{duration:0.22}} className={`aspect-square rounded-xl border text-xl font-black ${isFaceUp?'border-amber-300/30 bg-gradient-to-br from-amber-300/15 to-purple-500/15':'border-white/10 bg-black/20 hover:border-purple-300/30'}`} onClick={()=>flipMemory(i)}><span className="block" style={{transform:isFaceUp?'rotateY(180deg)':undefined}}>{isFaceUp?v:'?'}</span></motion.button>;})}</div><button className={gameButton} onClick={resetMemory}>Reset board</button></>}
+          {activeGame==='reaction_challenge' && <><p className="text-sm text-slate-400">Tap the button as soon as it turns green. Under 650ms wins.</p><motion.button animate={{scale:reactionState==='go'?[1,1.015,1]:1,backgroundColor:reactionState==='go'?'#059669':undefined}} transition={{duration:0.45,repeat:reactionState==='go'?Infinity:0}} className={`${primary} min-h-20 w-full max-w-md ${reactionState==='go'?'border border-emerald-300/30 bg-emerald-600 shadow-emerald-900/40':''}`} onClick={reactionState==='idle'||reactionState==='done'?startReaction:handleReaction}>{reactionState==='idle'?'Start reaction test':reactionState==='wait'?'Wait for green…':reactionState==='go'?'CLICK NOW!':reactionResult===-1?'Too early — try again':`${reactionResult} ms · Try again`}</motion.button></>}
           {activeGame==='math_challenge' && <><p className="text-lg font-bold">{mathQuestion.label} = ?</p><div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" value={mathAnswer} onChange={e=>setMathAnswer(e.target.value)}/><button className={primary} onClick={submitMath}>Submit</button></div></>}
           {activeGame==='higher_or_lower' && <><p className="text-sm text-slate-400">Current number: <b className="text-white">{higherNumber}</b> · streak {higherCorrect}/3</p><div className="flex gap-2"><button className={primary} onClick={()=>guessHigher('higher')}>Higher</button><button className={primary} onClick={()=>guessHigher('lower')}>Lower</button></div></>}
-          {activeGame==='word_scramble' && <><p className="text-sm text-slate-400">Unscramble: <b className="text-white tracking-widest">{scramble(word)}</b></p><div className="flex gap-2"><input className="w-56 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white uppercase" value={wordAnswer} onChange={e=>setWordAnswer(e.target.value)}/><button className={primary} onClick={submitWord}>Check</button></div></>}
+          {activeGame==='word_scramble' && <><p className="text-sm text-slate-400">Unscramble: <b className="font-mono text-lg tracking-[0.25em] text-amber-100">{scrambledWord}</b></p><div className="flex gap-2"><input className="w-56 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white uppercase outline-none transition focus:border-purple-300/50" value={wordAnswer} onChange={e=>setWordAnswer(e.target.value)}/><button className={primary} onClick={submitWord}>Check</button></div></>}
         </div>}
-      </div>
+        </div>
+      </motion.div>
     </>}
-    {notice && <p role="status" className="rounded-xl border border-purple-400/20 bg-purple-500/10 p-3 text-sm text-purple-100">{notice}</p>}
+    {notice && <motion.p key={notice} initial={{opacity:0,y:8,scale:0.98}} animate={{opacity:1,y:0,scale:1}} transition={{duration:0.2}} role="status" className="flex items-center gap-2 rounded-xl border border-amber-300/20 bg-gradient-to-r from-amber-300/[0.08] to-purple-500/[0.08] p-3 text-sm text-amber-100"><motion.span animate={rewardCelebration !== null ? {y:[0,-7,0],rotate:[0,12,-12,0],scale:[1,1.22,1]} : undefined} transition={{duration:0.65}} onAnimationComplete={() => { if (rewardCelebration !== null) setRewardCelebration(null); }} className="shrink-0 text-amber-300"><Coins className="h-4 w-4" /></motion.span><span>{notice}</span>{rewardCelebration !== null && <span className="ml-auto rounded-full border border-amber-200/20 bg-amber-300/10 px-2.5 py-1 text-xs font-black text-amber-200">+{rewardCelebration}</span>}</motion.p>}
   </section>;
 }
 function makeMathQuestion() { const a=2+Math.floor(Math.random()*15), b=2+Math.floor(Math.random()*12); return {label:`${a} × ${b}`, answer:a*b}; }
 function shuffleMemory() { const pairs=['🍀','💎','🦋','⚡','🌙','🔥']; return [...pairs,...pairs].sort(()=>Math.random()-.5); }
+function scrambleWord(value:string) { const chars=value.split(''); for(let i=chars.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[chars[i],chars[j]]=[chars[j],chars[i]];} const result=chars.join(''); return result===value?`${result.slice(1)}${result[0]}`:result; }
 function ticWinner(b:string[]) { const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,c,d] of lines) if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; return ''; }
 
 export const AfkRewardsPage: React.FC = () => {
@@ -632,10 +640,11 @@ export const AfkRewardsPage: React.FC = () => {
     );
   }
   return (
+    <MotionConfig reducedMotion="user">
     <div className="relative min-h-screen overflow-hidden px-4 pb-20 pt-28 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute left-1/2 top-16 -z-10 h-96 w-[min(90vw,900px)] -translate-x-1/2 rounded-full bg-purple-700/10 blur-[130px]" />
       <div className="mx-auto max-w-7xl space-y-7">
-        <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <motion.header initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-200">
               <Sparkles className="h-3.5 w-3.5" /> Butterfly Coins · AFK Rewards
@@ -655,7 +664,7 @@ export const AfkRewardsPage: React.FC = () => {
             <RefreshCw className={`h-4 w-4 ${pageLoading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-        </header>
+        </motion.header>
         {notice && (
           <div
             role="status"
@@ -680,23 +689,26 @@ export const AfkRewardsPage: React.FC = () => {
         ) : (
           <>
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className={cardClass}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-slate-400">Butterfly Coins</p>
-                  <Coins className="h-5 w-5 text-amber-300" />
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }} className={`${cardClass} relative overflow-hidden border-amber-300/20 bg-gradient-to-br from-amber-300/[0.12] via-white/[0.035] to-purple-500/[0.06] shadow-xl shadow-amber-950/10`}>
+                <div className="pointer-events-none absolute -right-7 -top-10 h-36 w-36 rounded-full bg-amber-300/10 blur-3xl" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-amber-100/80">Butterfly Coins</p>
+                  <motion.span animate={{ rotate: [0, -8, 8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }} className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200/20 bg-amber-300/10">
+                    <Coins className="h-5 w-5 text-amber-200" />
+                  </motion.span>
                 </div>
-                <p className="mt-4 text-3xl font-black tabular-nums">{walletBalance.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-slate-500">Current wallet balance</p>
-              </div>
-              <div className={cardClass}>
+                <motion.p key={walletBalance} initial={{ opacity: 0.55, y: 5 }} animate={{ opacity: 1, y: 0 }} className="relative mt-4 text-3xl font-black tabular-nums tracking-tight text-white">{walletBalance.toLocaleString()}</motion.p>
+                <p className="relative mt-1 text-xs text-amber-100/55">Your available reward balance</p>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.05 }} className={cardClass}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-slate-400">Current Session</p>
                   <Clock3 className="h-5 w-5 text-sky-300" />
                 </div>
                 <p className="mt-4 text-3xl font-black tabular-nums">{formatDuration(activeSeconds)}</p>
                 <p className="mt-1 text-xs text-slate-500">Verified active time</p>
-              </div>
-              <div className={cardClass}>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} className={cardClass}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-slate-400">AFK Status</p>
                   <ActivityIcon />
@@ -707,8 +719,8 @@ export const AfkRewardsPage: React.FC = () => {
                 <p className="mt-1 text-xs text-slate-500">
                   {sessionId ? 'Session active in this tab' : 'Start a session when ready'}
                 </p>
-              </div>
-              <div className={cardClass}>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.15 }} className={cardClass}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-slate-400">Daily AFK Rule</p>
                   <Zap className="h-5 w-5 text-purple-300" />
@@ -719,7 +731,7 @@ export const AfkRewardsPage: React.FC = () => {
                 <p className="mt-1 text-xs text-slate-500">
                   {settings ? `${settings.coins_per_reward} Coins per interval · ${settings.daily_coin_cap} daily cap` : 'Settings unavailable'}
                 </p>
-              </div>
+              </motion.div>
             </section>
             <section className={`${cardClass} relative overflow-hidden`}>
               <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-purple-500/10 blur-3xl" />
@@ -841,7 +853,7 @@ export const AfkRewardsPage: React.FC = () => {
                     const claimSupported = ['daily_visit', 'afk_minutes'].includes(mission.mission_type);
                     const isClaiming = claimingMissionId === mission.id;
                     return (
-                      <article key={mission.id} className={cardClass}>
+                      <motion.article key={mission.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }} transition={{ duration: 0.2 }} className={`${cardClass} transition-colors hover:border-purple-300/20`}>
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/10">
@@ -880,7 +892,7 @@ export const AfkRewardsPage: React.FC = () => {
                             {isClaimed ? 'Claimed Today' : !claimSupported ? 'Not Available Yet' : 'Claim Reward'}
                           </button>
                         </div>
-                      </article>
+                      </motion.article>
                     );
                   })}
                 </div>
@@ -898,6 +910,7 @@ export const AfkRewardsPage: React.FC = () => {
         )}
       </div>
     </div>
+    </MotionConfig>
   );
 };
 function ActivityIcon() {
