@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Terminal,
   Vote,
-  Power,
   RefreshCw,
   CircleHelp,
   ShoppingBag,
@@ -49,6 +48,7 @@ interface SectionSummary {
   detail: string;
   icon: React.ElementType;
   accent: string;
+  items?: string[];
 }
 
 const formatDateTime = (value: string) => {
@@ -100,81 +100,94 @@ export const AdminDashboard: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
-
-  // SeedLoaf bot state
-  const [botEnabled, setBotEnabled] = useState(true);
-  const [botLoading, setBotLoading] = useState(true);
-  const [botSaving, setBotSaving] = useState(false);
-  const [botError, setBotError] = useState('');
+  const [dashboardError, setDashboardError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    let requestInProgress = false;
+
     const loadDashboard = async () => {
-      const [
-        activityResult,
-        modesResult,
-        pagesResult,
-        itemsResult,
-        rolesResult,
-        settingsResult,
-        postsResult,
-      ] = await Promise.all([
-        supabase
-          .from('admin_activity_log')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50),
+      if (requestInProgress) return;
+      requestInProgress = true;
+      setLoading(true);
 
-        supabase
-          .from('game_modes')
-          .select('name, is_active'),
+      try {
+        const [
+          activityResult,
+          modesResult,
+          pagesResult,
+          itemsResult,
+          rolesResult,
+          settingsResult,
+          postsResult,
+        ] = await Promise.all([
+          supabase
+            .from('admin_activity_log')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50),
 
-        supabase
-          .from('site_pages')
-          .select('title, is_visible'),
+          supabase
+            .from('game_modes')
+            .select('name, is_active'),
 
-        supabase
-          .from('site_page_items')
-          .select('page_key, is_visible'),
+          supabase
+            .from('site_pages')
+            .select('title, route, is_visible')
+            .order('created_at', { ascending: false }),
 
-        supabase
-          .from('custom_roles')
-          .select('name'),
+          supabase
+            .from('site_page_items')
+            .select('page_key, is_visible'),
 
-        supabase
-          .from('site_settings')
-          .select('site_name, bot_enabled')
-          .eq('id', true)
-          .maybeSingle(),
+          supabase
+            .from('custom_roles')
+            .select('name'),
 
-        supabase
-          .from('social_posts')
-          .select('id'),
-      ]);
+          supabase
+            .from('site_settings')
+            .select('site_name')
+            .eq('id', true)
+            .maybeSingle(),
 
-      // Activity history
-      if (activityResult.error) {
-        setHistoryError(
-          'Run supabase-admin-activity-log.sql once to enable full history.'
+          supabase
+            .from('posts')
+            .select('id'),
+        ]);
+
+        if (cancelled) return;
+
+        if (activityResult.error) {
+          setHistoryError(
+            'Run supabase-admin-activity-log.sql once to enable full history.'
+          );
+        } else {
+          const entries = (activityResult.data ?? []) as ActivityEntry[];
+          setHistory(entries);
+          setHistoryError('');
+        }
+
+        const modes = modesResult.data ?? [];
+        const pages = pagesResult.data ?? [];
+        const items = itemsResult.data ?? [];
+        const roles = rolesResult.data ?? [];
+        const posts = postsResult.data ?? [];
+        const queryErrors = [
+          { label: 'Game modes', error: modesResult.error },
+          { label: 'Pages', error: pagesResult.error },
+          { label: 'Page content', error: itemsResult.error },
+          { label: 'Roles', error: rolesResult.error },
+          { label: 'Site settings', error: settingsResult.error },
+          { label: 'Social posts', error: postsResult.error },
+        ]
+          .filter((result) => result.error)
+          .map((result) => `${result.label}: ${result.error?.message}`);
+        setDashboardError(
+          queryErrors.length
+            ? `Some dashboard details could not be loaded. ${queryErrors.join(' · ')}`
+            : ''
         );
-      } else {
-        const entries = (activityResult.data ?? []) as ActivityEntry[];
-        setHistory(entries);
-      }
-
-      // Bot status
-      if (settingsResult.error) {
-        setBotError('Unable to load SeedLoaf Bot status.');
-      } else {
-        setBotEnabled(settingsResult.data?.bot_enabled ?? true);
-      }
-
-      setBotLoading(false);
-
-      const modes = modesResult.data ?? [];
-      const pages = pagesResult.data ?? [];
-      const items = itemsResult.data ?? [];
-      const roles = rolesResult.data ?? [];
-      const posts = postsResult.data ?? [];
 
       setSections([
         {
@@ -182,8 +195,11 @@ export const AdminDashboard: React.FC = () => {
           description:
             'Brand, server, social and homepage settings',
           value:
-            settingsResult.data?.site_name || 'Configured',
-          detail: '1 settings record',
+            settingsResult.data?.site_name ||
+            (settingsResult.error ? 'Unavailable' : 'Configured'),
+          detail: settingsResult.error
+            ? settingsResult.error.message
+            : '1 settings record',
           icon: Settings,
           accent: 'text-purple-300',
         },
@@ -192,31 +208,33 @@ export const AdminDashboard: React.FC = () => {
           label: 'Game Modes',
           description:
             'All game modes and their active status',
-          value: String(
-            modes.filter((mode) => mode.is_active).length
-          ),
-          detail: `${modes.length} total modes`,
+          value: modesResult.error ? 'Unavailable' : String(modes.length),
+          detail: modesResult.error
+            ? modesResult.error.message
+            : `${modes.filter((mode) => mode.is_active).length} active modes`,
           icon: Gamepad2,
           accent: 'text-cyan-300',
+          items: modes.map((mode) => mode.name),
         },
 
         {
           label: 'Pages',
           description:
             'Menu pages, order and visibility',
-          value: String(
-            pages.filter((page) => page.is_visible).length
-          ),
-          detail: `${pages.length} total pages`,
+          value: pagesResult.error ? 'Unavailable' : String(pages.length),
+          detail: pagesResult.error
+            ? pagesResult.error.message
+            : `${pages.filter((page) => page.is_visible).length} visible · ${pages.filter((page) => !page.is_visible).length} hidden`,
           icon: FileText,
           accent: 'text-sky-300',
+          items: pages.map((page) => `${page.title} · ${page.route}`),
         },
 
         {
           label: 'Rules Content',
           description:
             'Rules items and moderation information',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'rules'
             ).length
@@ -230,7 +248,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Terms Content',
           description:
             'Terms and policy sections',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'terms'
             ).length
@@ -244,7 +262,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Contact Content',
           description:
             'Contact channels and support links',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'contact'
             ).length
@@ -258,7 +276,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Events Content',
           description:
             'Events, dates and announcements',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'events'
             ).length
@@ -272,7 +290,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Gallery Content',
           description:
             'Gallery images and captions',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'gallery'
             ).length
@@ -286,7 +304,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Commands Content',
           description:
             'Server commands and explanations',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'commands'
             ).length
@@ -300,7 +318,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Vote Content',
           description:
             'Voting rewards and external links',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'vote'
             ).length
@@ -314,7 +332,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Home Content',
           description:
             'Homepage sections and features',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'home'
             ).length
@@ -328,7 +346,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'FAQ Content',
           description:
             'Frequently asked questions',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'faq'
             ).length
@@ -342,7 +360,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Blog Content',
           description:
             'Blog posts and articles',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'blog'
             ).length
@@ -356,7 +374,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Minecraft Store',
           description:
             'Store items and packages',
-          value: String(
+          value: itemsResult.error ? 'Unavailable' : String(
             items.filter(
               (item) => item.page_key === 'store'
             ).length
@@ -370,7 +388,7 @@ export const AdminDashboard: React.FC = () => {
           label: 'Social Management',
           description:
             'Community posts and interactions',
-          value: String(posts.length),
+          value: postsResult.error ? 'Unavailable' : String(posts.length),
           detail: 'total posts',
           icon: MessageSquare,
           accent: 'text-fuchsia-300',
@@ -380,188 +398,62 @@ export const AdminDashboard: React.FC = () => {
           label: 'Manage Roles',
           description:
             'Custom roles and site access control',
-          value: String(roles.length),
+          value: rolesResult.error ? 'Unavailable' : String(roles.length),
           detail: 'custom roles',
           icon: ShieldCheck,
           accent: 'text-yellow-300',
         },
       ]);
 
-      setLoading(false);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Admin dashboard load failed:', error);
+        setDashboardError(
+          `Dashboard could not be refreshed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      } finally {
+        requestInProgress = false;
+        if (!cancelled) setLoading(false);
+      }
     };
 
-    loadDashboard();
-  }, []);
+    void loadDashboard();
+    const refreshInterval = window.setInterval(() => void loadDashboard(), 30_000);
+    window.addEventListener('focus', loadDashboard);
 
-  // Toggle SeedLoaf Bot
-  const handleBotToggle = async () => {
-    if (botSaving || botLoading) return;
-
-    const newStatus = !botEnabled;
-
-    setBotSaving(true);
-    setBotError('');
-
-    // Optimistic UI
-    setBotEnabled(newStatus);
-
-    const { error } = await supabase
-      .from('site_settings')
-      .update({
-        bot_enabled: newStatus,
-      })
-      .eq('id', true);
-
-    if (error) {
-      console.error('Bot toggle error:', error);
-
-      // Restore previous state
-      setBotEnabled(!newStatus);
-
-      setBotError(
-        'Could not update bot status. Check Supabase permissions.'
-      );
-    }
-
-    setBotSaving(false);
-  };
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', loadDashboard);
+    };
+  }, [refreshKey]);
 
   return (
     <AdminLayout
       active="dashboard"
       permission="dashboard"
     >
-      <div className="mb-8">
-        <h2 className="mb-2 text-2xl font-bold">
-          Welcome back
-        </h2>
-
-        <p className="text-slate-400">
-          Logged in as {email} ({role})
-        </p>
-      </div>
-
-      {/* =====================================================
-          SEEDLOAF BOT CONTROL
-      ====================================================== */}
-
-      <div className="mb-8 overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.08] via-white/[0.03] to-sky-500/[0.05]">
-        <div className="p-5 sm:p-6">
-
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
-            <div className="flex items-start gap-4">
-
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${
-                  botEnabled
-                    ? 'border-emerald-400/20 bg-emerald-400/10'
-                    : 'border-red-400/20 bg-red-400/10'
-                }`}
-              >
-                <Power
-                  className={`h-6 w-6 ${
-                    botEnabled
-                      ? 'text-emerald-300'
-                      : 'text-red-300'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white">
-                    SeedLoaf Bot
-                  </h3>
-
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                      botEnabled
-                        ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
-                        : 'border-red-400/20 bg-red-400/10 text-red-300'
-                    }`}
-                  >
-                    {botLoading
-                      ? 'Loading'
-                      : botEnabled
-                        ? 'ON'
-                        : 'OFF'}
-                  </span>
-                </div>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Control automatic SeedLoaf world starting.
-                </p>
-
-                <p className="mt-2 text-xs text-slate-500">
-                  {botEnabled
-                    ? 'Bot is allowed to automatically start the world.'
-                    : 'Bot is disabled. You can manually manage the server.'}
-                </p>
-              </div>
-
-            </div>
-
-            {/* Toggle */}
-            <button
-              type="button"
-              onClick={handleBotToggle}
-              disabled={botLoading || botSaving}
-              aria-label={
-                botEnabled
-                  ? 'Turn SeedLoaf Bot off'
-                  : 'Turn SeedLoaf Bot on'
-              }
-              className={`relative h-8 w-16 shrink-0 rounded-full border transition-all duration-300 ${
-                botEnabled
-                  ? 'border-emerald-400/30 bg-emerald-500/20'
-                  : 'border-white/10 bg-white/10'
-              } ${
-                botLoading || botSaving
-                  ? 'cursor-not-allowed opacity-50'
-                  : 'cursor-pointer'
-              }`}
-            >
-              <span
-                className={`absolute top-1 h-6 w-6 rounded-full shadow-lg transition-all duration-300 ${
-                  botEnabled
-                    ? 'left-9 bg-emerald-400 shadow-emerald-400/30'
-                    : 'left-1 bg-slate-400'
-                }`}
-              />
-            </button>
-
-          </div>
-
-          {/* Status footer */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${
-                  botSaving ? 'animate-spin' : ''
-                }`}
-              />
-
-              <span>
-                {botSaving
-                  ? 'Updating bot status...'
-                  : botEnabled
-                    ? 'Automatic monitoring enabled'
-                    : 'Automatic monitoring disabled'}
-              </span>
-            </div>
-
-            {botError && (
-              <p className="text-xs text-red-300">
-                {botError}
-              </p>
-            )}
-
-          </div>
-
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="mb-2 text-2xl font-bold">Welcome back</h2>
+          <p className="text-slate-400">Logged in as {email} ({role})</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setRefreshKey((current) => current + 1)}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh details
+        </button>
       </div>
+
+      {dashboardError && (
+        <div role="alert" className="mb-6 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-100">
+          {dashboardError}
+        </div>
+      )}
 
       {/* =====================================================
           EXISTING DASHBOARD
@@ -727,6 +619,20 @@ export const AdminDashboard: React.FC = () => {
                     <CheckCircle2 className="h-4 w-4 text-emerald-300" />
 
                   </div>
+
+                  {section.items && section.items.length > 0 && (
+                    <ul className="mt-4 max-h-32 space-y-1.5 overflow-y-auto border-t border-white/5 pt-3">
+                      {section.items.map((item, index) => (
+                        <li
+                          key={`${section.label}-${index}`}
+                          className="truncate text-xs text-slate-400"
+                          title={item}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                 </div>
               );
