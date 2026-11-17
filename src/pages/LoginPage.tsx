@@ -549,7 +549,7 @@ export const LoginPage: React.FC = () => {
             >
               <img
                 src="/logo.png"
-                alt="Butterfly network"
+                alt="Butterfly Network"
                 className="w-[140px] h-[140px] object-contain"
               />
             </motion.div>
@@ -676,7 +676,7 @@ export const LoginPage: React.FC = () => {
                       {isForgotPassword
                         ? 'Account Recovery'
                         : isSignUp
-                        ? 'Join Butterfly network'
+                        ? 'Join Butterfly Network'
                         : 'Secure Login'}
                     </span>
                   </div>
@@ -693,7 +693,7 @@ export const LoginPage: React.FC = () => {
                     {isForgotPassword
                       ? 'Enter your email and we will send you a secure reset link.'
                       : isSignUp
-                      ? 'Create your Butterfly network account.'
+                      ? 'Create your Butterfly Network account.'
                       : 'Log in to continue to your account.'}
                   </p>
                 </div>
@@ -1085,7 +1085,7 @@ export const LoginPage: React.FC = () => {
           transition={{ delay: 0.8 }}
           className="mt-6 text-center text-[11px] text-slate-700"
         >
-          Butterfly network • Minecraft Server Network
+          Butterfly Network • Minecraft Server Network
         </motion.p>
 
       </div>

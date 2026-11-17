@@ -80,7 +80,7 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = 'Minecraft Store | Butterfly network';
+    document.title = 'Minecraft Store | Butterfly Network';
   }, []);
 
   useEffect(() => {
@@ -176,7 +176,7 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
 
             <p className="text-base text-slate-400 sm:text-lg">
               Choose your favorite products for your
-              Butterfly network experience.
+              Butterfly Network experience.
             </p>
           </div>
 

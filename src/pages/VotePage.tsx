@@ -14,7 +14,7 @@ export const VotePage: React.FC = () => {
   };
 
   useEffect(() => {
-    document.title = 'Vote | Butterfly network';
+    document.title = 'Vote | Butterfly Network';
   }, []);
 
   const defaultRewards = [

@@ -76,13 +76,13 @@ function formatDuration(totalSeconds: number): string {
     .join(':');
 }
 
-type MiniGameConfig = { enabled: boolean; reward_coins: number; cooldown_minutes: number; daily_limit: number; difficulty?: string };
+type MiniGameConfig = { enabled: boolean; reward_coins: number; cooldown_minutes: number; daily_limit: number; difficulty?: string; pair_count?: number };
 type TicTacToeDifficulty = 'easy' | 'normal' | 'hard';
 const GAME_DEFAULTS: Record<string, MiniGameConfig> = {
   tic_tac_toe: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30, difficulty: 'normal' },
   rock_paper_scissors: { enabled: true, reward_coins: 5, cooldown_minutes: 1, daily_limit: 30 },
   number_guessing: { enabled: true, reward_coins: 10, cooldown_minutes: 2, daily_limit: 15 },
-  memory_match: { enabled: true, reward_coins: 25, cooldown_minutes: 5, daily_limit: 10 },
+  memory_match: { enabled: true, reward_coins: 25, cooldown_minutes: 5, daily_limit: 10, pair_count: 10 },
   reaction_challenge: { enabled: true, reward_coins: 15, cooldown_minutes: 2, daily_limit: 20 },
   math_challenge: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30 },
   higher_or_lower: { enabled: true, reward_coins: 10, cooldown_minutes: 2, daily_limit: 15 },
@@ -94,7 +94,18 @@ const GAME_TITLES: Record<string, string> = {
   reaction_challenge: 'Reaction Challenge', math_challenge: 'Math Challenge',
   higher_or_lower: 'Higher or Lower', word_scramble: 'Word Scramble',
 };
+const GAME_INSTRUCTIONS: Record<string, string> = {
+  tic_tac_toe: 'Place X in a square. Get three in a row before the bot, or force a draw.',
+  rock_paper_scissors: 'Start a round and choose Rock, Paper, or Scissors within 3 seconds. Your choice locks in; the result appears when the timer ends. If you do not choose, a move is picked for you.',
+  number_guessing: 'Guess the hidden number from 1 to 10. The hint tells you whether your guess is too high or too low.',
+  memory_match: 'Flip two cards at a time and find every matching pair. Fewer moves are better.',
+  reaction_challenge: 'Start and wait for the color cue. Tap the matching color as quickly as you can.',
+  math_challenge: 'Start the timer and solve the expression before it expires. Addition, subtraction, multiplication, and division can appear.',
+  higher_or_lower: 'Predict whether the next number is higher or lower. Build a three-answer streak to win.',
+  word_scramble: 'Rearrange the displayed letters to find the hidden Minecraft-themed word.',
+};
 const GAME_WORDS = ['BUTTERFLY', 'DIAMOND', 'CREEPER', 'PICKAXE', 'NETHER', 'DRAGON', 'EMERALD', 'REDSTONE'];
+const MATH_TIME_LIMIT_SECONDS = 15;
 function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (balance?: number) => void }) {
   const [configs, setConfigs] = useState<Record<string, MiniGameConfig>>(GAME_DEFAULTS);
   const [activeGame, setActiveGame] = useState('tic_tac_toe');
@@ -106,12 +117,18 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const [numberTarget, setNumberTarget] = useState(() => 1 + Math.floor(Math.random() * 10));
   const [mathAnswer, setMathAnswer] = useState('');
   const [mathQuestion, setMathQuestion] = useState(() => makeMathQuestion());
+  const [mathSeconds, setMathSeconds] = useState(MATH_TIME_LIMIT_SECONDS);
+  const [mathActive, setMathActive] = useState(false);
   const [word, setWord] = useState(() => GAME_WORDS[Math.floor(Math.random() * GAME_WORDS.length)]);
   const [wordAnswer, setWordAnswer] = useState('');
+  const [rpsActive, setRpsActive] = useState(false);
+  const [rpsSeconds, setRpsSeconds] = useState(3);
+  const [rpsSelection, setRpsSelection] = useState<string | null>(null);
   const [higherNumber, setHigherNumber] = useState(() => 1 + Math.floor(Math.random() * 9));
   const [reactionState, setReactionState] = useState<'idle'|'wait'|'go'|'done'>('idle');
   const [reactionStart, setReactionStart] = useState(0);
   const [reactionResult, setReactionResult] = useState<number|null>(null);
+  const [reactionTarget, setReactionTarget] = useState<'red' | 'green' | 'blue' | null>(null);
   const [board, setBoard] = useState<string[]>(Array(9).fill(''));
   const [botThinking, setBotThinking] = useState(false);
   const botThinkingRef = useRef(false);
@@ -124,6 +141,10 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const [higherCorrect, setHigherCorrect] = useState(0);
   const [scrambledWord, setScrambledWord] = useState(() => scrambleWord(word));
   const [rewardCelebration, setRewardCelebration] = useState<number | null>(null);
+  const rpsTimer = useRef<number | null>(null);
+  const rpsSelectionRef = useRef<string | null>(null);
+  const reactionTimer = useRef<number | null>(null);
+  const memoryPairCount = getMemoryPairCount(configs.memory_match?.pair_count);
   useEffect(() => {
     let cancelled = false;
     const loadConfigs = async () => {
@@ -155,8 +176,30 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
       if (botThinkTimer.current !== null) {
         window.clearTimeout(botThinkTimer.current);
       }
+      if (rpsTimer.current !== null) window.clearTimeout(rpsTimer.current);
+      if (reactionTimer.current !== null) window.clearTimeout(reactionTimer.current);
     };
   }, []);
+  useEffect(() => {
+    if (!mathActive) return;
+    if (mathSeconds <= 0) {
+      setMathActive(false);
+      setMathQuestion(makeMathQuestion());
+      setMathAnswer('');
+      setNotice('Time is up! Start another math challenge to try again.');
+      return;
+    }
+
+    const timerId = window.setTimeout(() => setMathSeconds((seconds) => seconds - 1), 1_000);
+    return () => window.clearTimeout(timerId);
+  }, [mathActive, mathSeconds]);
+  useEffect(() => {
+    if (activeGame !== 'memory_match') return;
+    setMemoryCards(shuffleMemory(memoryPairCount));
+    setFlipped([]);
+    setMatched([]);
+    setMemoryMoves(0);
+  }, [activeGame, memoryPairCount]);
   function finishGame(key: string, won: boolean) {
     if (!won) { setNotice('Not quite! Try again — no Coins were claimed.'); return; }
     const cfg = configs[key] ?? GAME_DEFAULTS[key];
@@ -195,14 +238,32 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
   const gameButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:border-purple-300/30 hover:bg-purple-500/20 hover:shadow-lg hover:shadow-purple-950/30 motion-reduce:transform-none motion-reduce:transition-none disabled:opacity-40';
   const primary = 'rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-950/30 transition duration-200 hover:-translate-y-0.5 hover:from-purple-500 hover:to-indigo-500 hover:shadow-purple-900/40 motion-reduce:transform-none motion-reduce:transition-none disabled:opacity-40';
   const startReaction = () => {
-    setReactionState('wait'); setReactionResult(null);
-    window.setTimeout(() => { setReactionState(current => { if (current !== 'wait') return current; setReactionStart(Date.now()); return 'go'; }); }, 1000 + Math.random()*2500);
+    if (reactionTimer.current !== null) window.clearTimeout(reactionTimer.current);
+    setReactionState('wait');
+    setReactionResult(null);
+    setReactionTarget(null);
+    reactionTimer.current = window.setTimeout(() => {
+      const colors = ['red', 'green', 'blue'] as const;
+      setReactionTarget(colors[Math.floor(Math.random() * colors.length)]);
+      setReactionStart(Date.now());
+      setReactionState('go');
+      reactionTimer.current = null;
+    }, 1_000 + Math.random() * 2_500);
   };
-  const handleReaction = () => {
-    if (reactionState === 'wait') { setReactionState('done'); setReactionResult(-1); }
-    else if (reactionState === 'go') { const ms = Date.now()-reactionStart; setReactionState('done'); setReactionResult(ms); finishGame('reaction_challenge', ms < 650); }
+  const handleReaction = (color: 'red' | 'green' | 'blue') => {
+    if (reactionState !== 'go' || !reactionTarget) return;
+    const elapsed = Date.now() - reactionStart;
+    setReactionState('done');
+    setReactionResult(elapsed);
+    if (color !== reactionTarget) {
+      setNotice(`Wrong color. The cue was ${reactionTarget}. Start again.`);
+    } else if (elapsed >= 650) {
+      setNotice(`Correct color, but ${elapsed} ms was too slow. Try again.`);
+    } else {
+      finishGame('reaction_challenge', true);
+    }
   };
-  const resetMemory = () => { setMemoryCards(shuffleMemory()); setFlipped([]); setMatched([]); setMemoryMoves(0); };
+  const resetMemory = () => { setMemoryCards(shuffleMemory(memoryPairCount)); setFlipped([]); setMatched([]); setMemoryMoves(0); };
   const flipMemory = (idx: number) => {
     if (flipped.includes(idx) || matched.includes(idx) || flipped.length >= 2) return;
     const next = [...flipped, idx]; setFlipped(next);
@@ -257,33 +318,94 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
     setBoard(Array(9).fill(''));
     setNotice('');
   };
-  const chooseRps = (pick: string) => {
+  const selectGame = (key: string) => {
+    if (rpsTimer.current !== null) {
+      window.clearTimeout(rpsTimer.current);
+      rpsTimer.current = null;
+    }
+    if (reactionTimer.current !== null) {
+      window.clearTimeout(reactionTimer.current);
+      reactionTimer.current = null;
+    }
+    setRpsActive(false);
+    rpsSelectionRef.current = null;
+    setRpsSelection(null);
+    setReactionState('idle');
+    setReactionTarget(null);
+    setMathActive(false);
+    setActiveGame(key);
+    setNotice('');
+  };
+  const selectRps = (pick: string) => {
+    if (!rpsActive || rpsSelectionRef.current !== null) return;
+    rpsSelectionRef.current = pick;
+    setRpsSelection(pick);
+  };
+  const resolveRps = (pick: string, automatic = false) => {
+    if (rpsTimer.current !== null) {
+      window.clearTimeout(rpsTimer.current);
+      rpsTimer.current = null;
+    }
+    setRpsActive(false);
     const options = ['Rock','Paper','Scissors'];
     const bot = options[Math.floor(Math.random()*3)];
     const won = (pick==='Rock'&&bot==='Scissors')||(pick==='Paper'&&bot==='Rock')||(pick==='Scissors'&&bot==='Paper');
     const draw = pick===bot;
-    setLastRpsResult(`You: ${pick} · Bot: ${bot} — ${draw?'Draw':won?'You win!':'Bot wins'}`);
+    setLastRpsResult(`${automatic ? 'Time expired · Auto-picked' : 'You picked'} ${pick} · Bot: ${bot} — ${draw?'Draw':won?'You win!':'Bot wins'}`);
+    if (automatic) setRpsSelection(pick);
     if (won) finishGame('rock_paper_scissors', true);
   };
+  const startRpsRound = () => {
+    if (rpsActive || busy) return;
+    if (rpsTimer.current !== null) window.clearTimeout(rpsTimer.current);
+    setLastRpsResult('');
+    rpsSelectionRef.current = null;
+    setRpsSelection(null);
+    setRpsSeconds(3);
+    setRpsActive(true);
+    const tick = (seconds: number) => {
+      setRpsSeconds(seconds);
+      if (seconds === 0) {
+        rpsTimer.current = null;
+        const options = ['Rock', 'Paper', 'Scissors'];
+        const selected = rpsSelectionRef.current;
+        resolveRps(
+          selected ?? options[Math.floor(Math.random() * options.length)],
+          selected === null
+        );
+        return;
+      }
+      rpsTimer.current = window.setTimeout(() => tick(seconds - 1), 1_000);
+    };
+    rpsTimer.current = window.setTimeout(() => tick(2), 1_000);
+  };
+  const startMathChallenge = () => {
+    setMathQuestion(makeMathQuestion());
+    setMathAnswer('');
+    setMathSeconds(MATH_TIME_LIMIT_SECONDS);
+    setNotice('');
+    setMathActive(true);
+  };
   const submitGuess = () => { const n=Number(guess); if(n===numberTarget){finishGame('number_guessing',true);setGuess('');setNumberTarget(1+Math.floor(Math.random()*10));} else setNotice(n<numberTarget?'Too low — try again.':'Too high — try again.'); };
-  const submitMath = () => { const ok=Number(mathAnswer)===mathQuestion.answer; if(ok){finishGame('math_challenge',true);setMathQuestion(makeMathQuestion());setMathAnswer('');}else setNotice('Incorrect answer. Try again.'); };
+  const submitMath = () => { if(!mathActive) return; const ok=Number(mathAnswer)===mathQuestion.answer; if(ok){setMathActive(false);finishGame('math_challenge',true);setMathAnswer('');}else setNotice('Incorrect answer. Try again before the timer ends.'); };
   const submitWord = () => { if(wordAnswer.trim().toUpperCase()===word){finishGame('word_scramble',true);const next=GAME_WORDS[Math.floor(Math.random()*GAME_WORDS.length)];setWord(next);setScrambledWord(scrambleWord(next));setWordAnswer('');}else setNotice('Not the right word yet.'); };
   const guessHigher = (choice: 'higher'|'lower') => { const next=1+Math.floor(Math.random()*9); const won=(choice==='higher'&&next>higherNumber)||(choice==='lower'&&next<higherNumber); setHigherNumber(next); if(won){const score=higherCorrect+1;setHigherCorrect(score);if(score>=3){finishGame('higher_or_lower',true);setHigherCorrect(0);}}else{setHigherCorrect(0);setNotice(`New number: ${next}. Streak reset.`);} };
   return <section className="space-y-4">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-black">Mini-games</h2><p className="mt-1 text-sm text-slate-400">Play against the bot and complete quick challenges to earn Coins.</p></div><span className="text-xs text-slate-500">Rewards are confirmed by Supabase</span></div>
     {!enabled ? <div className={cardClass}>Mini-games are disabled by an admin.</div> : <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map((key)=><motion.button key={key} whileHover={{y:-2}} whileTap={{scale:0.97}} transition={{duration:0.16}} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20 shadow-lg shadow-purple-950/20':''}`} onClick={()=>{setActiveGame(key);setNotice('');}} disabled={botThinking || !(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</motion.button>)}</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.keys(GAME_TITLES).map((key)=><motion.button key={key} whileHover={{y:-2}} whileTap={{scale:0.97}} transition={{duration:0.16}} className={`${gameButton} ${activeGame===key?'border-purple-400/50 bg-purple-500/20 shadow-lg shadow-purple-950/20':''}`} onClick={()=>selectGame(key)} disabled={botThinking || !(configs[key]??GAME_DEFAULTS[key]).enabled}>{GAME_TITLES[key]}</motion.button>)}</div>
       <motion.div key={activeGame} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.24}} className={`${cardClass} relative overflow-hidden border-purple-300/15 bg-gradient-to-br from-white/[0.055] via-slate-950/70 to-purple-950/20`}>
         <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-purple-500/10 blur-3xl" />
         <div className="relative mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-300/20 bg-purple-500/10"><Gamepad2 className="h-5 w-5 text-purple-200" /></span><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">Arcade challenge</p><h3 className="text-xl font-bold">{GAME_TITLES[activeGame]}</h3></div></div><span className="rounded-xl border border-amber-300/20 bg-gradient-to-br from-amber-300/15 to-amber-600/5 px-3 py-2 text-sm font-black text-amber-200 shadow-lg shadow-amber-950/10"><Coins className="mr-1 inline h-4 w-4" />+{cfg.reward_coins}</span></div>
+        <p className="relative mb-5 max-w-3xl text-sm leading-6 text-slate-400">{GAME_INSTRUCTIONS[activeGame]}</p>
         <div className="relative">
         {!cfg.enabled ? <p className="text-slate-400">This game is currently disabled.</p> : <div className="space-y-4">
-          {activeGame==='tic_tac_toe' && <><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-slate-400">You are X. Beat the bot to win.</p><span className="rounded-full border border-purple-300/15 bg-purple-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-200">Bot · {ticDifficulty}</span></div><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><motion.button key={i} disabled={botThinking || busy || Boolean(v) || Boolean(ticWinner(board))} whileHover={!v&&!botThinking?{scale:1.04}:undefined} whileTap={{scale:0.95}} className={`aspect-square rounded-xl border text-3xl font-black transition-colors disabled:cursor-not-allowed ${v==='X'?'border-purple-300/30 bg-purple-500/15 text-purple-200':v==='O'?'border-sky-300/20 bg-sky-500/10 text-sky-200':'border-white/10 bg-black/20 hover:border-purple-300/30 disabled:opacity-70'}`} onClick={()=>playTic(i)}>{v}</motion.button>)}</div><div className="mt-4 flex min-h-9 items-center justify-between gap-3"><div className="text-sm text-slate-400">{botThinking ? <span className="inline-flex items-center gap-2 text-sky-200"><Loader2 className="h-4 w-4 animate-spin" />Bot is thinking…</span> : <span>{ticDifficulty==='hard'?'Unbeatable strategy enabled':ticDifficulty==='normal'?'Bot will win or block when it can':'Easy random moves'}</span>}</div><button className={gameButton} onClick={resetTic}>New round</button></div></>}
-          {activeGame==='rock_paper_scissors' && <><div className="flex flex-wrap gap-2">{['Rock','Paper','Scissors'].map((x)=><motion.button whileHover={{y:-3,scale:1.03}} whileTap={{scale:0.96}} transition={{duration:0.16}} className={`${primary} min-w-28`} key={x} onClick={()=>chooseRps(x)}>{x}</motion.button>)}</div><p className="text-sm text-slate-300">{lastRpsResult}</p></>}
-          {activeGame==='number_guessing' && <><p className="text-sm text-slate-400">Guess the secret number from 1 to 10.</p><div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" min="1" max="10" value={guess} onChange={e=>setGuess(e.target.value)}/><button className={primary} onClick={submitGuess}>Guess</button></div></>}
-          {activeGame==='memory_match' && <><p className="text-sm text-slate-400">Find all matching pairs. Moves: {memoryMoves}</p><div className="grid max-w-lg grid-cols-4 gap-2">{memoryCards.map((v,i)=>{const isFaceUp=flipped.includes(i)||matched.includes(i);return <motion.button key={i} animate={{rotateY:isFaceUp?180:0,scale:matched.includes(i)?1.03:1}} whileTap={{scale:0.94}} transition={{duration:0.22}} className={`aspect-square rounded-xl border text-xl font-black ${isFaceUp?'border-amber-300/30 bg-gradient-to-br from-amber-300/15 to-purple-500/15':'border-white/10 bg-black/20 hover:border-purple-300/30'}`} onClick={()=>flipMemory(i)}><span className="block" style={{transform:isFaceUp?'rotateY(180deg)':undefined}}>{isFaceUp?v:'?'}</span></motion.button>;})}</div><button className={gameButton} onClick={resetMemory}>Reset board</button></>}
-          {activeGame==='reaction_challenge' && <><p className="text-sm text-slate-400">Tap the button as soon as it turns green. Under 650ms wins.</p><motion.button animate={{scale:reactionState==='go'?[1,1.015,1]:1,backgroundColor:reactionState==='go'?'#059669':undefined}} transition={{duration:0.45,repeat:reactionState==='go'?Infinity:0}} className={`${primary} min-h-20 w-full max-w-md ${reactionState==='go'?'border border-emerald-300/30 bg-emerald-600 shadow-emerald-900/40':''}`} onClick={reactionState==='idle'||reactionState==='done'?startReaction:handleReaction}>{reactionState==='idle'?'Start reaction test':reactionState==='wait'?'Wait for green…':reactionState==='go'?'CLICK NOW!':reactionResult===-1?'Too early — try again':`${reactionResult} ms · Try again`}</motion.button></>}
-          {activeGame==='math_challenge' && <><p className="text-lg font-bold">{mathQuestion.label} = ?</p><div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" value={mathAnswer} onChange={e=>setMathAnswer(e.target.value)}/><button className={primary} onClick={submitMath}>Submit</button></div></>}
+          {activeGame==='tic_tac_toe' && <><div className="mb-3 flex flex-wrap items-center justify-end gap-3"><span className="rounded-full border border-purple-300/15 bg-purple-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-200">Bot · {ticDifficulty}</span></div><div className="grid max-w-xs grid-cols-3 gap-2">{board.map((v,i)=><motion.button key={i} disabled={botThinking || busy || Boolean(v) || Boolean(ticWinner(board))} whileHover={!v&&!botThinking?{scale:1.04}:undefined} whileTap={{scale:0.95}} className={`aspect-square rounded-xl border text-3xl font-black transition-colors disabled:cursor-not-allowed ${v==='X'?'border-purple-300/30 bg-purple-500/15 text-purple-200':v==='O'?'border-sky-300/20 bg-sky-500/10 text-sky-200':'border-white/10 bg-black/20 hover:border-purple-300/30 disabled:opacity-70'}`} onClick={()=>playTic(i)}>{v}</motion.button>)}</div><div className="mt-4 flex min-h-9 items-center justify-between gap-3"><div className="text-sm text-slate-400">{botThinking ? <span className="inline-flex items-center gap-2 text-sky-200"><Loader2 className="h-4 w-4 animate-spin" />Bot is thinking…</span> : <span>{ticDifficulty==='hard'?'Unbeatable strategy enabled':ticDifficulty==='normal'?'Bot will win or block when it can':'Easy random moves'}</span>}</div><button className={gameButton} onClick={resetTic}>New round</button></div></>}
+          {activeGame==='rock_paper_scissors' && <><div className="mb-4 flex flex-wrap items-center gap-3"><button className={primary} onClick={startRpsRound} disabled={rpsActive || busy}>{rpsActive ? 'Round in progress' : 'Start round'}</button>{rpsActive && <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-sm font-black tabular-nums text-amber-200">{rpsSeconds}s</span>}</div><div className="flex flex-wrap gap-2">{['Rock','Paper','Scissors'].map((x)=><motion.button whileHover={{y:-3,scale:1.03}} whileTap={{scale:0.96}} transition={{duration:0.16}} className={`${primary} min-w-28 ${rpsSelection===x?'border-purple-300/50 bg-purple-500/20':''}`} key={x} onClick={()=>selectRps(x)} disabled={!rpsActive || busy || rpsSelection!==null}>{x}{rpsSelection===x?' · Locked':''}</motion.button>)}</div>{rpsActive && <p className="text-sm text-slate-400">{rpsSelection ? `Your ${rpsSelection} is locked. The result will appear when the timer ends.` : 'Choose before the timer ends. If you do not choose, a move will be picked for you.'}</p>}{lastRpsResult && <p className="text-sm text-slate-300">{lastRpsResult}</p>}</>}
+          {activeGame==='number_guessing' && <div className="flex gap-2"><input className="w-32 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white" type="number" min="1" max="10" value={guess} onChange={e=>setGuess(e.target.value)}/><button className={primary} onClick={submitGuess}>Guess</button></div>}
+          {activeGame==='memory_match' && <><p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{memoryCards.length} cards · {memoryPairCount} pairs · {memoryMoves} moves</p><div className="grid max-w-3xl grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{memoryCards.map((v,i)=>{const isFaceUp=flipped.includes(i)||matched.includes(i);return <motion.button key={i} animate={{rotateY:isFaceUp?180:0,scale:matched.includes(i)?1.03:1}} whileTap={{scale:0.94}} transition={{duration:0.22}} className={`aspect-square rounded-2xl border text-2xl font-black shadow-lg sm:text-3xl ${isFaceUp?'border-amber-300/30 bg-gradient-to-br from-amber-300/15 to-purple-500/15 text-amber-100':'border-white/10 bg-gradient-to-br from-white/[0.06] to-black/30 text-purple-200 hover:border-purple-300/30'}`} onClick={()=>flipMemory(i)} aria-label={isFaceUp?`Card ${i+1}: ${v}`:`Hidden card ${i+1}`}><span className="block" style={{transform:isFaceUp?'rotateY(180deg)':undefined}}>{isFaceUp?v:'?'}</span></motion.button>;})}</div><button className={gameButton} onClick={resetMemory}>Reset board</button></>}
+          {activeGame==='reaction_challenge' && <><div className="mb-4 min-h-12">{reactionState==='idle' || reactionState==='done' ? <button className={primary} onClick={startReaction}>Start reaction test</button> : reactionState==='wait' ? <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-300"><Loader2 className="h-4 w-4 animate-spin"/>Wait for the color cue…</span> : <p className="text-lg font-black uppercase tracking-wider text-white">Tap <span className={reactionTarget==='red'?'text-red-400':reactionTarget==='green'?'text-emerald-400':'text-sky-400'}>{reactionTarget}</span>!</p>}</div>{reactionState==='go' && <div className="grid max-w-lg grid-cols-3 gap-3">{([{id:'red',label:'Red',style:'border-red-300/30 bg-red-500/20 text-red-100 hover:bg-red-500/35'},{id:'green',label:'Green',style:'border-emerald-300/30 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/35'},{id:'blue',label:'Blue',style:'border-sky-300/30 bg-sky-500/20 text-sky-100 hover:bg-sky-500/35'}] as const).map(color=><motion.button key={color.id} whileHover={{scale:1.04}} whileTap={{scale:0.94}} className={`min-h-24 rounded-2xl border text-lg font-black uppercase tracking-wider shadow-lg transition ${color.style}`} onClick={()=>handleReaction(color.id)}>{color.label}</motion.button>)}</div>}{reactionState==='done' && reactionResult !== null && <p className="mt-3 text-sm text-slate-400">Reaction time: {reactionResult} ms</p>}</>}
+          {activeGame==='math_challenge' && <><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-2xl font-black tracking-wide text-white">{mathQuestion.label} = ?</p><span className={`rounded-full border px-3 py-1.5 text-sm font-black tabular-nums ${mathSeconds<=5&&mathActive?'border-red-300/25 bg-red-500/10 text-red-200':'border-purple-300/20 bg-purple-500/10 text-purple-200'}`}>{mathActive ? `${mathSeconds}s left` : `${MATH_TIME_LIMIT_SECONDS}s challenge`}</span></div>{mathActive ? <form className="flex flex-wrap gap-2" onSubmit={(event)=>{event.preventDefault();submitMath();}}><input autoFocus className="w-36 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-white outline-none focus:border-purple-300/50" type="number" step="1" value={mathAnswer} onChange={e=>setMathAnswer(e.target.value)} aria-label="Math answer"/><button className={primary} type="submit" disabled={!mathAnswer.trim()}>Submit answer</button></form> : <button className={primary} onClick={startMathChallenge}>Start timed challenge</button>}</>}
           {activeGame==='higher_or_lower' && <><p className="text-sm text-slate-400">Current number: <b className="text-white">{higherNumber}</b> · streak {higherCorrect}/3</p><div className="flex gap-2"><button className={primary} onClick={()=>guessHigher('higher')}>Higher</button><button className={primary} onClick={()=>guessHigher('lower')}>Lower</button></div></>}
           {activeGame==='word_scramble' && <><p className="text-sm text-slate-400">Unscramble: <b className="font-mono text-lg tracking-[0.25em] text-amber-100">{scrambledWord}</b></p><div className="flex gap-2"><input className="w-56 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white uppercase outline-none transition focus:border-purple-300/50" value={wordAnswer} onChange={e=>setWordAnswer(e.target.value)}/><button className={primary} onClick={submitWord}>Check</button></div></>}
         </div>}
@@ -293,8 +415,65 @@ function AfkMiniGames({ enabled, onBalance }: { enabled: boolean; onBalance: (ba
     {notice && <motion.p key={notice} initial={{opacity:0,y:8,scale:0.98}} animate={{opacity:1,y:0,scale:1}} transition={{duration:0.2}} role="status" className="flex items-center gap-2 rounded-xl border border-amber-300/20 bg-gradient-to-r from-amber-300/[0.08] to-purple-500/[0.08] p-3 text-sm text-amber-100"><motion.span animate={rewardCelebration !== null ? {y:[0,-7,0],rotate:[0,12,-12,0],scale:[1,1.22,1]} : undefined} transition={{duration:0.65}} onAnimationComplete={() => { if (rewardCelebration !== null) setRewardCelebration(null); }} className="shrink-0 text-amber-300"><Coins className="h-4 w-4" /></motion.span><span>{notice}</span>{rewardCelebration !== null && <span className="ml-auto rounded-full border border-amber-200/20 bg-amber-300/10 px-2.5 py-1 text-xs font-black text-amber-200">+{rewardCelebration}</span>}</motion.p>}
   </section>;
 }
-function makeMathQuestion() { const a=2+Math.floor(Math.random()*15), b=2+Math.floor(Math.random()*12); return {label:`${a} × ${b}`, answer:a*b}; }
-function shuffleMemory() { const pairs=['🍀','💎','🦋','⚡','🌙','🔥']; return [...pairs,...pairs].sort(()=>Math.random()-.5); }
+function makeMathQuestion() {
+  const pick = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
+  const mode = Math.floor(Math.random() * 5);
+
+  if (mode === 0 || mode === 1 || mode === 2) {
+    const operatorCount = pick(3, 4);
+    const operations = Array.from({ length: operatorCount }, () =>
+      mode === 0 ? '+' : mode === 1 ? '-' : Math.random() < 0.5 ? '+' : '-'
+    );
+    if (mode === 2) {
+      if (!operations.includes('+')) operations[0] = '+';
+      if (!operations.includes('-')) operations[operations.length - 1] = '-';
+    }
+
+    const values = [pick(60, 100), ...Array.from({ length: operatorCount }, () => pick(2, 15))];
+    const answer = operations.reduce(
+      (total, operation, index) =>
+        operation === '+' ? total + values[index + 1] : total - values[index + 1],
+      values[0]
+    );
+    return {
+      label: values.reduce(
+        (expression, value, index) =>
+          index === 0 ? String(value) : `${expression} ${operations[index - 1]} ${value}`,
+        ''
+      ),
+      answer,
+    };
+  }
+
+  if (mode === 3) {
+    const factors = Array.from({ length: pick(2, 3) }, () => pick(2, 9));
+    return {
+      label: factors.join(' × '),
+      answer: factors.reduce((product, factor) => product * factor, 1),
+    };
+  }
+
+  const divisors = Array.from({ length: pick(2, 3) }, () => pick(2, 9));
+  const quotient = pick(2, 12);
+  const dividend = quotient * divisors.reduce((product, divisor) => product * divisor, 1);
+  return {
+    label: [dividend, ...divisors].join(' ÷ '),
+    answer: quotient,
+  };
+}
+function getMemoryPairCount(value: unknown): number {
+  const count = Number(value);
+  return Number.isInteger(count) && count >= 6 && count <= 16 ? count : 10;
+}
+function shuffleMemory(pairCount = 10) {
+  const symbols = ['🍀','💎','🦋','⚡','🌙','🔥','🪙','🗡️','🧪','🧱','🏹','⛏️','🛡️','🪵','👑','🐉'];
+  const cards = [...symbols.slice(0, pairCount), ...symbols.slice(0, pairCount)];
+  for (let index = cards.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [cards[index], cards[target]] = [cards[target], cards[index]];
+  }
+  return cards;
+}
 function scrambleWord(value:string) { const chars=value.split(''); for(let i=chars.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[chars[i],chars[j]]=[chars[j],chars[i]];} const result=chars.join(''); return result===value?`${result.slice(1)}${result[0]}`:result; }
 function normalizeTicDifficulty(value: string | undefined): TicTacToeDifficulty {
   return value === 'easy' || value === 'hard' ? value : 'normal';

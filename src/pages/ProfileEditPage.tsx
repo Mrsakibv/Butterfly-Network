@@ -462,7 +462,7 @@ export const ProfileEditPage: React.FC = () => {
               </h1>
 
               <p className="mt-1 text-slate-400">
-                Manage your Butterfly network profile
+                Manage your Butterfly Network profile
               </p>
             </div>
 

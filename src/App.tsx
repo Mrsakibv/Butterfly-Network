@@ -223,7 +223,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
           {/* Logo */}
           <img
             src="/logo1.png"
-            alt="Butterfly network"
+            alt="Butterfly Network"
             className="relative z-10 h-[190px] w-[190px] object-contain"
             style={{
               filter:
@@ -272,7 +272,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
             }}
           />
 
-          CONNECTING TO Butterfly network
+          CONNECTING TO Butterfly Network
 
         </div>
 

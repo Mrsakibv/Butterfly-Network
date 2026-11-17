@@ -310,7 +310,7 @@ export const ProductDetailsPage: React.FC = () => {
 
                 <p className="mt-3 text-sm leading-7 text-slate-400">
                   {product.description ||
-                    'Get this Minecraft Store product and enhance your Butterfly network experience.'}
+                    'Get this Minecraft Store product and enhance your Butterfly Network experience.'}
                 </p>
               </div>
 

@@ -351,7 +351,7 @@ export const UpdatePasswordPage: React.FC = () => {
             >
               <img
                 src="/logo.png"
-                alt="Butterfly network"
+                alt="Butterfly Network"
                 className="w-[155px] h-[155px] object-contain"
               />
             </motion.div>
@@ -412,7 +412,7 @@ export const UpdatePasswordPage: React.FC = () => {
 
                   <p className="mt-2 text-sm leading-6 text-slate-400">
                     Choose a strong new password for your
-                    Butterfly network account.
+                    Butterfly Network account.
                   </p>
 
                 </div>
@@ -682,7 +682,7 @@ export const UpdatePasswordPage: React.FC = () => {
                 </h1>
 
                 <p className="mt-3 text-sm leading-6 text-slate-400">
-                  Your Butterfly network password has been
+                  Your Butterfly Network password has been
                   successfully updated.
                 </p>
 
@@ -692,7 +692,7 @@ export const UpdatePasswordPage: React.FC = () => {
                   onClick={() => navigate('/')}
                   className="mt-7 w-full rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3.5 font-semibold text-white shadow-lg shadow-purple-950/40 hover:from-purple-500 hover:to-indigo-500 transition-all"
                 >
-                  Return to Butterfly network
+                  Return to Butterfly Network
                 </motion.button>
 
               </motion.div>
@@ -710,7 +710,7 @@ export const UpdatePasswordPage: React.FC = () => {
           transition={{ delay: 0.8 }}
           className="mt-6 text-center text-[11px] text-slate-700"
         >
-          Butterfly network • Minecraft Server Network
+          Butterfly Network • Minecraft Server Network
         </motion.p>
 
       </div>

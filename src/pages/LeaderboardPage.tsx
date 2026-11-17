@@ -8,7 +8,7 @@ interface LeaderboardPageProps {
 
 export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
-    document.title = 'Leaderboards | Butterfly network';
+    document.title = 'Leaderboards | Butterfly Network';
   }, []);
 
   return (

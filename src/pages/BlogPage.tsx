@@ -10,7 +10,7 @@ export const BlogPage: React.FC = () => {
   const { navigate } = useRouter();
 
   useEffect(() => {
-    document.title = 'Blog & News | Butterfly network';
+    document.title = 'Blog & News | Butterfly Network';
   }, []);
 
   // Parse extra fields safely
@@ -192,7 +192,7 @@ export const BlogPage: React.FC = () => {
             </h1>
 
             <p className="text-base text-slate-400 sm:text-lg">
-              Stay updated with the latest news, announcements, and guides from Butterfly network.
+              Stay updated with the latest news, announcements, and guides from Butterfly Network.
             </p>
           </div>
 

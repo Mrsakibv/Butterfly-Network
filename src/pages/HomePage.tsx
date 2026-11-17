@@ -15,7 +15,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
   useEffect(() => {
-    document.title = 'Butterfly network | Minecraft Server Network';
+    document.title = 'Butterfly Network | Minecraft Server Network';
   }, []);
 
   return (
@@ -29,7 +29,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenPlayModal }) => {
       {/* 2. Custom Home Content Slider */}
       <HomeSlider />
 
-      {/* 3. Why Butterfly network Features */}
+      {/* 3. Why Butterfly Network Features */}
       <FeaturesSection />
 
       {/* 4. How To Join (3 Steps) */}

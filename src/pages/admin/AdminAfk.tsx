@@ -140,7 +140,7 @@ const DEFAULT_GAME_CONFIG = {
   tic_tac_toe: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30, difficulty: 'normal' },
   rock_paper_scissors: { enabled: true, reward_coins: 5, cooldown_minutes: 1, daily_limit: 30, difficulty: 'normal' },
   number_guessing: { enabled: true, reward_coins: 10, cooldown_minutes: 2, daily_limit: 15, difficulty: 'normal' },
-  memory_match: { enabled: true, reward_coins: 25, cooldown_minutes: 5, daily_limit: 10, difficulty: 'normal' },
+  memory_match: { enabled: true, reward_coins: 25, cooldown_minutes: 5, daily_limit: 10, difficulty: 'normal', pair_count: 10 },
   reaction_challenge: { enabled: true, reward_coins: 15, cooldown_minutes: 2, daily_limit: 20, difficulty: 'normal' },
   math_challenge: { enabled: true, reward_coins: 10, cooldown_minutes: 1, daily_limit: 30, difficulty: 'normal' },
   higher_or_lower: { enabled: true, reward_coins: 10, cooldown_minutes: 2, daily_limit: 15, difficulty: 'normal' },
@@ -221,8 +221,16 @@ export const AdminAfk: React.FC = () => {
         .select('config_key, config_value');
       if (error) throw error;
       const map = new Map((data ?? []).map((row: { config_key: string; config_value: unknown }) => [row.config_key, row.config_value]));
+      const savedMinigames = map.get('minigames') as Partial<typeof DEFAULT_GAME_CONFIG> | undefined;
       setAdminConfigs({
-        minigames: { ...DEFAULT_GAME_CONFIG, ...(map.get('minigames') as Partial<typeof DEFAULT_GAME_CONFIG> | undefined) },
+        minigames: {
+          ...DEFAULT_GAME_CONFIG,
+          ...savedMinigames,
+          memory_match: {
+            ...DEFAULT_GAME_CONFIG.memory_match,
+            ...savedMinigames?.memory_match,
+          },
+        },
         ads: { ...DEFAULT_AD_CONFIG, ...(map.get('ads') as Partial<typeof DEFAULT_AD_CONFIG> | undefined) },
         security: { ...DEFAULT_SECURITY_CONFIG, ...(map.get('security') as Partial<typeof DEFAULT_SECURITY_CONFIG> | undefined) },
         general: { ...DEFAULT_GENERAL_CONFIG, ...(map.get('general') as Partial<typeof DEFAULT_GENERAL_CONFIG> | undefined) },
@@ -1316,11 +1324,14 @@ export const AdminAfk: React.FC = () => {
                         {key === 'tic_tac_toe' && (
                           <label className="text-sm text-slate-300">Bot difficulty<select className={field} value={game.difficulty ?? 'normal'} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, [key]: {...c.minigames[key], difficulty: e.target.value}}}))}><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
                         )}
+                        {key === 'memory_match' && (
+                          <label className="text-sm text-slate-300">Memory cards<select className={field} value={String((adminConfigs.minigames.memory_match.pair_count ?? 10) * 2)} onChange={e => setAdminConfigs(c => ({...c, minigames: {...c.minigames, memory_match: {...c.minigames.memory_match, pair_count: Number(e.target.value) / 2}}}))}><option value="12">12 cards · 6 pairs</option><option value="16">16 cards · 8 pairs</option><option value="20">20 cards · 10 pairs</option><option value="24">24 cards · 12 pairs</option><option value="28">28 cards · 14 pairs</option><option value="32">32 cards · 16 pairs</option></select></label>
+                        )}
                       </div>
                     </div>;
                   })}
                   <button type="button" disabled={configSaving} onClick={() => void saveAdminConfig('minigames')} className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"><Save className="h-4 w-4"/>{configSaving ? 'Saving…' : 'Save Mini-game Settings'}</button>
-                  <p className="text-xs text-slate-500">Each game can be enabled/disabled independently. Reward, cooldown and daily limit are saved for every game; bot difficulty applies to Tic-Tac-Toe. Player rewards must be verified by a server-side claim function.</p>
+                  <p className="text-xs text-slate-500">Each game can be enabled/disabled independently. Reward, cooldown and daily limit are saved for every game; bot difficulty applies to Tic-Tac-Toe and Memory Match card count applies to all new boards. Player rewards must be verified by a server-side claim function.</p>
                 </div>
               )}
             </>
