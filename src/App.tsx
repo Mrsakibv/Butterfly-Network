@@ -46,6 +46,8 @@ import { StoreCheckoutPage } from './pages/StoreCheckoutPage';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminImportantLinks } from './pages/admin/AdminImportantLinks';
+import { AdminQuickAccess } from './pages/admin/AdminQuickAccess';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminGameModes } from './pages/admin/AdminGameModes';
 import { AdminPages } from './pages/admin/AdminPages';
@@ -535,6 +537,14 @@ function AppContent() {
 
     if (path === '/admin') {
       return <AdminDashboard />;
+    }
+
+    if (path === '/admin/quick-access') {
+      return <AdminQuickAccess />;
+    }
+
+    if (path === '/admin/important-links') {
+      return <AdminImportantLinks />;
     }
 
     if (path === '/admin/settings') {

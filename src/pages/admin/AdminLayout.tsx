@@ -25,6 +25,8 @@ import {
   BadgeCheck,
   Cable,
   Zap,
+  Link2,
+  LayoutGrid,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
@@ -38,6 +40,7 @@ interface AdminLayoutProps {
 
 export type AdminSectionKey =
   | 'dashboard'
+  | 'quickaccess'
   | 'settings'
   | 'gamemodes'
   | 'pages'
@@ -60,9 +63,10 @@ export type AdminSectionKey =
   | 'memories'
   | 'achievements'
   | 'minecraft'
-  | 'afk';
+  | 'afk'
+  | 'importantlinks';
 
-const ADMIN_NAV_ITEMS: {
+export const ADMIN_NAV_ITEMS: {
   key: AdminSectionKey;
   permission: AdminPermission;
   label: string;
@@ -77,11 +81,25 @@ const ADMIN_NAV_ITEMS: {
     path: '/admin',
   },
   {
+    key: 'quickaccess',
+    permission: 'dashboard',
+    label: 'Quick Access',
+    icon: LayoutGrid,
+    path: '/admin/quick-access',
+  },
+  {
     key: 'settings',
     permission: 'settings',
     label: 'Site Settings',
     icon: Settings,
     path: '/admin/settings',
+  },
+  {
+    key: 'importantlinks',
+    permission: 'importantlinks',
+    label: 'Important Links',
+    icon: Link2,
+    path: '/admin/important-links',
   },
   {
     key: 'gamemodes',
@@ -249,7 +267,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   // The page's own permission is always used.
   // No permission inheritance.
-  const accessPermission: AdminPermission = permission ?? active;
+  const accessPermission: AdminPermission =
+    permission ?? (active === 'quickaccess' ? 'dashboard' : active);
 
   const firstAllowedItem = ADMIN_NAV_ITEMS.find((item) =>
     can(item.permission)

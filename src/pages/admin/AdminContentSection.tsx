@@ -134,7 +134,7 @@ const emptyItem = (pageKey: string): PageItem => ({
 });
 
 interface AdminContentSectionProps {
-  pageKey: Exclude<AdminSectionKey, 'dashboard' | 'settings' | 'gamemodes' | 'pages' | 'users'>;
+  pageKey: Exclude<AdminSectionKey, 'dashboard' | 'settings' | 'gamemodes' | 'pages' | 'users' | 'importantlinks'>;
   title: string;
   description: string;
   hideLayout?: boolean;

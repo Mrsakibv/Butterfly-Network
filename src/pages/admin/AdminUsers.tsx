@@ -20,6 +20,7 @@ interface CustomRole {
 
 const PERMISSIONS: { key: AdminPermission; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'importantlinks', label: 'Important Links' },
   { key: 'settings', label: 'Site Settings' },
   { key: 'gamemodes', label: 'Game Modes' },
   { key: 'pages', label: 'Pages' },

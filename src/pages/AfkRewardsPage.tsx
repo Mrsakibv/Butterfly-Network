@@ -48,6 +48,7 @@ type SessionRpcResult = {
 };
 type ClaimRpcResult = {
   success?: boolean;
+  reason?: string;
   mission_id?: string;
   reward_coins?: number;
   new_balance?: number;
@@ -895,13 +896,6 @@ export const AfkRewardsPage: React.FC = () => {
       setNoticeIsError(true);
       return;
     }
-    if (!['daily_visit', 'afk_minutes'].includes(mission.mission_type)) {
-      setNotice(
-        'এই mission type-এর verified progress system এখনো চালু হয়নি।'
-      );
-      setNoticeIsError(true);
-      return;
-    }
     setClaimingMissionId(mission.id);
     setNotice('');
     setNoticeIsError(false);
@@ -912,7 +906,15 @@ export const AfkRewardsPage: React.FC = () => {
       if (error) throw error;
       const result = data as ClaimRpcResult | null;
       if (!result?.success) {
-        throw new Error('The server did not confirm this mission claim.');
+        const messages: Record<string, string> = {
+          login_required: 'Mission reward নিতে login করতে হবে।',
+          missions_disabled: 'Daily Missions বর্তমানে disabled আছে।',
+          mission_inactive: 'এই Mission বর্তমানে active নয়।',
+          already_claimed: 'তুমি এই Mission today-তে আগেই claim করেছ।',
+          progress_incomplete: `Progress পূর্ণ হয়নি। ${result.progress ?? 0}/${result.target ?? mission.target} complete।`,
+          unsupported_mission: 'এই Mission type এখনো server-এ supported নয়।',
+        };
+        throw new Error(messages[result.reason ?? ''] ?? 'The server did not confirm this mission claim.');
       }
       if (typeof result.new_balance === 'number') {
         setWalletBalance(result.new_balance);
@@ -1151,7 +1153,6 @@ export const AfkRewardsPage: React.FC = () => {
                 <div className="grid gap-4 lg:grid-cols-2">
                   {missions.map((mission) => {
                     const isClaimed = claimedMissionIds.includes(mission.id);
-                    const claimSupported = ['daily_visit', 'afk_minutes'].includes(mission.mission_type);
                     const isClaiming = claimingMissionId === mission.id;
                     return (
                       <motion.article key={mission.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }} transition={{ duration: 0.2 }} className={`${cardClass} transition-colors hover:border-purple-300/20`}>
@@ -1179,8 +1180,7 @@ export const AfkRewardsPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => void claimMission(mission)}
-                            disabled={isClaimed || isClaiming || !claimSupported}
-                            title={!claimSupported ? 'This mission type needs verified mini-game tracking.' : undefined}
+                            disabled={isClaimed || isClaiming}
                             className={isClaimed ? secondaryButtonClass : buttonClass}
                           >
                             {isClaiming ? (
@@ -1190,7 +1190,7 @@ export const AfkRewardsPage: React.FC = () => {
                             ) : (
                               <Coins className="h-4 w-4" />
                             )}
-                            {isClaimed ? 'Claimed Today' : !claimSupported ? 'Not Available Yet' : 'Claim Reward'}
+                            {isClaimed ? 'Claimed Today' : 'Claim Reward'}
                           </button>
                         </div>
                       </motion.article>

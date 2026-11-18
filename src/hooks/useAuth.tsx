@@ -25,7 +25,8 @@ export type AdminPermission =
   | 'memories'
   | 'achievements'
   | 'minecraft'
-  | 'afk';
+  | 'afk'
+  | 'importantlinks';
 
 const VALID_PERMISSIONS: AdminPermission[] = [
   'dashboard',
@@ -53,6 +54,7 @@ const VALID_PERMISSIONS: AdminPermission[] = [
   'achievements',
   'minecraft',
   'afk',
+  'importantlinks',
 ];
 
 interface AuthContextValue {
