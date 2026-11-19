@@ -28,6 +28,7 @@ interface ImportantLink {
   title: string;
   description: string;
   url: string;
+  urls: string[];
 }
 
 interface LinkFeature {
@@ -35,12 +36,13 @@ interface LinkFeature {
   link_id: string;
   title: string;
   description: string;
+  url: string;
   created_at: string;
 }
 
 const emptyGroupForm = { title: '', subtitle: '' };
 const emptyLinkForm = { title: '', description: '', url: '' };
-const emptyFeatureForm = { title: '', description: '' };
+const emptyFeatureForm = { title: '', description: '', url: '' };
 
 export const AdminImportantLinks: React.FC = () => {
   const [groups, setGroups] = useState<LinkGroup[]>([]);
@@ -64,6 +66,9 @@ export const AdminImportantLinks: React.FC = () => {
   const [featureFormVisible, setFeatureFormVisible] = useState(false);
   const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
   const [featureForm, setFeatureForm] = useState(emptyFeatureForm);
+  const [featureFormMode, setFeatureFormMode] = useState<'feature' | 'link'>('feature');
+  const [destinationUrlVisible, setDestinationUrlVisible] = useState(false);
+  const [destinationUrl, setDestinationUrl] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -76,11 +81,11 @@ export const AdminImportantLinks: React.FC = () => {
         .order('created_at', { ascending: false }),
       supabase
         .from('admin_important_links')
-        .select('id, group_id, title, description, url')
+        .select('id, group_id, title, description, url, urls')
         .order('created_at', { ascending: false }),
       supabase
         .from('admin_important_link_features')
-        .select('id, link_id, title, description, created_at')
+        .select('id, link_id, title, description, url, created_at')
         .order('created_at', { ascending: true }),
     ]);
 
@@ -96,7 +101,12 @@ export const AdminImportantLinks: React.FC = () => {
       );
     } else {
       setGroups(groupsResult.data ?? []);
-      setLinks(linksResult.data ?? []);
+      setLinks(
+        (linksResult.data ?? []).map((link) => ({
+          ...link,
+          urls: Array.isArray(link.urls) && link.urls.length > 0 ? link.urls : [link.url],
+        }))
+      );
       setFeatures(featuresResult.data ?? []);
     }
 
@@ -110,7 +120,12 @@ export const AdminImportantLinks: React.FC = () => {
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
   const groupLinks = links.filter((link) => link.group_id === selectedGroupId);
   const selectedLink = groupLinks.find((link) => link.id === selectedLinkId) ?? null;
-  const selectedLinkFeatures = features.filter((feature) => feature.link_id === selectedLinkId);
+  const selectedLinkFeatures = features.filter(
+    (feature) => feature.link_id === selectedLinkId && !feature.url
+  );
+  const selectedLinkLinks = features.filter(
+    (feature) => feature.link_id === selectedLinkId && Boolean(feature.url)
+  );
 
   const resetGroupForm = () => {
     setGroupForm(emptyGroupForm);
@@ -128,6 +143,7 @@ export const AdminImportantLinks: React.FC = () => {
     setFeatureForm(emptyFeatureForm);
     setEditingFeatureId(null);
     setFeatureFormVisible(false);
+    setFeatureFormMode('feature');
   };
 
   const handleSaveGroup = async (event: FormEvent<HTMLFormElement>) => {
@@ -232,6 +248,9 @@ export const AdminImportantLinks: React.FC = () => {
       title,
       description,
       url: parsedUrl.toString(),
+      urls: editingLinkId
+        ? (selectedLink?.urls ?? [parsedUrl.toString()])
+        : [parsedUrl.toString()],
       updated_at: new Date().toISOString(),
     };
     const result = editingLinkId
@@ -239,7 +258,11 @@ export const AdminImportantLinks: React.FC = () => {
           .from('admin_important_links')
           .update(payload)
           .eq('id', editingLinkId)
-      : await supabase.from('admin_important_links').insert(payload);
+      : await supabase
+          .from('admin_important_links')
+          .insert(payload)
+          .select('id')
+          .single();
     setSaving(false);
 
     if (result.error) {
@@ -253,8 +276,16 @@ export const AdminImportantLinks: React.FC = () => {
       itemName: title,
       details: payload,
     });
-    setMessage(editingLinkId ? 'Link updated.' : 'Link added.');
-    resetLinkForm();
+    if (editingLinkId) {
+      setMessage('Link updated.');
+      resetLinkForm();
+    } else {
+      setMessage('Link added. You can now add features to it.');
+      resetLinkForm();
+      setSelectedLinkId(result.data.id);
+      resetFeatureForm();
+      setFeatureFormVisible(true);
+    }
     await loadData();
   };
 
@@ -286,15 +317,108 @@ export const AdminImportantLinks: React.FC = () => {
     await loadData();
   };
 
+  const handleSaveDestinationUrl = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedLink) return;
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(destinationUrl.trim());
+    } catch {
+      setMessage('Please enter a valid destination URL.');
+      return;
+    }
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      setMessage('Links must start with http:// or https://.');
+      return;
+    }
+
+    const nextUrl = parsedUrl.toString();
+    const currentUrls =
+      selectedLink.urls?.length > 0 ? selectedLink.urls : [selectedLink.url];
+    if (currentUrls.includes(nextUrl)) {
+      setMessage('This destination URL is already added.');
+      return;
+    }
+
+    setSaving(true);
+    const { error } = await supabase
+      .from('admin_important_links')
+      .update({
+        url: currentUrls[0],
+        urls: [...currentUrls, nextUrl],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedLink.id);
+    setSaving(false);
+
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+      return;
+    }
+
+    setDestinationUrl('');
+    setDestinationUrlVisible(false);
+    setMessage('Destination URL added.');
+    await loadData();
+  };
+
+  const handleDeleteDestinationUrl = async (url: string) => {
+    if (!selectedLink) return;
+    const currentUrls =
+      selectedLink.urls?.length > 0 ? selectedLink.urls : [selectedLink.url];
+    if (currentUrls.length <= 1) {
+      setMessage('Keep at least one destination URL.');
+      return;
+    }
+    if (!window.confirm(`Remove this destination URL?\n${url}`)) return;
+
+    const nextUrls = currentUrls.filter((item) => item !== url);
+    setSaving(true);
+    const { error } = await supabase
+      .from('admin_important_links')
+      .update({
+        url: nextUrls[0],
+        urls: nextUrls,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedLink.id);
+    setSaving(false);
+
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+      return;
+    }
+    setMessage('Destination URL removed.');
+    await loadData();
+  };
+
   const handleSaveFeature = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedLinkId) return;
 
     const title = featureForm.title.trim();
     const description = featureForm.description.trim();
+    const url = featureForm.url.trim();
     if (!title) {
-      setMessage('Please enter a feature title.');
+      setMessage(featureFormMode === 'link' ? 'Please enter a link title.' : 'Please enter a feature title.');
       return;
+    }
+    if (featureFormMode === 'link' && !url) {
+      setMessage('Please enter a link URL.');
+      return;
+    }
+    if (url) {
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          setMessage('Links must start with http:// or https://.');
+          return;
+        }
+      } catch {
+        setMessage('Please enter a valid link URL.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -303,6 +427,7 @@ export const AdminImportantLinks: React.FC = () => {
       link_id: selectedLinkId,
       title,
       description,
+      url: url || '',
       updated_at: new Date().toISOString(),
     };
     const result = editingFeatureId
@@ -320,17 +445,25 @@ export const AdminImportantLinks: React.FC = () => {
 
     await logAdminActivity({
       action: editingFeatureId ? 'updated' : 'created',
-      section: 'Important Link Features',
+      section: featureFormMode === 'link' ? 'Important Link Links' : 'Important Link Features',
       itemName: title,
-      details: { link: selectedLink?.title, description },
+      details: { link: selectedLink?.title, description, url },
     });
-    setMessage(editingFeatureId ? 'Feature updated.' : 'Feature added.');
+    setMessage(
+      editingFeatureId
+        ? featureFormMode === 'link'
+          ? 'Link updated.'
+          : 'Feature updated.'
+        : featureFormMode === 'link'
+          ? 'Link added.'
+          : 'Feature added.'
+    );
     resetFeatureForm();
     await loadData();
   };
 
   const handleDeleteFeature = async (feature: LinkFeature) => {
-    if (!window.confirm(`Delete feature "${feature.title}"?`)) return;
+    if (!window.confirm(`Delete ${feature.url ? 'link' : 'feature'} "${feature.title}"?`)) return;
 
     const { error } = await supabase
       .from('admin_important_link_features')
@@ -373,7 +506,8 @@ export const AdminImportantLinks: React.FC = () => {
 
   const startEditingFeature = (feature: LinkFeature) => {
     setEditingFeatureId(feature.id);
-    setFeatureForm({ title: feature.title, description: feature.description });
+    setFeatureForm({ title: feature.title, description: feature.description, url: feature.url || '' });
+    setFeatureFormMode(feature.url ? 'link' : 'feature');
     setFeatureFormVisible(true);
     setMessage('');
   };
@@ -724,6 +858,7 @@ export const AdminImportantLinks: React.FC = () => {
                       type="button"
                       onClick={() => {
                         resetFeatureForm();
+                        setFeatureFormMode('feature');
                         setFeatureFormVisible(true);
                         setMessage('');
                       }}
@@ -734,7 +869,7 @@ export const AdminImportantLinks: React.FC = () => {
                     </button>
                   </div>
 
-                  {featureFormVisible && (
+                  {featureFormVisible && featureFormMode !== 'link' && (
                     <form
                       onSubmit={handleSaveFeature}
                       className="mb-4 rounded-2xl border border-purple-300/15 bg-[#080910]/70 p-4 sm:p-5"
@@ -786,7 +921,11 @@ export const AdminImportantLinks: React.FC = () => {
                           disabled={saving}
                           className="rounded-xl bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-950/30 transition hover:-translate-y-0.5 disabled:opacity-50"
                         >
-                          {saving ? 'Saving...' : editingFeatureId ? 'Update feature' : 'Save feature'}
+                          {saving
+                            ? 'Saving...'
+                            : editingFeatureId
+                              ? 'Update feature'
+                              : 'Save feature'}
                         </button>
                       </div>
                     </form>
@@ -847,30 +986,103 @@ export const AdminImportantLinks: React.FC = () => {
                 </div>
 
                 <div className="mt-9 border-t border-white/10 pt-7">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                    Link destination
-                  </p>
-                  <div className="flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-[#07090f]/70 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-300/10 text-sky-200">
-                        <ExternalLink className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500">Saved URL</p>
-                        <p className="truncate text-sm text-slate-200" title={selectedLink.url}>
-                          {selectedLink.url}
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={selectedLink.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-900/20 transition hover:-translate-y-0.5 hover:shadow-sky-500/20"
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                      Link destination
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDestinationUrl('');
+                        setDestinationUrlVisible(true);
+                        setMessage('');
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-300/[0.08] px-3.5 py-2 text-sm font-semibold text-sky-100"
                     >
-                      Open link
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                      <Plus className="h-4 w-4" />
+                      Add another link
+                    </button>
+                  </div>
+
+                  {destinationUrlVisible && (
+                    <form
+                      onSubmit={handleSaveDestinationUrl}
+                      className="mb-3 flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-[#07090f]/70 p-3 sm:flex-row"
+                    >
+                      <input
+                        required
+                        type="url"
+                        maxLength={2048}
+                        value={destinationUrl}
+                        onChange={(event) => setDestinationUrl(event.target.value)}
+                        placeholder="https://..."
+                        aria-label="Destination URL"
+                        className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-sky-400"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDestinationUrlVisible(false);
+                            setDestinationUrl('');
+                          }}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={saving}
+                          className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        >
+                          {saving ? 'Saving...' : 'Save link'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="space-y-2.5">
+                    {(selectedLink.urls?.length > 0 ? selectedLink.urls : [selectedLink.url]).map(
+                      (url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-[#07090f]/70 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-300/10 text-sky-200">
+                              <ExternalLink className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs text-slate-500">
+                                Saved URL {index + 1}
+                              </p>
+                              <p className="truncate text-sm text-slate-200" title={url}>
+                                {url}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2.5 text-sm font-bold text-white"
+                            >
+                              Open
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteDestinationUrl(url)}
+                              aria-label={`Remove destination URL ${index + 1}`}
+                              className="rounded-xl border border-red-400/20 px-3 py-2 text-red-300 hover:bg-red-400/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </motion.section>

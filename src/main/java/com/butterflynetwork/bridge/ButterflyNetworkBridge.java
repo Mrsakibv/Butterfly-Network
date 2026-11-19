@@ -7,7 +7,14 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Statistic;
 import org.bukkit.advancement.Advancement;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
@@ -23,6 +30,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.io.IOException;
@@ -34,6 +42,8 @@ import java.net.http.HttpResponse;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,10 +53,21 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class ButterflyNetworkBridge
         extends JavaPlugin
         implements Listener {
+
+    private static final int STATUS_MENU_SIZE = 27;
+    private static final Pattern SUCCESS_RESPONSE_PATTERN =
+            Pattern.compile("\"success\"\\s*:\\s*true\\b");
+    private static final Pattern SYNCED_PLAYERS_PATTERN =
+            Pattern.compile("\"syncedPlayers\"\\s*:\\s*(\\d+)");
+    private static final Pattern WARNINGS_PATTERN =
+            Pattern.compile("\"warnings\"\\s*:\\s*\\[(.*?)]", Pattern.DOTALL);
 
     private HttpClient httpClient;
     private BukkitTask syncTask;
@@ -74,6 +95,27 @@ public final class ButterflyNetworkBridge
     private final AtomicBoolean periodicSyncInProgress =
             new AtomicBoolean(false);
 
+    private final AtomicLong syncRequestSequence =
+            new AtomicLong();
+
+    private volatile SyncStatus lastSyncStatus =
+            new SyncStatus(
+                    "NEVER",
+                    "",
+                    null,
+                    null,
+                    0,
+                    0,
+                    -1,
+                    "No sync request has been sent yet."
+            );
+
+    private volatile Instant lastSuccessfulSyncAt;
+
+    private final DateTimeFormatter statusTimeFormatter =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    .withZone(ZoneId.systemDefault());
+
     private BukkitTask activePeriodicSnapshotTask;
 
     private NamespacedKey playtimeKey;
@@ -100,6 +142,9 @@ public final class ButterflyNetworkBridge
 
         Bukkit.getPluginManager()
                 .registerEvents(this, this);
+
+        getCommand("butterflybridge")
+                .setExecutor(this::handleCommand);
 
         httpClient =
                 HttpClient.newBuilder()
@@ -311,13 +356,7 @@ public final class ButterflyNetworkBridge
                         )
                         .trim();
 
-        bridgeVersion =
-                getConfig()
-                        .getString(
-                                "bridge.version",
-                                "1.2.1"
-                        )
-                        .trim();
+        bridgeVersion = getDescription().getVersion();
 
         intervalSeconds =
                 Math.max(
@@ -325,7 +364,7 @@ public final class ButterflyNetworkBridge
                         getConfig()
                                 .getInt(
                                         "api.interval-seconds",
-                                        60
+                                        2400
                                 )
                 );
 
@@ -370,7 +409,7 @@ public final class ButterflyNetworkBridge
                 Bukkit.getScheduler()
                         .runTaskTimer(
                                 this,
-                                this::startPeriodicSnapshot,
+                                () -> startPeriodicSnapshot(),
                                 40L,
                                 intervalTicks
                         );
@@ -378,13 +417,18 @@ public final class ButterflyNetworkBridge
 
     private void startPeriodicSnapshot() {
 
+        startPeriodicSnapshot("periodic");
+    }
+
+    private boolean startPeriodicSnapshot(String syncType) {
+
         if (!periodicSyncInProgress.compareAndSet(false, true)) {
 
             logSuccess(
                     "Skipping periodic sync because the previous snapshot is still in progress."
             );
 
-            return;
+            return false;
         }
 
         List<UUID> onlinePlayerIds =
@@ -396,6 +440,19 @@ public final class ButterflyNetworkBridge
             );
         }
 
+        lastSyncStatus = new SyncStatus(
+                onlinePlayerIds.isEmpty() ? "SENDING" : "COLLECTING",
+                syncType,
+                Instant.now(),
+                null,
+                0,
+                onlinePlayerIds.size(),
+                -1,
+                onlinePlayerIds.isEmpty()
+                        ? "Sending an empty heartbeat request."
+                        : "Collecting online player stats."
+        );
+
         if (onlinePlayerIds.isEmpty()) {
 
             periodicSyncInProgress.set(false);
@@ -405,7 +462,7 @@ public final class ButterflyNetworkBridge
             );
 
             sendHeartbeat();
-            return;
+            return true;
         }
 
         List<Map<String, Object>> snapshots =
@@ -468,7 +525,7 @@ public final class ButterflyNetworkBridge
                                     sendSnapshot(
                                             createPayload(
                                                     snapshots,
-                                                    "periodic"
+                                                    syncType
                                             ),
                                             snapshots.size()
                                     );
@@ -478,6 +535,8 @@ public final class ButterflyNetworkBridge
                         1L,
                         1L
                 );
+
+        return true;
     }
 
     private Map<String, Object> createPayload(
@@ -596,6 +655,279 @@ public final class ButterflyNetworkBridge
 
         sessionStartMillis.remove(
                 player.getUniqueId()
+        );
+    }
+
+    @EventHandler
+    public void onStatusMenuClick(InventoryClickEvent event) {
+
+        if (!(event.getView().getTopInventory().getHolder() instanceof StatusMenu)) {
+            return;
+        }
+
+        event.setCancelled(true);
+
+        if (!(event.getWhoClicked() instanceof Player player)
+                || event.getRawSlot() < 0
+                || event.getRawSlot() >= STATUS_MENU_SIZE) {
+            return;
+        }
+
+        switch (event.getRawSlot()) {
+            case 11 -> {
+                if (!hasApiKey()) {
+                    player.sendMessage(Component.text(
+                            "Set api.api-key in the plugin config before syncing."
+                    ));
+                    return;
+                }
+
+                if (startPeriodicSnapshot("manual")) {
+                    player.sendMessage(Component.text(
+                            "Current online player stats are being sent to the website."
+                    ));
+                } else {
+                    player.sendMessage(Component.text(
+                            "A player sync is already in progress."
+                    ));
+                }
+                renderStatusMenu(event.getView().getTopInventory());
+            }
+            case 13 -> {
+                if (!hasApiKey()) {
+                    player.sendMessage(Component.text(
+                            "Set api.api-key in the plugin config before testing the connection."
+                    ));
+                    return;
+                }
+
+                sendHeartbeat();
+                player.sendMessage(Component.text(
+                        "Connection test sent. Refresh the menu to see the website response."
+                ));
+                renderStatusMenu(event.getView().getTopInventory());
+            }
+            case 15 -> renderStatusMenu(event.getView().getTopInventory());
+            default -> {
+            }
+        }
+    }
+
+    private boolean handleCommand(
+            CommandSender sender,
+            Command command,
+            String label,
+            String[] args
+    ) {
+
+        if (!sender.hasPermission("butterflynetworkbridge.admin")) {
+            sender.sendMessage(Component.text(
+                    "You do not have permission to use this command."
+            ));
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("sync")) {
+            if (!hasApiKey()) {
+                sender.sendMessage(Component.text(
+                        "Set api.api-key in the plugin config before syncing."
+                ));
+            } else if (startPeriodicSnapshot("manual")) {
+                sender.sendMessage(Component.text(
+                        "Current online player stats are being sent to the website."
+                ));
+            } else {
+                sender.sendMessage(Component.text(
+                        "A player sync is already in progress."
+                ));
+            }
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("test")) {
+            if (!hasApiKey()) {
+                sender.sendMessage(Component.text(
+                        "Set api.api-key in the plugin config before testing the connection."
+                ));
+            } else {
+                sendHeartbeat();
+                sender.sendMessage(Component.text(
+                        "Connection test sent. Check the bridge status for the website response."
+                ));
+            }
+            return true;
+        }
+
+        if (sender instanceof Player player) {
+            openStatusMenu(player);
+        } else {
+            sendStatus(sender);
+        }
+
+        return true;
+    }
+
+    private boolean hasApiKey() {
+
+        return apiKey != null && !apiKey.isBlank();
+    }
+
+    private void openStatusMenu(Player player) {
+
+        StatusMenu holder = new StatusMenu();
+        Inventory inventory = Bukkit.createInventory(
+                holder,
+                STATUS_MENU_SIZE,
+                Component.text("Butterfly Bridge Status")
+        );
+        holder.setInventory(inventory);
+        renderStatusMenu(inventory);
+        player.openInventory(inventory);
+    }
+
+    private void renderStatusMenu(Inventory inventory) {
+
+        ItemStack filler = createMenuItem(
+                Material.GRAY_STAINED_GLASS_PANE,
+                " ",
+                List.of()
+        );
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            inventory.setItem(slot, filler);
+        }
+
+        SyncStatus status = lastSyncStatus;
+        Material statusMaterial = switch (status.state()) {
+            case "SENDING", "COLLECTING" -> Material.YELLOW_DYE;
+            case "SUCCESS" -> Material.LIME_DYE;
+            case "WARNING" -> Material.ORANGE_DYE;
+            case "FAILED" -> Material.RED_DYE;
+            default -> Material.GRAY_DYE;
+        };
+
+        List<String> statusLore = new ArrayList<>();
+        statusLore.add("Result: " + status.state().toLowerCase().replace('_', ' '));
+        if (!status.syncType().isBlank()) {
+            statusLore.add("Request type: " + status.syncType());
+        }
+        statusLore.add("Players sent: " + status.playersSent());
+        if (status.playersAccepted() >= 0) {
+            statusLore.add("Players accepted: " + status.playersAccepted());
+        }
+        if (status.httpStatus() > 0) {
+            statusLore.add("Website HTTP status: " + status.httpStatus());
+        }
+        if (status.startedAt() != null) {
+            statusLore.add("Last attempt: " + formatStatusTime(status.startedAt()));
+        }
+        if (status.completedAt() != null) {
+            statusLore.add("Last response: " + formatStatusTime(status.completedAt()));
+        }
+        statusLore.add("Last successful delivery: "
+                + (lastSuccessfulSyncAt == null
+                        ? "never"
+                        : formatStatusTime(lastSuccessfulSyncAt)));
+        statusLore.addAll(wrapStatusDetail(status.detail()));
+
+        inventory.setItem(
+                4,
+                createMenuItem(
+                        statusMaterial,
+                        "Latest Website Delivery",
+                        statusLore
+                )
+        );
+        inventory.setItem(
+                10,
+                createMenuItem(
+                        Material.COMPASS,
+                        "Server & Schedule",
+                        List.of(
+                                "Server ID: " + serverId,
+                                "Auto-sync: every " + intervalSeconds + " seconds",
+                                "Sync on join: " + syncOnJoin,
+                                "Sync on leave: " + syncOnLeave,
+                                "API key: " + (hasApiKey() ? "configured" : "missing")
+                        )
+                )
+        );
+        inventory.setItem(
+                11,
+                createMenuItem(
+                        Material.EMERALD,
+                        "Sync Current Players",
+                        List.of(
+                                "Send live stats for all online players now.",
+                                "The response confirms how many the website accepted."
+                        )
+                )
+        );
+        inventory.setItem(
+                13,
+                createMenuItem(
+                        Material.ENDER_EYE,
+                        "Test Website Connection",
+                        List.of(
+                                "Send a heartbeat without player data.",
+                                "Checks the endpoint, API key and server ID."
+                        )
+                )
+        );
+        inventory.setItem(
+                15,
+                createMenuItem(
+                        Material.CLOCK,
+                        "Refresh Status",
+                        List.of("Update this menu with the latest response.")
+                )
+        );
+    }
+
+    private ItemStack createMenuItem(
+            Material material,
+            String title,
+            List<String> lore
+    ) {
+
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text(title));
+        meta.lore(lore.stream().map(Component::text).toList());
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private List<String> wrapStatusDetail(String detail) {
+
+        if (detail == null || detail.isBlank()) {
+            return List.of();
+        }
+
+        String normalized = detail.replaceAll("\\s+", " ");
+        if (normalized.length() > 180) {
+            normalized = normalized.substring(0, 177) + "...";
+        }
+        return List.of("Details: " + normalized);
+    }
+
+    private String formatStatusTime(Instant instant) {
+
+        return statusTimeFormatter.format(instant);
+    }
+
+    private void sendStatus(CommandSender sender) {
+
+        SyncStatus status = lastSyncStatus;
+        sender.sendMessage(
+                "Bridge status: " + status.state()
+                        + " | Server ID: " + serverId
+                        + " | API key: " + (hasApiKey() ? "configured" : "missing")
+        );
+        sender.sendMessage(
+                "Last delivery: " + status.detail()
+                        + (status.httpStatus() > 0
+                                ? " (HTTP " + status.httpStatus() + ")"
+                                : "")
         );
     }
 
@@ -1636,6 +1968,20 @@ public final class ButterflyNetworkBridge
             int playerCount
     ) {
 
+        long requestSequence = syncRequestSequence.incrementAndGet();
+        Instant startedAt = Instant.now();
+        String syncType = String.valueOf(payload.getOrDefault("syncType", "unknown"));
+        lastSyncStatus = new SyncStatus(
+                "SENDING",
+                syncType,
+                startedAt,
+                null,
+                0,
+                playerCount,
+                -1,
+                "Waiting for the website response."
+        );
+
         CompletableFuture
                 .supplyAsync(
                         () -> {
@@ -1711,25 +2057,79 @@ public final class ButterflyNetworkBridge
                 .thenAccept(
                         response -> {
 
-                            if (
+                            boolean successful =
                                     response.statusCode() >= 200
                                             && response.statusCode() < 300
-                            ) {
+                                            && SUCCESS_RESPONSE_PATTERN
+                                                    .matcher(response.body())
+                                                    .find();
+                            int acceptedPlayers =
+                                    readResponseCount(response.body());
+                            String warnings =
+                                    readResponseWarnings(response.body());
+                            String detail;
+
+                            if (successful) {
+
+                                lastSuccessfulSyncAt = Instant.now();
+                                detail =
+                                        "Website accepted "
+                                                + (acceptedPlayers >= 0
+                                                        ? acceptedPlayers
+                                                        : playerCount)
+                                                + " player(s).";
+
+                                if (!warnings.isBlank()) {
+                                    detail += " Website warnings: " + warnings;
+                                }
+
+                                if (requestSequence == syncRequestSequence.get()) {
+                                    lastSyncStatus = new SyncStatus(
+                                            warnings.isBlank() ? "SUCCESS" : "WARNING",
+                                            syncType,
+                                            startedAt,
+                                            Instant.now(),
+                                            response.statusCode(),
+                                            playerCount,
+                                            acceptedPlayers,
+                                            detail
+                                    );
+                                }
 
                                 logSuccess(
-                                        "Synced "
-                                                + playerCount
-                                                + " player(s) to website. HTTP "
-                                                + response.statusCode()
+                                        detail + " HTTP " + response.statusCode()
                                 );
 
                             } else {
 
-                                logError(
-                                        "Website sync failed. HTTP "
+                                String responseBody =
+                                        response.body().replaceAll("\\s+", " ");
+                                if (responseBody.length() > 400) {
+                                    responseBody =
+                                            responseBody.substring(0, 397) + "...";
+                                }
+                                detail =
+                                        "Website rejected the request. HTTP "
                                                 + response.statusCode()
-                                                + " Response: "
-                                                + response.body()
+                                                + (responseBody.isBlank()
+                                                        ? ""
+                                                        : " Response: " + responseBody);
+
+                                if (requestSequence == syncRequestSequence.get()) {
+                                    lastSyncStatus = new SyncStatus(
+                                            "FAILED",
+                                            syncType,
+                                            startedAt,
+                                            Instant.now(),
+                                            response.statusCode(),
+                                            playerCount,
+                                            acceptedPlayers,
+                                            detail
+                                    );
+                                }
+
+                                logError(
+                                        detail
                                 );
                             }
                         }
@@ -1737,14 +2137,57 @@ public final class ButterflyNetworkBridge
                 .exceptionally(
                         exception -> {
 
-                            logError(
+                            String detail =
                                     "Website sync request failed: "
-                                            + exception.getMessage()
+                                            + exception.getMessage();
+                            if (requestSequence == syncRequestSequence.get()) {
+                                lastSyncStatus = new SyncStatus(
+                                        "FAILED",
+                                        syncType,
+                                        startedAt,
+                                        Instant.now(),
+                                        0,
+                                        playerCount,
+                                        -1,
+                                        detail
+                                );
+                            }
+
+                            logError(
+                                    detail
                             );
 
                             return null;
                         }
                 );
+    }
+
+    private int readResponseCount(String responseBody) {
+
+        Matcher matcher =
+                SYNCED_PLAYERS_PATTERN.matcher(responseBody);
+        if (!matcher.find()) {
+            return -1;
+        }
+
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException exception) {
+            return -1;
+        }
+    }
+
+    private String readResponseWarnings(String responseBody) {
+
+        Matcher matcher =
+                WARNINGS_PATTERN.matcher(responseBody);
+        if (!matcher.find()) {
+            return "";
+        }
+
+        return matcher.group(1)
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String toJson(
@@ -1931,5 +2374,31 @@ public final class ButterflyNetworkBridge
             long itemsCrafted,
             long itemsUsed
     ) {
+    }
+
+    private record SyncStatus(
+            String state,
+            String syncType,
+            Instant startedAt,
+            Instant completedAt,
+            int httpStatus,
+            int playersSent,
+            int playersAccepted,
+            String detail
+    ) {
+    }
+
+    private static final class StatusMenu implements InventoryHolder {
+
+        private Inventory inventory;
+
+        private void setInventory(Inventory inventory) {
+            this.inventory = inventory;
+        }
+
+        @Override
+        public Inventory getInventory() {
+            return inventory;
+        }
     }
 }

@@ -1,0 +1,25 @@
+name: ButterflyNetworkBridge
+version: '1.3.0'
+main: com.butterflynetwork.bridge.ButterflyNetworkBridge
+description: Butterfly Network Minecraft to Website live statistics bridge
+author: Butterfly Network
+website: https://butterfly-network.vercel.app
+api-version: '26.2'
+
+softdepend:
+  - Vault
+  - PlaceholderAPI
+  - LuckPerms
+
+commands:
+  butterflybridge:
+    description: View and manage the Butterfly Network website sync.
+    aliases: [bfnbridge, butterflynetwork]
+    usage: /butterflybridge [sync|test]
+    permission: butterflynetworkbridge.admin
+    permission-message: You do not have permission to use this command.
+
+permissions:
+  butterflynetworkbridge.admin:
+    description: Open the bridge status menu and run sync checks.
+    default: op

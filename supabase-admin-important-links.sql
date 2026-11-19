@@ -29,6 +29,13 @@ create table if not exists public.admin_important_link_features (
   link_id uuid not null references public.admin_important_links(id) on delete cascade,
   title text not null check (char_length(trim(title)) between 1 and 100),
   description text not null default '' check (char_length(description) <= 500),
+  url text not null default '' check (
+    url = ''
+    or (
+      char_length(url) <= 2048
+      and url ~* '^https?://'
+    )
+  ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -40,6 +47,36 @@ alter table public.admin_important_links
 
 alter table public.admin_important_links
   add column if not exists description text not null default '';
+
+alter table public.admin_important_links
+  add column if not exists urls jsonb not null default '[]'::jsonb;
+
+update public.admin_important_links
+  set urls =
+    case
+      when jsonb_array_length(urls) > 0 then urls
+      when char_length(coalesce(url, '')) > 0 then jsonb_build_array(url)
+      else '[]'::jsonb
+    end
+  where
+    jsonb_array_length(urls) = 0
+    and char_length(coalesce(url, '')) > 0;
+
+alter table public.admin_important_link_features
+  add column if not exists url text not null default '';
+
+alter table public.admin_important_link_features
+  drop constraint if exists admin_important_link_features_url_check;
+
+alter table public.admin_important_link_features
+  add constraint admin_important_link_features_url_check
+  check (
+    url = ''
+    or (
+      char_length(url) <= 2048
+      and url ~* '^https?://'
+    )
+  );
 
 do $$
 declare

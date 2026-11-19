@@ -48,7 +48,7 @@ interface MinecraftSyncPayload {
   serverId: string;
   bridgeVersion?: string;
   sentAt?: string;
-  syncType?: 'periodic' | 'join' | 'leave';
+  syncType?: 'periodic' | 'join' | 'leave' | 'heartbeat' | 'manual';
   players: MinecraftPlayerPayload[];
 }
 
@@ -231,7 +231,9 @@ export default async function handler(
 
   const syncType =
     body.syncType === 'join' ||
-    body.syncType === 'leave'
+    body.syncType === 'leave' ||
+    body.syncType === 'heartbeat' ||
+    body.syncType === 'manual'
       ? body.syncType
       : 'periodic';
 

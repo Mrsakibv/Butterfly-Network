@@ -1,0 +1,37 @@
+# ============================================================
+# BUTTERFLY NETWORK BRIDGE
+# ============================================================
+
+server-id: main
+
+api:
+  url: "https://butterfly-network.vercel.app/api/minecraft-sync"
+
+  # Set this to the same secret as the website's MINECRAFT_API_KEY.
+  # Do not publish or commit the real key.
+  api-key: ""
+
+  # Full online-player sync interval in seconds (40 minutes by default). Join/leave syncs are immediate.
+  interval-seconds: 2400
+
+bridge:
+  # These are independent of the periodic timer.
+  # true  = sync that player immediately
+  # false = do not sync on that event
+  sync-on-join: true
+  sync-on-leave: true
+
+  # How many online players are snapshotted per server tick
+  # during a periodic full sync.
+  # 1 is the safest setting for server performance.
+  # 2-4 can be used on larger/higher-performance servers.
+  players-per-tick: 1
+
+logging:
+  enabled: true
+  success: true
+  errors: true
+
+  # Detailed per-player snapshot logging is disabled by default
+  # to avoid unnecessary console/log overhead.
+  snapshot-details: false

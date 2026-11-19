@@ -11,12 +11,10 @@ api:
   # Do not publish or commit the real key.
   api-key: ""
 
-  # Periodic full sync interval. Join/leave snapshots are sent separately.
-  interval-seconds: 60
+  # Full online-player sync interval in seconds (40 minutes by default). Join/leave syncs are immediate.
+  interval-seconds: 2400
 
 bridge:
-  version: "1.2.1"
-
   # These are independent of the periodic timer.
   # true  = sync that player immediately
   # false = do not sync on that event
