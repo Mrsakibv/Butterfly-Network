@@ -11,6 +11,7 @@ import {
   ImageIcon,
   KeyRound,
   Loader2,
+  ListChecks,
   Package,
   Pencil,
   Percent,
@@ -38,6 +39,7 @@ type StoreTab =
   | 'promos'
   | 'orders'
   | 'deliveries'
+  | 'rank_features'
   | 'payment_methods';
 
 interface StoreProduct {
@@ -67,6 +69,18 @@ interface StoreCategory {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface RankComparisonFeature {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+interface RankFeatureProduct {
+  feature_id: string;
+  product_id: string;
+  details: string | null;
 }
 
 interface PromoCode {
@@ -316,6 +330,12 @@ export const AdminStore: React.FC = () => {
   const [activeTab, setActiveTab] = useState<StoreTab>('overview');
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [rankFeatures, setRankFeatures] = useState<RankComparisonFeature[]>([]);
+  const [rankFeatureAssignments, setRankFeatureAssignments] = useState<Map<string, string>>(new Map());
+  const [rankFeatureDetailsDrafts, setRankFeatureDetailsDrafts] = useState<Record<string, string>>({});
+  const [rankFeaturesLoading, setRankFeaturesLoading] = useState(false);
+  const [rankFeatureName, setRankFeatureName] = useState('');
+  const [rankFeatureAction, setRankFeatureAction] = useState<string | null>(null);
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [deliveries, setDeliveries] = useState<StoreDelivery[]>([]);
@@ -417,6 +437,38 @@ export const AdminStore: React.FC = () => {
     if (!silent) setLoading(false);
   };
 
+  const loadRankComparison = async () => {
+    setRankFeaturesLoading(true);
+    const [featuresResult, assignmentsResult] = await Promise.all([
+      supabase
+        .from('rank_comparison_features')
+        .select('id,name,sort_order')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true }),
+      supabase
+        .from('rank_comparison_feature_products')
+        .select('feature_id,product_id,details'),
+    ]);
+
+    const failedResult = featuresResult.error || assignmentsResult.error;
+    if (failedResult) {
+      showToast('Rank Features Error', failedResult.message, 'error');
+      setRankFeaturesLoading(false);
+      return;
+    }
+
+    setRankFeatures((featuresResult.data ?? []) as RankComparisonFeature[]);
+    setRankFeatureAssignments(
+      new Map(
+        ((assignmentsResult.data ?? []) as RankFeatureProduct[]).map((assignment) => [
+          `${assignment.feature_id}:${assignment.product_id}`,
+          assignment.details ?? '',
+        ])
+      )
+    );
+    setRankFeaturesLoading(false);
+  };
+
   const scheduleRealtimeReload = () => {
     if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
     realtimeTimerRef.current = setTimeout(() => loadAll(true), 180);
@@ -432,6 +484,12 @@ export const AdminStore: React.FC = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_promo_codes' }, scheduleRealtimeReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_orders' }, scheduleRealtimeReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_deliveries' }, scheduleRealtimeReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rank_comparison_features' }, () => {
+        if (activeTab === 'rank_features') void loadRankComparison();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rank_comparison_feature_products' }, () => {
+        if (activeTab === 'rank_features') void loadRankComparison();
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') setRealtimeState('connected');
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeState('disconnected');
@@ -442,7 +500,11 @@ export const AdminStore: React.FC = () => {
       if (realtimeTimerRef.current) clearTimeout(realtimeTimerRef.current);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'rank_features') void loadRankComparison();
+  }, [activeTab]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -467,6 +529,7 @@ export const AdminStore: React.FC = () => {
   const refresh = async () => {
     setRefreshing(true);
     await loadAll();
+    if (activeTab === 'rank_features') await loadRankComparison();
     setRefreshing(false);
   };
 
@@ -629,6 +692,211 @@ export const AdminStore: React.FC = () => {
     }
 
     await loadAll();
+  };
+
+  const addRankFeature = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = rankFeatureName.trim();
+    if (!name) {
+      showToast('Feature Error', 'Enter a feature name.', 'error');
+      return;
+    }
+    if (name.length > 120) {
+      showToast('Feature Error', 'Feature names must be 120 characters or fewer.', 'error');
+      return;
+    }
+    if (rankFeatures.some((feature) => feature.name.toLowerCase() === name.toLowerCase())) {
+      showToast('Feature Error', 'That rank feature already exists.', 'error');
+      return;
+    }
+
+    setRankFeatureAction('add');
+    const { data, error } = await supabase
+      .from('rank_comparison_features')
+      .insert({
+        name,
+        sort_order:
+          rankFeatures.reduce(
+            (highest, feature) => Math.max(highest, feature.sort_order),
+            0
+          ) + 1,
+      })
+      .select('id,name,sort_order')
+      .single();
+
+    if (error) {
+      showToast('Feature Error', error.message, 'error');
+      setRankFeatureAction(null);
+      return;
+    }
+
+    setRankFeatures((current) =>
+      [...current, data as RankComparisonFeature].sort(
+        (left, right) =>
+          left.sort_order - right.sort_order || left.name.localeCompare(right.name)
+      )
+    );
+    setRankFeatureName('');
+    setRankFeatureAction(null);
+    showToast('Feature Added', `${name} was added to the rank comparison.`, 'success');
+  };
+
+  const renameRankFeature = async (feature: RankComparisonFeature) => {
+    const input = window.prompt('Rename this rank feature:', feature.name);
+    if (input === null) return;
+    const name = input.trim();
+    if (!name) {
+      showToast('Feature Error', 'Feature name cannot be empty.', 'error');
+      return;
+    }
+    if (name.length > 120) {
+      showToast('Feature Error', 'Feature names must be 120 characters or fewer.', 'error');
+      return;
+    }
+    if (
+      rankFeatures.some(
+        (item) => item.id !== feature.id && item.name.toLowerCase() === name.toLowerCase()
+      )
+    ) {
+      showToast('Feature Error', 'That rank feature already exists.', 'error');
+      return;
+    }
+
+    setRankFeatureAction(`feature:${feature.id}`);
+    const { data, error } = await supabase
+      .from('rank_comparison_features')
+      .update({ name })
+      .eq('id', feature.id)
+      .select('id,name,sort_order')
+      .single();
+
+    if (error) {
+      showToast('Feature Rename Failed', error.message, 'error');
+      setRankFeatureAction(null);
+      return;
+    }
+
+    setRankFeatures((current) =>
+      current.map((item) =>
+        item.id === feature.id ? (data as RankComparisonFeature) : item
+      )
+    );
+    setRankFeatureAction(null);
+    showToast('Feature Renamed', 'Rank feature updated.', 'success');
+  };
+
+  const deleteRankFeature = async (feature: RankComparisonFeature) => {
+    if (!window.confirm(`Delete "${feature.name}" from the rank comparison?`)) return;
+
+    setRankFeatureAction(`feature:${feature.id}`);
+    const { error } = await supabase
+      .from('rank_comparison_features')
+      .delete()
+      .eq('id', feature.id);
+
+    if (error) {
+      showToast('Feature Delete Failed', error.message, 'error');
+      setRankFeatureAction(null);
+      return;
+    }
+
+    setRankFeatures((current) => current.filter((item) => item.id !== feature.id));
+    setRankFeatureAssignments((current) => {
+      const next = new Map(current);
+      for (const assignment of next.keys()) {
+        if (assignment.startsWith(`${feature.id}:`)) next.delete(assignment);
+      }
+      return next;
+    });
+    setRankFeatureDetailsDrafts((current) => {
+      const next = { ...current };
+      for (const assignment of Object.keys(next)) {
+        if (assignment.startsWith(`${feature.id}:`)) delete next[assignment];
+      }
+      return next;
+    });
+    setRankFeatureAction(null);
+    showToast('Feature Deleted', `${feature.name} was removed.`, 'success');
+  };
+
+  const toggleRankFeatureForProduct = async (
+    feature: RankComparisonFeature,
+    product: StoreProduct
+  ) => {
+    const assignmentKey = `${feature.id}:${product.id}`;
+    if (rankFeatureAction) return;
+
+    setRankFeatureAction(assignmentKey);
+    const query = supabase
+      .from('rank_comparison_feature_products');
+    const result = rankFeatureAssignments.has(assignmentKey)
+      ? await query
+          .delete()
+          .eq('feature_id', feature.id)
+          .eq('product_id', product.id)
+      : await query.insert({
+          feature_id: feature.id,
+          product_id: product.id,
+          details: '',
+        });
+
+    if (result.error) {
+      showToast('Feature Update Failed', result.error.message, 'error');
+      setRankFeatureAction(null);
+      return;
+    }
+
+    const wasAvailable = rankFeatureAssignments.has(assignmentKey);
+    setRankFeatureAssignments((current) => {
+      const next = new Map(current);
+      if (wasAvailable) {
+        next.delete(assignmentKey);
+      } else {
+        next.set(assignmentKey, '');
+      }
+      return next;
+    });
+    if (wasAvailable) {
+      setRankFeatureDetailsDrafts((current) => {
+        const next = { ...current };
+        delete next[assignmentKey];
+        return next;
+      });
+    }
+    setRankFeatureAction(null);
+  };
+
+  const saveRankFeatureDetails = async (
+    feature: RankComparisonFeature,
+    product: StoreProduct
+  ) => {
+    const assignmentKey = `${feature.id}:${product.id}`;
+    const details =
+      rankFeatureDetailsDrafts[assignmentKey] ??
+      rankFeatureAssignments.get(assignmentKey) ??
+      '';
+    if (!rankFeatureAssignments.has(assignmentKey)) return;
+    if (details === rankFeatureAssignments.get(assignmentKey)) return;
+
+    setRankFeatureAction(assignmentKey);
+    const { error } = await supabase
+      .from('rank_comparison_feature_products')
+      .update({ details })
+      .eq('feature_id', feature.id)
+      .eq('product_id', product.id);
+
+    if (error) {
+      showToast('Feature Text Update Failed', error.message, 'error');
+      setRankFeatureAction(null);
+      return;
+    }
+
+    setRankFeatureAssignments((current) => {
+      const next = new Map(current);
+      next.set(assignmentKey, details);
+      return next;
+    });
+    setRankFeatureAction(null);
   };
 
   /* ==========================================
@@ -1197,6 +1465,13 @@ export const AdminStore: React.FC = () => {
   ).length;
 
   const activeCategories = categories.filter((category) => category.is_active).length;
+  const rankProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        ['rank', 'ranks'].includes(product.category.trim().toLowerCase())
+      ),
+    [products]
+  );
   const awaitingPayment = orders.filter(
     (order) =>
       order.payment_status === 'pending' &&
@@ -1226,6 +1501,7 @@ export const AdminStore: React.FC = () => {
     { id: 'promos', label: 'Promo Codes', icon: Tag },
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
     { id: 'deliveries', label: 'Deliveries', icon: Truck },
+    { id: 'rank_features', label: 'Rank Features', icon: ListChecks },
     { id: 'payment_methods', label: 'Payment Methods', icon: Coins },
   ];
 
@@ -1355,7 +1631,9 @@ export const AdminStore: React.FC = () => {
         </div>
 
         {/* SEARCH */}
-        {activeTab !== 'overview' && activeTab !== 'payment_methods' && (
+        {activeTab !== 'overview' &&
+          activeTab !== 'payment_methods' &&
+          activeTab !== 'rank_features' && (
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <div className="relative max-w-2xl flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
@@ -1464,6 +1742,174 @@ export const AdminStore: React.FC = () => {
                     </div>
                   </Panel>
                 </div>
+              </div>
+            )}
+
+            {/* RANK COMPARISON FEATURES */}
+            {activeTab === 'rank_features' && (
+              <div className="space-y-5">
+                <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Rank comparison features</h2>
+                    <p className="mt-1 text-sm text-slate-400">
+                      Add or rename features, then click a check or cross to change availability.
+                    </p>
+                  </div>
+                  <form onSubmit={addRankFeature} className="flex w-full gap-2 lg:max-w-md">
+                    <input
+                      value={rankFeatureName}
+                      onChange={(event) => setRankFeatureName(event.target.value)}
+                      maxLength={120}
+                      placeholder="New feature name"
+                      className={inputClass}
+                    />
+                    <button
+                      type="submit"
+                      disabled={rankFeatureAction !== null || !rankFeatureName.trim()}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-sm font-bold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${buttonClass}`}
+                    >
+                      {rankFeatureAction === 'add' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                      Add Feature
+                    </button>
+                  </form>
+                </div>
+
+                {rankFeaturesLoading ? (
+                  <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-sm text-slate-400">
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin text-purple-400" />
+                    Loading rank features...
+                  </div>
+                ) : rankProducts.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+                    <p className="font-semibold text-white">No rank products found.</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Add a product with the rank or ranks category before setting up comparisons.
+                    </p>
+                  </div>
+                ) : rankFeatures.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm text-slate-400">
+                    No features yet. Add the first feature above.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
+                    <table className="min-w-full border-separate border-spacing-0 text-left">
+                      <thead>
+                        <tr>
+                          <th className="sticky left-0 z-20 min-w-[320px] border-b border-white/10 bg-[#100d19] px-4 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Feature
+                          </th>
+                          {rankProducts.map((product) => (
+                            <th
+                              key={product.id}
+                              className="min-w-44 border-b border-white/10 bg-[#100d19] px-4 py-4 text-center"
+                            >
+                              <span className="block text-sm font-bold text-white">{product.name}</span>
+                              {!product.is_active && (
+                                <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                                  Inactive
+                                </span>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rankFeatures.map((feature, index) => (
+                          <tr key={feature.id} className="group">
+                            <th className="sticky left-0 z-10 border-b border-white/[0.06] bg-[#0c0a12] px-4 py-3 text-left group-hover:bg-[#15111e]">
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 shrink-0 text-xs text-slate-600">
+                                  {String(index + 1).padStart(2, '0')}
+                                </span>
+                                <span className="min-w-0 flex-1 text-sm font-medium text-slate-200">
+                                  {feature.name}
+                                </span>
+                                <button
+                                  onClick={() => void renameRankFeature(feature)}
+                                  disabled={rankFeatureAction !== null}
+                                  title={`Rename ${feature.name}`}
+                                  className="rounded-lg p-2 text-slate-500 transition hover:bg-white/[0.06] hover:text-purple-300 disabled:opacity-40"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => void deleteRankFeature(feature)}
+                                  disabled={rankFeatureAction !== null}
+                                  title={`Delete ${feature.name}`}
+                                  className="rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </th>
+                            {rankProducts.map((product) => {
+                              const assignmentKey = `${feature.id}:${product.id}`;
+                              const available = rankFeatureAssignments.has(assignmentKey);
+                              const isSaving = rankFeatureAction === assignmentKey;
+                              return (
+                                <td
+                                  key={assignmentKey}
+                                  className="border-b border-white/[0.06] px-4 py-3 text-center group-hover:bg-white/[0.02]"
+                                >
+                                  <button
+                                    onClick={() =>
+                                      void toggleRankFeatureForProduct(feature, product)
+                                    }
+                                    disabled={rankFeatureAction !== null}
+                                    aria-label={`${available ? 'Remove' : 'Add'} ${feature.name} ${
+                                      available ? 'from' : 'to'
+                                    } ${product.name}`}
+                                    title={available ? 'Click to mark unavailable' : 'Click to mark available'}
+                                    className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-wait disabled:opacity-50 ${
+                                      available
+                                        ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                                        : 'bg-white/[0.04] text-slate-600 hover:bg-red-500/10 hover:text-red-300'
+                                    }`}
+                                  >
+                                    {isSaving ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : available ? (
+                                      <CheckCircle2 className="h-5 w-5" />
+                                    ) : (
+                                      <X className="h-5 w-5" />
+                                    )}
+                                  </button>
+                                  {available && (
+                                    <input
+                                      value={
+                                        rankFeatureDetailsDrafts[assignmentKey] ??
+                                        rankFeatureAssignments.get(assignmentKey) ??
+                                        ''
+                                      }
+                                      onChange={(event) =>
+                                        setRankFeatureDetailsDrafts((current) => ({
+                                          ...current,
+                                          [assignmentKey]: event.target.value,
+                                        }))
+                                      }
+                                      onBlur={() =>
+                                        void saveRankFeatureDetails(feature, product)
+                                      }
+                                      disabled={rankFeatureAction !== null}
+                                      maxLength={240}
+                                      aria-label={`${feature.name} details for ${product.name}`}
+                                      placeholder="Optional text"
+                                      className="mt-2 w-full min-w-32 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-xs text-white outline-none placeholder:text-slate-600 focus:border-purple-500/40 disabled:opacity-50"
+                                    />
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

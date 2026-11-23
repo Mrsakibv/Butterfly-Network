@@ -7,6 +7,7 @@ import {
   Package,
   Sparkles,
   ArrowRight,
+  GitCompareArrows,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -222,6 +223,18 @@ export const PricingPage: React.FC<PricingPageProps> = () => {
                   );
                 })}
               </div>
+
+              {['rank', 'ranks'].includes(activeCategory.toLowerCase()) && (
+                <div className="-mt-5 mb-10 flex justify-center">
+                  <button
+                    onClick={() => navigate('/store/rank-comparison')}
+                    className="inline-flex items-center gap-2 rounded-xl border border-purple-400/30 bg-purple-500/10 px-5 py-3 text-sm font-bold text-purple-100 transition hover:border-purple-300/50 hover:bg-purple-500/20"
+                  >
+                    <GitCompareArrows className="h-4 w-4" />
+                    Compare Ranks
+                  </button>
+                </div>
+              )}
 
               {/* Products */}
               {visibleProducts.length === 0 ? (

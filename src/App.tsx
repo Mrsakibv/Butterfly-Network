@@ -26,6 +26,7 @@ import { RulesPage } from './pages/RulesPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { PricingPage } from './pages/PricingPage';
+import { RankComparisonPage } from './pages/RankComparisonPage';
 import { ApplyPage } from './pages/ApplyPage';
 import { ApplicationFormPage } from './pages/ApplicationFormPage';
 import { ContactPage } from './pages/ContactPage';
@@ -767,6 +768,10 @@ function AppContent() {
 
     if (path === '/store') {
       return <PricingPage onOpenPlayModal={handleOpenPlayModal} />;
+    }
+
+    if (path === '/store/rank-comparison') {
+      return <RankComparisonPage />;
     }
 
     if (path === '/apply') {
