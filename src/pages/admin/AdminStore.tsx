@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FolderTree,
+  GripVertical,
   ImageIcon,
   KeyRound,
   Loader2,
@@ -336,6 +337,8 @@ export const AdminStore: React.FC = () => {
   const [rankFeaturesLoading, setRankFeaturesLoading] = useState(false);
   const [rankFeatureName, setRankFeatureName] = useState('');
   const [rankFeatureAction, setRankFeatureAction] = useState<string | null>(null);
+  const [draggedRankFeatureId, setDraggedRankFeatureId] = useState<string | null>(null);
+  const [rankFeatureDropTargetId, setRankFeatureDropTargetId] = useState<string | null>(null);
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [deliveries, setDeliveries] = useState<StoreDelivery[]>([]);
@@ -739,6 +742,48 @@ export const AdminStore: React.FC = () => {
     setRankFeatureName('');
     setRankFeatureAction(null);
     showToast('Feature Added', `${name} was added to the rank comparison.`, 'success');
+  };
+
+  const persistRankFeatureOrder = async (orderedFeatures: RankComparisonFeature[]) => {
+    setRankFeatureAction('reorder');
+
+    const updates = await Promise.all(
+      orderedFeatures.map((feature, index) =>
+        supabase
+          .from('rank_comparison_features')
+          .update({ sort_order: index + 1 })
+          .eq('id', feature.id)
+      )
+    );
+    const failedUpdate = updates.find((result) => result.error);
+
+    if (failedUpdate?.error) {
+      showToast('Feature Reorder Failed', failedUpdate.error.message, 'error');
+      await loadRankComparison();
+    } else {
+      showToast('Feature Order Saved', 'Rank comparison feature order updated.', 'success');
+    }
+    setRankFeatureAction(null);
+  };
+
+  const moveRankFeature = (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
+
+    setRankFeatures((current) => {
+      const sourceIndex = current.findIndex((feature) => feature.id === sourceId);
+      const targetIndex = current.findIndex((feature) => feature.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      const ordered = next.map((feature, index) => ({
+        ...feature,
+        sort_order: index + 1,
+      }));
+      void persistRankFeatureOrder(ordered);
+      return ordered;
+    });
   };
 
   const renameRankFeature = async (feature: RankComparisonFeature) => {
@@ -1752,7 +1797,7 @@ export const AdminStore: React.FC = () => {
                   <div>
                     <h2 className="text-lg font-bold text-white">Rank comparison features</h2>
                     <p className="mt-1 text-sm text-slate-400">
-                      Add or rename features, then click a check or cross to change availability.
+                      Add, rename, or drag features to set their display order, then click a check or cross to change availability.
                     </p>
                   </div>
                   <form onSubmit={addRankFeature} className="flex w-full gap-2 lg:max-w-md">
@@ -1819,9 +1864,56 @@ export const AdminStore: React.FC = () => {
                       </thead>
                       <tbody>
                         {rankFeatures.map((feature, index) => (
-                          <tr key={feature.id} className="group">
+                          <tr
+                            key={feature.id}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              if (draggedRankFeatureId && draggedRankFeatureId !== feature.id) {
+                                setRankFeatureDropTargetId(feature.id);
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (rankFeatureDropTargetId === feature.id) {
+                                setRankFeatureDropTargetId(null);
+                              }
+                            }}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              if (draggedRankFeatureId) {
+                                moveRankFeature(draggedRankFeatureId, feature.id);
+                              }
+                              setDraggedRankFeatureId(null);
+                              setRankFeatureDropTargetId(null);
+                            }}
+                            className={`group ${
+                              rankFeatureDropTargetId === feature.id
+                                ? 'ring-1 ring-inset ring-purple-400/50'
+                                : ''
+                            }`}
+                          >
                             <th className="sticky left-0 z-10 border-b border-white/[0.06] bg-[#0c0a12] px-4 py-3 text-left group-hover:bg-[#15111e]">
                               <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  draggable
+                                  onDragStart={(event) => {
+                                    setDraggedRankFeatureId(feature.id);
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData('text/plain', feature.id);
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedRankFeatureId(null);
+                                    setRankFeatureDropTargetId(null);
+                                  }}
+                                  disabled={rankFeatureAction !== null}
+                                  title={`Drag ${feature.name} to reorder`}
+                                  aria-label={`Drag ${feature.name} to reorder`}
+                                  className={`cursor-grab touch-none rounded-lg p-1 text-slate-600 transition hover:bg-white/[0.06] hover:text-purple-300 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 ${
+                                    draggedRankFeatureId === feature.id ? 'opacity-40' : ''
+                                  }`}
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </button>
                                 <span className="w-6 shrink-0 text-xs text-slate-600">
                                   {String(index + 1).padStart(2, '0')}
                                 </span>
