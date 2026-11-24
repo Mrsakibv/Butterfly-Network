@@ -19,6 +19,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from '../hooks/useRouter';
+import { useToast } from '../hooks/useToast';
 type AfkSettings = {
   enabled: boolean;
   minutes_per_reward: number;
@@ -45,6 +46,9 @@ type SessionRpcResult = {
   reason?: string;
   active_seconds?: number;
   credited_seconds?: number;
+  credited_coins?: number;
+  reward_coins?: number;
+  new_balance?: number;
 };
 type ClaimRpcResult = {
   success?: boolean;
@@ -542,6 +546,7 @@ export const AfkRewardsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
   const { navigate } = useRouter();
+  const { showToast } = useToast();
   const [pageLoading, setPageLoading] = useState(true);
   const [settings, setSettings] = useState<AfkSettings | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -696,6 +701,9 @@ export const AfkRewardsPage: React.FC = () => {
     async (reason?: string) => {
       if (!sessionId) return;
       try {
+        // Flush the latest visible interval before closing the session.
+        // This prevents the final 30 seconds from being missed at Stop or page-hide.
+        await supabase.rpc('heartbeat_afk_session', { p_session_id: sessionId });
         const { data, error } = await supabase.rpc('stop_afk_session', {
           p_session_id: sessionId,
         });
@@ -704,8 +712,30 @@ export const AfkRewardsPage: React.FC = () => {
         if (typeof result?.active_seconds === 'number') {
           setActiveSeconds(result.active_seconds);
         }
+        if (typeof result?.new_balance === 'number') {
+          setWalletBalance(result.new_balance);
+        } else {
+          await loadWallet();
+        }
+        const creditedCoins =
+          (typeof result?.credited_coins === 'number' && result.credited_coins) ||
+          (typeof result?.reward_coins === 'number' && result.reward_coins) ||
+          0;
         setSessionId(null);
-        setNotice(reason || 'AFK session stopped. Tracked time has been saved.');
+        if (creditedCoins > 0) {
+          showToast(
+            'Butterfly Coins Added',
+            `AFK reward received: +${creditedCoins.toLocaleString()} Coins`,
+            'success',
+            5500
+          );
+        }
+        setNotice(
+          reason ||
+            (creditedCoins > 0
+              ? `AFK session stopped. +${creditedCoins} Butterfly Coins added.`
+              : 'AFK session stopped. Tracked time has been saved.')
+        );
         setNoticeIsError(false);
       } catch (error) {
         console.error('AFK stop failed:', error);
@@ -713,7 +743,7 @@ export const AfkRewardsPage: React.FC = () => {
         setNoticeIsError(true);
       }
     },
-    [sessionId]
+    [sessionId, loadWallet, showToast]
   );
   // Smoothly update the session timer between server heartbeats.
   // Heartbeat responses periodically replace this with the server's value.
@@ -751,11 +781,28 @@ export const AfkRewardsPage: React.FC = () => {
         if (typeof result?.active_seconds === 'number') {
           setActiveSeconds(result.active_seconds);
         }
+        if (typeof result?.new_balance === 'number') {
+          setWalletBalance(result.new_balance);
+        }
 
         // Refresh promptly after the server processes this heartbeat/reward interval.
         void loadWallet().catch((walletError) => {
           console.error('AFK wallet refresh failed:', walletError);
         });
+        const creditedCoins =
+          (typeof result?.credited_coins === 'number' && result.credited_coins) ||
+          (typeof result?.reward_coins === 'number' && result.reward_coins) ||
+          0;
+        if (creditedCoins > 0) {
+          setNotice(`AFK reward added: +${creditedCoins} Butterfly Coins.`);
+          setNoticeIsError(false);
+          showToast(
+            'Butterfly Coins Added',
+            `AFK reward received: +${creditedCoins.toLocaleString()} Coins`,
+            'success',
+            5500
+          );
+        }
 
         if (result?.success === false) {
           setSessionId(null);
@@ -778,6 +825,7 @@ export const AfkRewardsPage: React.FC = () => {
     const intervalId = window.setInterval(() => {
       void sendHeartbeat();
     }, 30_000);
+    void sendHeartbeat();
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         // Per the AFK rule: leaving/minimizing this tab stops AFK tracking.
@@ -799,7 +847,7 @@ export const AfkRewardsPage: React.FC = () => {
       // effect replay occurs before the user can start a session.
       void supabase.rpc('stop_afk_session', { p_session_id: sessionId });
     };
-  }, [sessionId, stopSession, loadWallet]);
+  }, [sessionId, stopSession, loadWallet, showToast]);
   const startSession = async () => {
     setNotice('');
     setNoticeIsError(false);
